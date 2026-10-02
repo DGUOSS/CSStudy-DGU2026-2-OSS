@@ -1,1 +1,1 @@
-"""Database connections and persistence (to be implemented)."""
+"""Database connections and persistence"""

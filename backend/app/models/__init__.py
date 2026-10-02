@@ -1,1 +1,1 @@
-"""Database models (to be implemented)."""
+"""Database models"""

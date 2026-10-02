@@ -1,1 +1,1 @@
-"""Study planner backend."""
+"""Study planner backend"""

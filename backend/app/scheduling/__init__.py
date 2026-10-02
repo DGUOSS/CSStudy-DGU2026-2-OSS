@@ -1,1 +1,1 @@
-"""Learning state and weekly scheduling modules (algorithm owner)."""
+"""Learning state and weekly scheduling modules."""

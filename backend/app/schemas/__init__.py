@@ -1,1 +1,1 @@
-"""Shared API request and response models."""
+"""Shared API request and response models"""
