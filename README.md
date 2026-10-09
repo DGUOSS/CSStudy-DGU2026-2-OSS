@@ -1,4 +1,4 @@
-# StudyPlanner-DGU2026-2-OSS
+# CSStudy-DGU2026-2-OSS
 
 동국대학교 2026-2 공개SW 프로젝트: 학습 상태를 반영하는 주간 학습 플래너.
 
