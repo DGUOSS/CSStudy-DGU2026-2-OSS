@@ -1,0 +1,17 @@
+# 키
+.env
+.env.*
+!.env.example
+# Python
+.venv
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+# Node
+node_modules/
+dist/
+# 기타
+.DS_Store
+CLAUDE.local.md
+uploads/
