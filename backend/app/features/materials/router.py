@@ -53,10 +53,35 @@ def _out(session: SessionDep, m: Material) -> MaterialOut:
 @router.get("/courses/{course_id}/materials")
 def list_materials(course_id: int, session: SessionDep) -> list[MaterialOut]:
     get_course_or_404(session, course_id)
+    # 쪽별 본문(pages)은 크기가 커서 목록에서는 읽지 않는다
     rows = session.exec(
-        select(Material).where(Material.course_id == course_id).order_by(Material.created_at)
+        select(
+            Material.id,
+            Material.course_id,
+            Material.kind,
+            Material.title,
+            Material.filename,
+            Material.page_count,
+            Material.created_at,
+            User.name,
+        )
+        .join(User, User.id == Material.uploader_id, isouter=True)
+        .where(Material.course_id == course_id)
+        .order_by(Material.created_at, Material.id)
     ).all()
-    return [_out(session, m) for m in rows]
+    return [
+        MaterialOut(
+            id=r[0],
+            course_id=r[1],
+            kind=r[2],
+            title=r[3],
+            filename=r[4],
+            page_count=r[5],
+            created_at=r[6],
+            uploader_name=r[7],
+        )
+        for r in rows
+    ]
 
 
 @router.post("/courses/{course_id}/materials", status_code=status.HTTP_201_CREATED)

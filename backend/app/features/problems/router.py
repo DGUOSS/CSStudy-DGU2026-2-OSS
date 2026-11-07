@@ -81,20 +81,32 @@ def list_chapters(course_id: int, session: SessionDep) -> list[ChapterOut]:
     chapters = session.exec(
         select(Chapter).where(Chapter.course_id == course_id).order_by(Chapter.order)
     ).all()
-    out = []
-    for ch in chapters:
-        names = session.exec(
-            select(Concept.name).where(Concept.chapter_id == ch.id).order_by(Concept.id)
+    ids = [ch.id for ch in chapters]
+    # 챕터마다 따로 조회하면 DB 왕복이 챕터 수만큼 늘어나서 한 번에 모아 온다
+    names: dict[int, list[str]] = {i: [] for i in ids}
+    for chapter_id, name in session.exec(
+        select(Concept.chapter_id, Concept.name)
+        .where(Concept.chapter_id.in_(ids))
+        .order_by(Concept.id)
+    ).all():
+        names[chapter_id].append(name)
+    counts = dict(
+        session.exec(
+            select(Problem.chapter_id, func.count())
+            .where(Problem.chapter_id.in_(ids))
+            .group_by(Problem.chapter_id)
         ).all()
-        count = session.exec(
-            select(func.count()).select_from(Problem).where(Problem.chapter_id == ch.id)
-        ).one()
-        out.append(
-            ChapterOut(
-                id=ch.id, order=ch.order, title=ch.title, concepts=list(names), problem_count=count
-            )
+    )
+    return [
+        ChapterOut(
+            id=ch.id,
+            order=ch.order,
+            title=ch.title,
+            concepts=names[ch.id],
+            problem_count=counts.get(ch.id, 0),
         )
-    return out
+        for ch in chapters
+    ]
 
 
 @router.get("/chapters/{chapter_id}/problems")
