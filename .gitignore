@@ -18,3 +18,5 @@ uploads/
 
 # 교안 원본 (저작권, 각자 보관)
 data/raw/
+# Vercel CLI
+.vercel
