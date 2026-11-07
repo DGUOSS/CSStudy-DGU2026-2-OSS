@@ -1,8 +1,26 @@
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
+
+from app.features.auth.router import router as auth_router
+from app.features.courses.router import router as courses_router
+from app.features.mastery.router import router as mastery_router
+from app.features.materials.router import router as materials_router
+from app.features.problems.router import router as problems_router
 
 app = FastAPI(title="dgu-study")
 
+api = APIRouter(prefix="/api/v1")
 
-@app.get("/api/v1/health")
+
+@api.get("/health", tags=["health"])
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+# 기능을 추가하면 여기에 한 줄 등록한다
+api.include_router(auth_router)
+api.include_router(courses_router)
+api.include_router(materials_router)
+api.include_router(problems_router)
+api.include_router(mastery_router)
+
+app.include_router(api)

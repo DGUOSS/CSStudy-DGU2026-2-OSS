@@ -15,3 +15,6 @@ dist/
 .DS_Store
 CLAUDE.local.md
 uploads/
+
+# 교안 원본 (저작권, 각자 보관)
+data/raw/
