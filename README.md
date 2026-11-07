@@ -41,7 +41,9 @@ PR을 올리면 GitHub Actions가 같은 검사를 돌린다.
 - 백엔드 API를 바꾸면 `frontend`에서 `pnpm gen:api`로 프론트 타입을 다시 만든다.
 - AI 코딩 도구 공통 규칙은 [CLAUDE.md](CLAUDE.md).
 
-## 배포 (아직 안 함)
-1. Render → New → Blueprint → 이 레포. `DATABASE_URL`, `DATABASE_URL_UNPOOLED`를 넣는다. (`render.yaml`)
-2. Vercel → 새 프로젝트 → Root Directory `frontend`. `/api`는 Render 주소로 넘어간다. (`frontend/vercel.json`)
-3. Render 서비스 이름이 `dgu-study-api`가 아니면 `frontend/vercel.json`의 주소를 바꾼다.
+## 배포
+- 사이트: https://dgu-study.vercel.app (Vercel, `frontend/`)
+- API: https://dgu-study-api.onrender.com (Render 무료, 싱가포르, `backend/`). 사이트의 `/api` 요청은 `frontend/vercel.json`이 여기로 넘긴다.
+- 백엔드는 main에 push하면 자동 배포된다. 시작할 때 `alembic upgrade head`가 먼저 돈다.
+- 프론트는 `frontend`에서 `vercel deploy --prod`로 배포한다 (Vercel GitHub 앱을 레포에 연결하면 자동 배포).
+- Render 무료 서버는 15분 동안 요청이 없으면 잠든다. 첫 요청이 30초~1분 걸린다.
