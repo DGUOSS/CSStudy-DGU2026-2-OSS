@@ -99,7 +99,10 @@ export interface paths {
         /** List Subjects */
         get: operations["list_subjects_api_v1_subjects_get"];
         put?: never;
-        /** Create Subject */
+        /**
+         * Create Subject
+         * @description 관리자 전용. 일반 사용자는 POST /course-requests로 요청한다.
+         */
         post: operations["create_subject_api_v1_subjects_post"];
         delete?: never;
         options?: never;
@@ -135,7 +138,7 @@ export interface paths {
         put?: never;
         /**
          * Create Course
-         * @description 없는 강좌를 사용자가 추가한다. 지금은 자동 승인.
+         * @description 관리자 전용. 일반 사용자는 POST /course-requests로 요청하고 관리자가 승인한다.
          */
         post: operations["create_course_api_v1_courses_post"];
         delete?: never;
@@ -169,10 +172,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Materials */
+        /**
+         * List Materials
+         * @description 기본은 최신판만. all_versions=true면 옛 판까지.
+         */
         get: operations["list_materials_api_v1_courses__course_id__materials_get"];
         put?: never;
-        /** Upload Material */
+        /**
+         * Upload Material
+         * @description 같은 내용이면 등록하지 않고(200, duplicate), 같은 자료의 수정본이면 새 판으로 대체한다(updated).
+         */
         post: operations["upload_material_api_v1_courses__course_id__materials_post"];
         delete?: never;
         options?: never;
@@ -274,10 +283,110 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/course-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Request
+         * @description file을 안 보내면 '교안 없음' 요청이다.
+         */
+        post: operations["create_request_api_v1_course_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/course-requests/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My Requests */
+        get: operations["my_requests_api_v1_course_requests_mine_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/course-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Requests */
+        get: operations["list_requests_api_v1_admin_course_requests_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/course-requests/{request_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve Request */
+        post: operations["approve_request_api_v1_admin_course_requests__request_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/course-requests/{request_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject Request */
+        post: operations["reject_request_api_v1_admin_course_requests__request_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * ApproveIn
+         * @description 관리자가 승인하면서 이름을 고칠 수 있다(오타, 표기 통일).
+         */
+        ApproveIn: {
+            /** Subject Name */
+            subject_name?: string | null;
+            /** Subject Code */
+            subject_code?: string | null;
+            /** Professor Name */
+            professor_name?: string | null;
+        };
         /** AttemptIn */
         AttemptIn: {
             /** Chosen Index */
@@ -296,6 +405,26 @@ export interface components {
             source: components["schemas"]["SourceOut"] | null;
             /** Mastery */
             mastery: components["schemas"]["MasteryChange"][];
+        };
+        /** Body_create_request_api_v1_course_requests_post */
+        Body_create_request_api_v1_course_requests_post: {
+            /** Subject Name */
+            subject_name: string;
+            /** Professor Name */
+            professor_name: string;
+            /** Subject Code */
+            subject_code?: string | null;
+            /** Semester */
+            semester?: string | null;
+            /**
+             * Note
+             * @default
+             */
+            note?: string;
+            /** Material Title */
+            material_title?: string | null;
+            /** File */
+            file?: string | null;
         };
         /** Body_upload_material_api_v1_courses__course_id__materials_post */
         Body_upload_material_api_v1_courses__course_id__materials_post: {
@@ -391,6 +520,42 @@ export interface components {
             /** Problem Count */
             problem_count: number;
         };
+        /** CourseRequestOut */
+        CourseRequestOut: {
+            /** Id */
+            id: number;
+            /** Requester Name */
+            requester_name: string | null;
+            /** Subject Name */
+            subject_name: string;
+            /** Subject Code */
+            subject_code: string | null;
+            /** Professor Name */
+            professor_name: string;
+            /** Semester */
+            semester: string | null;
+            /** Note */
+            note: string;
+            /** Has Material */
+            has_material: boolean;
+            /** Material Title */
+            material_title: string | null;
+            /** Material Page Count */
+            material_page_count: number;
+            /** Status */
+            status: string;
+            /** Reject Reason */
+            reject_reason: string | null;
+            /** Course Id */
+            course_id: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Reviewed At */
+            reviewed_at: string | null;
+        };
         /** CourseUpdate */
         CourseUpdate: {
             /** Info */
@@ -445,6 +610,15 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Week */
+            week?: number | null;
+            /**
+             * Version
+             * @default 1
+             */
+            version?: number;
+            /** Replaced By */
+            replaced_by?: number | null;
         };
         /** MaterialPageOut */
         MaterialPageOut: {
@@ -472,6 +646,11 @@ export interface components {
             concepts: components["schemas"]["ConceptRef"][];
             /** Origin */
             origin: string;
+        };
+        /** RejectIn */
+        RejectIn: {
+            /** Reason */
+            reason: string;
         };
         /** SignupIn */
         SignupIn: {
@@ -511,6 +690,67 @@ export interface components {
             code: string | null;
             /** Course Count */
             course_count: number;
+        };
+        /** UploadOut */
+        UploadOut: {
+            /** Id */
+            id: number;
+            /** Course Id */
+            course_id: number;
+            /** Kind */
+            kind: string;
+            /** Title */
+            title: string;
+            /** Filename */
+            filename: string;
+            /** Page Count */
+            page_count: number;
+            /** Uploader Name */
+            uploader_name: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Week */
+            week?: number | null;
+            /**
+             * Version
+             * @default 1
+             */
+            version?: number;
+            /** Replaced By */
+            replaced_by?: number | null;
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "new" | "updated" | "duplicate";
+            /**
+             * Relinked Problems
+             * @default 0
+             */
+            relinked_problems?: number;
+            /**
+             * Pages Same
+             * @default 0
+             */
+            pages_same?: number;
+            /**
+             * Pages Modified
+             * @default 0
+             */
+            pages_modified?: number;
+            /**
+             * Pages New
+             * @default 0
+             */
+            pages_new?: number;
+            /**
+             * Replaced Ids
+             * @default []
+             */
+            replaced_ids?: number[];
         };
         /** UserOut */
         UserOut: {
@@ -873,7 +1113,9 @@ export interface operations {
     };
     list_materials_api_v1_courses__course_id__materials_get: {
         parameters: {
-            query?: never;
+            query?: {
+                all_versions?: boolean;
+            };
             header?: never;
             path: {
                 course_id: number;
@@ -925,7 +1167,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MaterialOut"];
+                    "application/json": components["schemas"]["UploadOut"];
                 };
             };
             /** @description Validation Error */
@@ -1094,6 +1336,179 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChapterMasteryOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_request_api_v1_course_requests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_create_request_api_v1_course_requests_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourseRequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_requests_api_v1_course_requests_mine_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourseRequestOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_requests_api_v1_admin_course_requests_get: {
+        parameters: {
+            query?: {
+                status?: ("pending" | "approved" | "rejected") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourseRequestOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_request_api_v1_admin_course_requests__request_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ApproveIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourseRequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_request_api_v1_admin_course_requests__request_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourseRequestOut"];
                 };
             };
             /** @description Validation Error */

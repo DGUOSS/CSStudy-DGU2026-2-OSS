@@ -1,6 +1,7 @@
 from fastapi import APIRouter, FastAPI
 
 from app.features.auth.router import router as auth_router
+from app.features.course_requests.router import router as course_requests_router
 from app.features.courses.router import router as courses_router
 from app.features.mastery.router import router as mastery_router
 from app.features.materials.router import router as materials_router
@@ -22,5 +23,6 @@ api.include_router(courses_router)
 api.include_router(materials_router)
 api.include_router(problems_router)
 api.include_router(mastery_router)
+api.include_router(course_requests_router)
 
 app.include_router(api)

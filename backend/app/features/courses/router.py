@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import func, select
 
 from app.core.db import SessionDep
-from app.core.security import CurrentUser
+from app.core.security import AdminUser, CurrentUser
 from app.models import Chapter, Course, Material, Problem, Professor, Subject
 
 router = APIRouter(tags=["courses"])
@@ -91,7 +91,8 @@ def list_subjects(session: SessionDep) -> list[SubjectOut]:
 
 
 @router.post("/subjects", status_code=status.HTTP_201_CREATED)
-def create_subject(body: SubjectIn, session: SessionDep, _: CurrentUser) -> SubjectOut:
+def create_subject(body: SubjectIn, session: SessionDep, _: AdminUser) -> SubjectOut:
+    """관리자 전용. 일반 사용자는 POST /course-requests로 요청한다."""
     name = body.name.strip()
     if session.exec(select(Subject).where(Subject.name == name)).first():
         raise HTTPException(status.HTTP_409_CONFLICT, "이미 있는 과목입니다")
@@ -112,8 +113,8 @@ def list_courses(subject_id: int, session: SessionDep) -> list[CourseOut]:
 
 
 @router.post("/courses", status_code=status.HTTP_201_CREATED)
-def create_course(body: CourseIn, session: SessionDep, user: CurrentUser) -> CourseOut:
-    """없는 강좌를 사용자가 추가한다. 지금은 자동 승인."""
+def create_course(body: CourseIn, session: SessionDep, user: AdminUser) -> CourseOut:
+    """관리자 전용. 일반 사용자는 POST /course-requests로 요청하고 관리자가 승인한다."""
     if session.get(Subject, body.subject_id) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "과목이 없습니다")
     name = body.professor_name.strip()

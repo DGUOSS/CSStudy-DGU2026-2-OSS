@@ -4,13 +4,15 @@ import { type FormEvent, useState } from 'react'
 import { Link } from 'react-router'
 import { api, unwrap } from '@/api/client'
 import { Empty, ErrorText, Loading } from '@/components/States'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { useAuth } from '@/features/auth/useAuth'
 import { useSubjects } from './queries'
 
 export function SubjectsPage() {
   const subjects = useSubjects()
+  const { user } = useAuth()
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -20,7 +22,7 @@ export function SubjectsPage() {
       {subjects.isPending ? (
         <Loading />
       ) : subjects.data?.length === 0 ? (
-        <Empty>아직 과목이 없습니다. 아래에서 추가해 주세요.</Empty>
+        <Empty>아직 과목이 없습니다. 아래에서 추가를 요청해 주세요.</Empty>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {subjects.data?.map((s) => (
@@ -39,11 +41,27 @@ export function SubjectsPage() {
         </div>
       )}
       <ErrorText error={subjects.error} />
-      <AddSubject />
+      <RequestHint />
+      {user?.role === 'admin' && <AddSubject />}
     </div>
   )
 }
 
+function RequestHint() {
+  return (
+    <Card className="flex flex-col items-start gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="text-sm text-muted-foreground">
+        찾는 과목이 없나요? 과목·교수님과 교안을 보내 주면 관리자가 확인한 뒤 열어 드립니다.
+      </div>
+      <Link to="/requests/new" className={buttonVariants({ variant: 'outline' })}>
+        <Plus />
+        추가 요청
+      </Link>
+    </Card>
+  )
+}
+
+/** 관리자만: 요청 없이 바로 과목 추가 */
 function AddSubject() {
   const qc = useQueryClient()
   const [name, setName] = useState('')
@@ -62,7 +80,7 @@ function AddSubject() {
     <form onSubmit={submit} className="flex flex-col gap-2">
       <div className="flex gap-2">
         <Input
-          placeholder="찾는 과목이 없으면 이름을 입력해 추가 (예: 자료구조)"
+          placeholder="관리자: 과목 이름을 입력해 바로 추가"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required

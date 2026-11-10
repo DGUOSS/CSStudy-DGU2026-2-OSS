@@ -103,3 +103,15 @@ def make_pdf(pages: list[str]) -> bytes:
     out += "".join(f"{o:010d} 00000 n \n" for o in offsets).encode()
     out += f"trailer\n<< /Size {len(objs) + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF".encode()
     return out
+
+
+def make_admin(session, email: str = "a@dgu.ac.kr") -> None:
+    """가입한 사용자를 관리자로 바꾼다."""
+    from sqlmodel import select
+
+    from app.models import User
+
+    user = session.exec(select(User).where(User.email == email)).one()
+    user.role = "admin"
+    session.add(user)
+    session.commit()

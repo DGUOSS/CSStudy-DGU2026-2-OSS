@@ -8,6 +8,8 @@ courses ─< materials                      교안·기출·시험 정보, 쪽�
 courses ─< chapters ─< concepts
 chapters ─< problems >─< concepts         problem_concepts로 연결 (한 문제에 개념 여러 개)
 users ─< attempts >─ problems             풀이 기록. 숙련도는 이 기록으로 계산한다 (따로 저장하지 않음)
+users ─< course_requests ─ courses        과목·강좌 추가 요청, 관리자가 승인하면 강좌와 연결
+materials ─ materials(replaced_by)        자료의 판 관리: 옛 판이 새 판을 가리킨다
 ```
 
 | 테이블 | 주요 칸 |
@@ -16,7 +18,8 @@ users ─< attempts >─ problems             풀이 기록. 숙련도는 이 �
 | subjects | name(고유), code(학수번호) |
 | professors | name, department |
 | courses | subject_id, professor_id, info, exam_info, created_by |
-| materials | course_id, uploader_id, kind(lecture/exam/note), title, filename, page_count, pages(JSON), status |
+| materials | course_id, uploader_id, kind(lecture/exam/note), title, filename, page_count, pages(JSON), status, week(표시용), version, replaced_by(새 판 id, 최신판은 NULL) |
+| course_requests | requester_id, subject_name, subject_code, professor_name, semester, note, material_title/filename/pages(JSON, 승인 전까지만), status(pending/approved/rejected), reject_reason, reviewed_by, reviewed_at, course_id |
 | chapters | course_id, order, title, material_id |
 | concepts | chapter_id, name |
 | problems | chapter_id, question, choices(JSON), answer_index(0부터), explanation, evidence, source_material_id, source_page, origin(sample/llm/exam) |

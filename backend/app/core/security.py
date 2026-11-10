@@ -60,3 +60,12 @@ def get_current_user(
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+def get_admin_user(user: CurrentUser) -> User:
+    if user.role != "admin":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "관리자만 할 수 있습니다")
+    return user
+
+
+AdminUser = Annotated[User, Depends(get_admin_user)]

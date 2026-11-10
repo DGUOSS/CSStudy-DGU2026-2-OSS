@@ -1,9 +1,12 @@
-from tests.conftest import make_pdf
+from tests.conftest import make_admin, make_pdf
 
 
-def test_subject_course_flow(client, login):
+def test_subject_course_flow(client, login, session):
     assert client.post("/api/v1/subjects", json={"name": "자료구조"}).status_code == 401
     login()
+    # 일반 사용자는 직접 만들 수 없고 요청(course-requests)을 해야 한다
+    assert client.post("/api/v1/subjects", json={"name": "자료구조"}).status_code == 403
+    make_admin(session)
     subject = client.post("/api/v1/subjects", json={"name": "자료구조"}).json()
     assert client.post("/api/v1/subjects", json={"name": "자료구조"}).status_code == 409
 

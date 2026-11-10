@@ -1,6 +1,9 @@
 import { createBrowserRouter, RouterProvider } from 'react-router'
 import { Layout } from '@/components/Layout'
 import { AuthPage } from '@/features/auth/AuthPage'
+import { AdminRequestsPage } from '@/features/course_requests/AdminRequestsPage'
+import { MyRequestsPage } from '@/features/course_requests/MyRequestsPage'
+import { RequestCoursePage } from '@/features/course_requests/RequestCoursePage'
 import { CoursePage } from '@/features/courses/CoursePage'
 import { SubjectCoursesPage } from '@/features/courses/SubjectCoursesPage'
 import { SubjectsPage } from '@/features/courses/SubjectsPage'
@@ -17,6 +20,9 @@ const router = createBrowserRouter([
       { path: '/subjects/:subjectId', element: <SubjectCoursesPage /> },
       { path: '/courses/:courseId', element: <CoursePage /> },
       { path: '/courses/:courseId/chapters/:chapterId/quiz', element: <QuizPage /> },
+      { path: '/requests', element: <MyRequestsPage /> },
+      { path: '/requests/new', element: <RequestCoursePage /> },
+      { path: '/admin/requests', element: <AdminRequestsPage /> },
     ],
   },
 ])

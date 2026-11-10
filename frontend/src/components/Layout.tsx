@@ -19,6 +19,14 @@ export function Layout() {
             동국 스터디
           </Link>
           <div className="flex items-center gap-2 text-sm">
+            {user.role === 'admin' && (
+              <Link to="/admin/requests" className="text-primary hover:underline">
+                요청 관리
+              </Link>
+            )}
+            <Link to="/requests" className="text-muted-foreground hover:underline">
+              내 요청
+            </Link>
             <span className="text-muted-foreground">{user.name}</span>
             <Button variant="ghost" size="sm" onClick={() => logout.mutate()}>
               <LogOut />

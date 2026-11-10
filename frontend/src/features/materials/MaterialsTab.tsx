@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { FileText, Upload } from 'lucide-react'
 import { type FormEvent, useRef, useState } from 'react'
-import { api, unwrap } from '@/api/client'
+import { api, type Schemas, unwrap } from '@/api/client'
 import { Empty, ErrorText, Loading } from '@/components/States'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -35,7 +35,12 @@ export function MaterialsTab({ courseId }: { courseId: number }) {
             <li key={m.id} className="flex items-center gap-3 px-4 py-3">
               <FileText className="size-4 shrink-0 text-muted-foreground" />
               <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium">{m.title}</div>
+                <div className="truncate text-sm font-medium">
+                  {m.title}
+                  {(m.version ?? 1) > 1 && (
+                    <span className="ml-1.5 text-xs text-muted-foreground">{m.version}판</span>
+                  )}
+                </div>
                 <div className="text-xs text-muted-foreground">
                   {m.filename} · {m.page_count}쪽{m.uploader_name && ` · ${m.uploader_name}`}
                 </div>
@@ -49,6 +54,16 @@ export function MaterialsTab({ courseId }: { courseId: number }) {
       <UploadForm courseId={courseId} />
     </div>
   )
+}
+
+/** 판 관리 결과 안내 (쪽 내용 비교로 중복·새 판을 판단한다) */
+function resultText(r: Schemas['UploadOut']): string {
+  if (r.action === 'duplicate') return '이미 같은 내용의 자료가 있어 새로 올리지 않았습니다.'
+  const pages = `같은 쪽 ${r.pages_same}, 수정된 쪽 ${r.pages_modified}, 새 쪽 ${r.pages_new}`
+  const moved = r.relinked_problems ? ` 문제 ${r.relinked_problems}개의 근거를 새 자료로 옮겼습니다.` : ''
+  if (r.action === 'updated')
+    return `기존 자료 ${(r.replaced_ids ?? []).length}개를 새 판으로 바꿨습니다 (${pages}).${moved}`
+  return `새 자료로 올렸습니다 (${pages}).${moved}`
 }
 
 function UploadForm({ courseId }: { courseId: number }) {
@@ -129,10 +144,8 @@ function UploadForm({ courseId }: { courseId: number }) {
               <Upload />
               {upload.isPending ? '올리는 중…' : '올리기'}
             </Button>
-            {upload.isSuccess && (
-              <span className="text-sm text-muted-foreground">
-                올렸습니다. 이 자료로 문제를 만드는 기능은 준비 중입니다.
-              </span>
+            {upload.data && (
+              <span className="text-sm text-muted-foreground">{resultText(upload.data)}</span>
             )}
           </div>
         </form>

@@ -5,6 +5,7 @@
       강좌 ─< 챕터(Chapter) ─< 개념(Concept)
       챕터 ─< 문제(Problem) >─< 개념   (ProblemConcept)
       사용자(User) ─< 풀이 기록(Attempt) >─ 문제
+      사용자 ─< 강좌 추가 요청(CourseRequest) ─ (승인 후) 강좌
 """
 
 from datetime import UTC, datetime
@@ -55,6 +56,29 @@ class Course(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_now)
 
 
+class CourseRequest(SQLModel, table=True):
+    """없는 과목·강좌 추가 요청. 관리자가 승인하면 과목·교수·강좌가 생기고, 함께 낸 교안이 자료로 붙는다."""
+
+    __tablename__ = "course_requests"
+    id: int | None = Field(default=None, primary_key=True)
+    requester_id: int = Field(foreign_key="users.id", index=True)
+    subject_name: str = Field(max_length=100)
+    subject_code: str | None = Field(default=None, max_length=20)
+    professor_name: str = Field(max_length=50)
+    semester: str | None = Field(default=None, max_length=20)  # 예: 2026-2
+    note: str = Field(default="", sa_column=Column(Text, nullable=False, default=""))
+    # 교안을 함께 냈으면 쪽별 텍스트를 승인 전까지 여기에 둔다. '교안 없음'이면 비어 있다.
+    material_title: str | None = Field(default=None, max_length=200)
+    material_filename: str | None = Field(default=None, max_length=255)
+    material_pages: list[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
+    status: str = Field(default="pending", max_length=20, index=True)  # pending|approved|rejected
+    reject_reason: str | None = Field(default=None, sa_column=Column(Text))
+    reviewed_by: int | None = Field(default=None, foreign_key="users.id")
+    reviewed_at: datetime | None = None
+    course_id: int | None = Field(default=None, foreign_key="courses.id")  # 승인 결과 강좌
+    created_at: datetime = Field(default_factory=_now)
+
+
 class Material(SQLModel, table=True):
     __tablename__ = "materials"
     id: int | None = Field(default=None, primary_key=True)
@@ -67,6 +91,11 @@ class Material(SQLModel, table=True):
     # 쪽별 텍스트. pages[0]이 1쪽이다.
     pages: list[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
     status: str = Field(default="approved", max_length=20)  # 지금은 자동 승인
+    # 판 관리: 같은 주차·같은 문서의 새 판이 올라오면 옛 판의 replaced_by에 새 판 id를 적는다.
+    # 옛 판은 지우지 않는다(옛 문제의 근거 쪽 링크가 깨지지 않게). 목록에는 최신판만 보인다.
+    week: int | None = None  # 제목·파일명에서 읽은 주차
+    version: int = 1
+    replaced_by: int | None = Field(default=None, foreign_key="materials.id")
     created_at: datetime = Field(default_factory=_now)
 
 

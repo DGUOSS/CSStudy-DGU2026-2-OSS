@@ -204,6 +204,7 @@
           "courses"
         ],
         "summary": "Create Subject",
+        "description": "관리자 전용. 일반 사용자는 POST /course-requests로 요청한다.",
         "operationId": "create_subject_api_v1_subjects_post",
         "parameters": [
           {
@@ -309,7 +310,7 @@
           "courses"
         ],
         "summary": "Create Course",
-        "description": "없는 강좌를 사용자가 추가한다. 지금은 자동 승인.",
+        "description": "관리자 전용. 일반 사용자는 POST /course-requests로 요청하고 관리자가 승인한다.",
         "operationId": "create_course_api_v1_courses_post",
         "parameters": [
           {
@@ -477,6 +478,7 @@
           "materials"
         ],
         "summary": "List Materials",
+        "description": "기본은 최신판만. all_versions=true면 옛 판까지.",
         "operationId": "list_materials_api_v1_courses__course_id__materials_get",
         "parameters": [
           {
@@ -486,6 +488,16 @@
             "schema": {
               "type": "integer",
               "title": "Course Id"
+            }
+          },
+          {
+            "name": "all_versions",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "All Versions"
             }
           }
         ],
@@ -521,6 +533,7 @@
           "materials"
         ],
         "summary": "Upload Material",
+        "description": "같은 내용이면 등록하지 않고(200, duplicate), 같은 자료의 수정본이면 새 판으로 대체한다(updated).",
         "operationId": "upload_material_api_v1_courses__course_id__materials_post",
         "parameters": [
           {
@@ -565,7 +578,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MaterialOut"
+                  "$ref": "#/components/schemas/UploadOut"
                 }
               }
             }
@@ -885,10 +898,385 @@
           }
         }
       }
+    },
+    "/api/v1/course-requests": {
+      "post": {
+        "tags": [
+          "course-requests"
+        ],
+        "summary": "Create Request",
+        "description": "file을 안 보내면 '교안 없음' 요청이다.",
+        "operationId": "create_request_api_v1_course_requests_post",
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_request_api_v1_course_requests_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseRequestOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/course-requests/mine": {
+      "get": {
+        "tags": [
+          "course-requests"
+        ],
+        "summary": "My Requests",
+        "operationId": "my_requests_api_v1_course_requests_mine_get",
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CourseRequestOut"
+                  },
+                  "title": "Response My Requests Api V1 Course Requests Mine Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/course-requests": {
+      "get": {
+        "tags": [
+          "course-requests"
+        ],
+        "summary": "List Requests",
+        "operationId": "list_requests_api_v1_admin_course_requests_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "approved",
+                    "rejected"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CourseRequestOut"
+                  },
+                  "title": "Response List Requests Api V1 Admin Course Requests Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/course-requests/{request_id}/approve": {
+      "post": {
+        "tags": [
+          "course-requests"
+        ],
+        "summary": "Approve Request",
+        "operationId": "approve_request_api_v1_admin_course_requests__request_id__approve_post",
+        "parameters": [
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Request Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ApproveIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseRequestOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/course-requests/{request_id}/reject": {
+      "post": {
+        "tags": [
+          "course-requests"
+        ],
+        "summary": "Reject Request",
+        "operationId": "reject_request_api_v1_admin_course_requests__request_id__reject_post",
+        "parameters": [
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Request Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseRequestOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "ApproveIn": {
+        "properties": {
+          "subject_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Name"
+          },
+          "subject_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Code"
+          },
+          "professor_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Professor Name"
+          }
+        },
+        "type": "object",
+        "title": "ApproveIn",
+        "description": "관리자가 승인하면서 이름을 고칠 수 있다(오타, 표기 통일)."
+      },
       "AttemptIn": {
         "properties": {
           "chosen_index": {
@@ -955,6 +1343,82 @@
           "mastery"
         ],
         "title": "AttemptResult"
+      },
+      "Body_create_request_api_v1_course_requests_post": {
+        "properties": {
+          "subject_name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Subject Name"
+          },
+          "professor_name": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Professor Name"
+          },
+          "subject_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Code"
+          },
+          "semester": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Semester"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Note",
+            "default": ""
+          },
+          "material_title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Material Title"
+          },
+          "file": {
+            "anyOf": [
+              {
+                "type": "string",
+                "contentMediaType": "application/octet-stream"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_name",
+          "professor_name"
+        ],
+        "title": "Body_create_request_api_v1_course_requests_post"
       },
       "Body_upload_material_api_v1_courses__course_id__materials_post": {
         "properties": {
@@ -1188,6 +1652,140 @@
         ],
         "title": "CourseOut"
       },
+      "CourseRequestOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "requester_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requester Name"
+          },
+          "subject_name": {
+            "type": "string",
+            "title": "Subject Name"
+          },
+          "subject_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Code"
+          },
+          "professor_name": {
+            "type": "string",
+            "title": "Professor Name"
+          },
+          "semester": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Semester"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "has_material": {
+            "type": "boolean",
+            "title": "Has Material"
+          },
+          "material_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Material Title"
+          },
+          "material_page_count": {
+            "type": "integer",
+            "title": "Material Page Count"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "reject_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reject Reason"
+          },
+          "course_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Course Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "requester_name",
+          "subject_name",
+          "subject_code",
+          "professor_name",
+          "semester",
+          "note",
+          "has_material",
+          "material_title",
+          "material_page_count",
+          "status",
+          "reject_reason",
+          "course_id",
+          "created_at",
+          "reviewed_at"
+        ],
+        "title": "CourseRequestOut"
+      },
       "CourseUpdate": {
         "properties": {
           "info": {
@@ -1317,6 +1915,33 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "week": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Week"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version",
+            "default": 1
+          },
+          "replaced_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replaced By"
           }
         },
         "type": "object",
@@ -1399,6 +2024,21 @@
         ],
         "title": "ProblemOut",
         "description": "풀이 화면용. 정답은 넣지 않는다."
+      },
+      "RejectIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "RejectIn"
       },
       "SignupIn": {
         "properties": {
@@ -1519,6 +2159,127 @@
           "course_count"
         ],
         "title": "SubjectOut"
+      },
+      "UploadOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "course_id": {
+            "type": "integer",
+            "title": "Course Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "page_count": {
+            "type": "integer",
+            "title": "Page Count"
+          },
+          "uploader_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uploader Name"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "week": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Week"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version",
+            "default": 1
+          },
+          "replaced_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replaced By"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "new",
+              "updated",
+              "duplicate"
+            ],
+            "title": "Action"
+          },
+          "relinked_problems": {
+            "type": "integer",
+            "title": "Relinked Problems",
+            "default": 0
+          },
+          "pages_same": {
+            "type": "integer",
+            "title": "Pages Same",
+            "default": 0
+          },
+          "pages_modified": {
+            "type": "integer",
+            "title": "Pages Modified",
+            "default": 0
+          },
+          "pages_new": {
+            "type": "integer",
+            "title": "Pages New",
+            "default": 0
+          },
+          "replaced_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Replaced Ids",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "course_id",
+          "kind",
+          "title",
+          "filename",
+          "page_count",
+          "uploader_name",
+          "created_at",
+          "action"
+        ],
+        "title": "UploadOut"
       },
       "UserOut": {
         "properties": {
