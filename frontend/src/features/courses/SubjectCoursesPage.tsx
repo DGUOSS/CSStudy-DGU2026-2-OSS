@@ -1,13 +1,9 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
-import { type FormEvent, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
-import { api, unwrap } from '@/api/client'
+import { Link, useParams } from 'react-router'
 import { Empty, ErrorText, Loading } from '@/components/States'
 import { Badge } from '@/components/ui/badge'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { useAuth } from '@/features/auth/useAuth'
 import { useCourses, useSubjects } from './queries'
 
@@ -62,43 +58,11 @@ export function SubjectCoursesPage() {
           강좌 추가 요청
         </Link>
       </Card>
-      {user?.role === 'admin' && <AddCourse subjectId={subjectId} />}
+      {user?.role === 'admin' && (
+        <Link to="/admin/courses" className="text-sm text-primary hover:underline">
+          관리자: 과목·강좌·교안 직접 추가와 수정은 관리 화면에서
+        </Link>
+      )}
     </div>
-  )
-}
-
-/** 관리자만: 요청 없이 바로 강좌 추가 */
-function AddCourse({ subjectId }: { subjectId: number }) {
-  const qc = useQueryClient()
-  const navigate = useNavigate()
-  const [name, setName] = useState('')
-  const add = useMutation({
-    mutationFn: () =>
-      unwrap(api.POST('/api/v1/courses', { body: { subject_id: subjectId, professor_name: name } })),
-    onSuccess: (course) => {
-      qc.invalidateQueries({ queryKey: ['subjects'] })
-      navigate(`/courses/${course.id}`)
-    },
-  })
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    add.mutate()
-  }
-  return (
-    <form onSubmit={submit} className="flex flex-col gap-2">
-      <div className="flex gap-2">
-        <Input
-          placeholder="관리자: 교수님 이름을 입력해 바로 추가"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-        <Button type="submit" variant="outline" disabled={add.isPending}>
-          <Plus />
-          강좌 추가
-        </Button>
-      </div>
-      <ErrorText error={add.error} />
-    </form>
   )
 }

@@ -15,6 +15,7 @@
   - 승인하면 과목·교수·강좌를 만들고(있으면 그대로 쓰고), 교안이 있으면 아래 판 관리 규칙으로 자료에 붙인다. 관리자는 승인하면서 과목명·교수명 표기를 고칠 수 있다.
   - 이미 있는 강좌를 요청하면 거절(409)하고 그 강좌를 알려 준다. 같은 과목·교수의 대기 중 요청이 있으면 새로 만들지 않는다.
   - 과목·강좌를 바로 만드는 `POST /subjects`, `POST /courses`는 관리자 전용이다.
+- 관리자 화면(`/admin/courses`): 과목·강좌를 교안과 함께 바로 만들고, 기존 과목·강좌·교안(옛 판 포함)을 고치거나 지운다. `/admin/requests`: 추가 요청 승인·반려.
 - 자료는 개인이 아니라 강좌 공용이다.
 
 ## 규칙
@@ -68,6 +69,10 @@
 | GET | /course-requests/mine | 필요 | 내 요청과 처리 상태 |
 | GET | /admin/course-requests?status= | 관리자 | 요청 목록 |
 | POST | /admin/course-requests/{id}/approve, /reject | 관리자 | 승인(이름 수정 가능), 반려(사유 필수) |
+| POST | /admin/courses | 관리자 | 과목·교수·강좌 만들기(있으면 그대로) + 자료 PDF 여러 개 (판 관리 적용) |
+| PATCH·DELETE | /admin/subjects/{id} | 관리자 | 과목명·학수번호 수정, 삭제(강좌가 없을 때만) |
+| PATCH·DELETE | /admin/courses/{id} | 관리자 | 교수명 수정, 삭제(챕터·문제가 없을 때만, 자료도 함께 삭제) |
+| PATCH·DELETE | /admin/materials/{id} | 관리자 | 제목·종류 수정, 삭제(최신판을 지우면 이전 판이 다시 최신판, 문제 근거는 남은 자료에서 다시 찾음) |
 
 전체 명세는 서버 실행 후 http://localhost:8000/docs
 

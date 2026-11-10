@@ -371,10 +371,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/courses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Admin Create Course
+         * @description 과목·교수·강좌를 만들고(있으면 그대로 쓰고) 자료 PDF를 여러 개 붙인다. 파일 없이도 된다.
+         */
+        post: operations["admin_create_course_api_v1_admin_courses_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/subjects/{subject_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Admin Delete Subject */
+        delete: operations["admin_delete_subject_api_v1_admin_subjects__subject_id__delete"];
+        options?: never;
+        head?: never;
+        /** Admin Update Subject */
+        patch: operations["admin_update_subject_api_v1_admin_subjects__subject_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/admin/courses/{course_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Admin Delete Course */
+        delete: operations["admin_delete_course_api_v1_admin_courses__course_id__delete"];
+        options?: never;
+        head?: never;
+        /** Admin Update Course */
+        patch: operations["admin_update_course_api_v1_admin_courses__course_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/admin/materials/{material_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Admin Delete Material */
+        delete: operations["admin_delete_material_api_v1_admin_materials__material_id__delete"];
+        options?: never;
+        head?: never;
+        /** Admin Update Material */
+        patch: operations["admin_update_material_api_v1_admin_materials__material_id__patch"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AdminCourseCreated */
+        AdminCourseCreated: {
+            course: components["schemas"]["CourseOut"];
+            /** Created */
+            created: boolean;
+            /** Uploads */
+            uploads: components["schemas"]["UploadOut"][];
+        };
         /**
          * ApproveIn
          * @description 관리자가 승인하면서 이름을 고칠 수 있다(오타, 표기 통일).
@@ -405,6 +487,23 @@ export interface components {
             source: components["schemas"]["SourceOut"] | null;
             /** Mastery */
             mastery: components["schemas"]["MasteryChange"][];
+        };
+        /** Body_admin_create_course_api_v1_admin_courses_post */
+        Body_admin_create_course_api_v1_admin_courses_post: {
+            /** Subject Name */
+            subject_name: string;
+            /** Professor Name */
+            professor_name: string;
+            /** Subject Code */
+            subject_code?: string | null;
+            /**
+             * Kind
+             * @default lecture
+             * @enum {string}
+             */
+            kind?: "lecture" | "exam" | "note";
+            /** Files */
+            files?: string[] | null;
         };
         /** Body_create_request_api_v1_course_requests_post */
         Body_create_request_api_v1_course_requests_post: {
@@ -481,6 +580,11 @@ export interface components {
             id: number;
             /** Name */
             name: string;
+        };
+        /** CourseAdminUpdate */
+        CourseAdminUpdate: {
+            /** Professor Name */
+            professor_name: string;
         };
         /** CourseIn */
         CourseIn: {
@@ -629,6 +733,13 @@ export interface components {
             /** Text */
             text: string;
         };
+        /** MaterialUpdate */
+        MaterialUpdate: {
+            /** Title */
+            title?: string | null;
+            /** Kind */
+            kind?: ("lecture" | "exam" | "note") | null;
+        };
         /**
          * ProblemOut
          * @description 풀이 화면용. 정답은 넣지 않는다.
@@ -690,6 +801,13 @@ export interface components {
             code: string | null;
             /** Course Count */
             course_count: number;
+        };
+        /** SubjectUpdate */
+        SubjectUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Code */
+            code?: string | null;
         };
         /** UploadOut */
         UploadOut: {
@@ -1509,6 +1627,245 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CourseRequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_create_course_api_v1_admin_courses_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_admin_create_course_api_v1_admin_courses_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCourseCreated"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_delete_subject_api_v1_admin_subjects__subject_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subject_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_update_subject_api_v1_admin_subjects__subject_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subject_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubjectUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_delete_course_api_v1_admin_courses__course_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_update_course_api_v1_admin_courses__course_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CourseAdminUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourseOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_delete_material_api_v1_admin_materials__material_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                material_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_update_material_api_v1_admin_materials__material_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                material_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaterialUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaterialOut"];
                 };
             };
             /** @description Validation Error */

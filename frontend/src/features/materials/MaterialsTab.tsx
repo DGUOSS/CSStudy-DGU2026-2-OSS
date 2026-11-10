@@ -1,13 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { FileText, Upload } from 'lucide-react'
 import { type FormEvent, useRef, useState } from 'react'
-import { api, type Schemas, unwrap } from '@/api/client'
+import { api, unwrap } from '@/api/client'
 import { Empty, ErrorText, Loading } from '@/components/States'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { resultText } from './resultText'
 
 const KIND_LABEL: Record<string, string> = { lecture: '교안', exam: '기출·족보', note: '시험 정보' }
 type Kind = 'lecture' | 'exam' | 'note'
@@ -56,17 +57,7 @@ export function MaterialsTab({ courseId }: { courseId: number }) {
   )
 }
 
-/** 판 관리 결과 안내 (쪽 내용 비교로 중복·새 판을 판단한다) */
-function resultText(r: Schemas['UploadOut']): string {
-  if (r.action === 'duplicate') return '이미 같은 내용의 자료가 있어 새로 올리지 않았습니다.'
-  const pages = `같은 쪽 ${r.pages_same}, 수정된 쪽 ${r.pages_modified}, 새 쪽 ${r.pages_new}`
-  const moved = r.relinked_problems ? ` 문제 ${r.relinked_problems}개의 근거를 새 자료로 옮겼습니다.` : ''
-  if (r.action === 'updated')
-    return `기존 자료 ${(r.replaced_ids ?? []).length}개를 새 판으로 바꿨습니다 (${pages}).${moved}`
-  return `새 자료로 올렸습니다 (${pages}).${moved}`
-}
-
-function UploadForm({ courseId }: { courseId: number }) {
+export function UploadForm({ courseId }: { courseId: number }) {
   const qc = useQueryClient()
   const fileRef = useRef<HTMLInputElement>(null)
   const [title, setTitle] = useState('')

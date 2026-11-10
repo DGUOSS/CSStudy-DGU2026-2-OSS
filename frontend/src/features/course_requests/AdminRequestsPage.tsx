@@ -1,14 +1,13 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Check, X } from 'lucide-react'
 import { useState } from 'react'
-import { Navigate } from 'react-router'
 import { api, unwrap } from '@/api/client'
 import { Empty, ErrorText, Loading } from '@/components/States'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { useAuth } from '@/features/auth/useAuth'
+import { AdminNav } from '@/features/admin/AdminNav'
 import { type CourseRequest, STATUS_LABEL, useAdminRequests } from './queries'
 
 type Filter = 'pending' | 'approved' | 'rejected' | undefined
@@ -21,20 +20,19 @@ const FILTERS: { key: Filter; label: string }[] = [
 
 /** 관리자: 과목·강좌 추가 요청 승인/반려 */
 export function AdminRequestsPage() {
-  const { user } = useAuth()
   const [filter, setFilter] = useState<Filter>('pending')
   const requests = useAdminRequests(filter)
-  if (user && user.role !== 'admin') return <Navigate to="/" replace />
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold">추가 요청 관리</h1>
+        <h1 className="text-2xl font-bold">관리</h1>
         <p className="text-sm text-muted-foreground">
           승인하면 과목·강좌가 만들어지고, 함께 온 교안이 자료로 붙습니다. 이름 표기는 승인 전에 고칠 수
           있습니다.
         </p>
       </div>
+      <AdminNav />
       <div className="flex gap-2">
         {FILTERS.map((f) => (
           <Button

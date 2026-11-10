@@ -15,6 +15,7 @@ from sqlmodel import select
 
 from app.core.db import SessionDep
 from app.core.security import AdminUser, CurrentUser
+from app.features.courses.router import ensure_course
 from app.features.materials.router import read_pdf
 from app.features.materials.versioning import add_material
 from app.models import Course, CourseRequest, Professor, Subject, User
@@ -171,23 +172,13 @@ def approve_request(
     body = body or ApproveIn()
     subject_name = (body.subject_name or r.subject_name).strip()
     professor_name = (body.professor_name or r.professor_name).strip()
-    subject = session.exec(select(Subject).where(Subject.name == subject_name)).first()
-    if subject is None:
-        subject = Subject(name=subject_name, code=body.subject_code or r.subject_code)
-        session.add(subject)
-        session.flush()
-    professor = session.exec(select(Professor).where(Professor.name == professor_name)).first()
-    if professor is None:
-        professor = Professor(name=professor_name)
-        session.add(professor)
-        session.flush()
-    course = session.exec(
-        select(Course).where(Course.subject_id == subject.id, Course.professor_id == professor.id)
-    ).first()
-    if course is None:
-        course = Course(subject_id=subject.id, professor_id=professor.id, created_by=r.requester_id)
-        session.add(course)
-        session.flush()
+    course, _ = ensure_course(
+        session,
+        subject_name=subject_name,
+        subject_code=body.subject_code or r.subject_code,
+        professor_name=professor_name,
+        created_by=r.requester_id,
+    )
     if r.material_pages:
         add_material(  # 결과(대체 여부 등)는 강좌 자료 목록에 반영된다
             session,

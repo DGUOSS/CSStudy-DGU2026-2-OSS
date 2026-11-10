@@ -79,6 +79,39 @@ def get_course_or_404(session: SessionDep, course_id: int) -> Course:
     return course
 
 
+def ensure_course(
+    session: SessionDep,
+    *,
+    subject_name: str,
+    subject_code: str | None,
+    professor_name: str,
+    created_by: int | None,
+) -> tuple[Course, bool]:
+    """과목·교수·강좌를 찾고 없으면 만든다. (강좌, 새로 만들었는지). commit은 하지 않는다."""
+    subject = session.exec(select(Subject).where(Subject.name == subject_name)).first()
+    if subject is None:
+        subject = Subject(name=subject_name, code=subject_code or None)
+        session.add(subject)
+        session.flush()
+    elif subject_code and not subject.code:
+        subject.code = subject_code
+        session.add(subject)
+    professor = session.exec(select(Professor).where(Professor.name == professor_name)).first()
+    if professor is None:
+        professor = Professor(name=professor_name)
+        session.add(professor)
+        session.flush()
+    course = session.exec(
+        select(Course).where(Course.subject_id == subject.id, Course.professor_id == professor.id)
+    ).first()
+    if course is not None:
+        return course, False
+    course = Course(subject_id=subject.id, professor_id=professor.id, created_by=created_by)
+    session.add(course)
+    session.flush()
+    return course, True
+
+
 @router.get("/subjects")
 def list_subjects(session: SessionDep) -> list[SubjectOut]:
     rows = session.exec(

@@ -92,8 +92,10 @@ def diff_pages(new_pages: list[str], olds: list[Material]) -> Diff:
     return d
 
 
-def relink_problems(session: Session, course_id: int, material: Material) -> int:
-    """근거 문장이 이 자료에 있는 문제는 근거를 이 자료의 그 쪽으로 옮긴다."""
+def relink_problems(
+    session: Session, course_id: int, material: Material, only: set[int] | None = None
+) -> int:
+    """근거 문장이 이 자료에 있는 문제는 근거를 이 자료의 그 쪽으로 옮긴다. only면 그 문제들만."""
     pages = [_norm(p) for p in material.pages]
     moved = 0
     probs = session.exec(
@@ -102,6 +104,8 @@ def relink_problems(session: Session, course_id: int, material: Material) -> int
         .where(Chapter.course_id == course_id, Problem.evidence.is_not(None))  # type: ignore[union-attr]
     ).all()
     for prob in probs:
+        if only is not None and prob.id not in only:
+            continue
         key = _norm(prob.evidence or "")
         page = next((i + 1 for i, p in enumerate(pages) if key and key in p), None)
         if page and (prob.source_material_id, prob.source_page) != (material.id, page):
