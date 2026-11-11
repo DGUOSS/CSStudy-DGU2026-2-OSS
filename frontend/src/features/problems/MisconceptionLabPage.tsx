@@ -11,7 +11,14 @@ type Probe = {
   question: string
   code: string
   choices: string[]
+  answerIndex: number
   explanation: string
+  practice: {
+    code: string
+    choices: string[]
+    answerIndex: number
+    explanation: string
+  }
 }
 
 const firstChoices = ['[007]', '[  7]', '[0007]']
@@ -21,21 +28,42 @@ const probes: Record<number, Probe> = {
     question: '숫자를 바꿔도 같은 규칙이 적용될까요?',
     code: 'printf("[%03d]", 42);',
     choices: ['[042]', '[ 42]'],
+    answerIndex: 0,
     explanation: '42는 두 자리이므로 폭 3의 남은 한 칸을 0으로 채웁니다.',
+    practice: {
+      code: 'printf("[%04d]", 8);',
+      choices: ['[0008]', '[   8]'],
+      answerIndex: 0,
+      explanation: '8은 한 자리이므로 부족한 세 칸을 0으로 채웁니다.',
+    },
   },
   1: {
     hypothesis: '빈칸을 0 대신 공백으로 채운다고 생각했을 가능성이 있습니다.',
     question: '출력 폭을 4로 바꾸면 어떻게 될까요?',
     code: 'printf("[%04d]", 23);',
-    choices: ['[0023]', '[  23]'],
+    choices: ['[  23]', '[0023]'],
+    answerIndex: 1,
     explanation: '%04d는 총 4칸을 확보하고 부족한 두 칸을 0으로 채웁니다.',
+    practice: {
+      code: 'printf("[%05d]", 12);',
+      choices: ['[   12]', '[00012]'],
+      answerIndex: 1,
+      explanation: '12는 두 자리이므로 부족한 세 칸을 0으로 채웁니다.',
+    },
   },
   2: {
     hypothesis: '출력 폭을 숫자 앞에 더하는 0의 개수로 생각했을 가능성이 있습니다.',
     question: '숫자가 이미 출력 폭보다 길다면 어떻게 될까요?',
     code: 'printf("[%03d]", 1234);',
-    choices: ['[1234]', '[0001234]'],
+    choices: ['[0001234]', '[1234]'],
+    answerIndex: 1,
     explanation: '폭 3은 최소 너비입니다. 이미 네 자리인 1234 앞에는 0을 추가하지 않습니다.',
+    practice: {
+      code: 'printf("[%02d]", 123);',
+      choices: ['[123]', '[00123]'],
+      answerIndex: 0,
+      explanation: '123은 이미 최소 출력 폭 2보다 길어 0을 더하지 않습니다.',
+    },
   },
 }
 
@@ -67,16 +95,18 @@ export function MisconceptionLabPage() {
   const [firstChoice, setFirstChoice] = useState<number | null>(null)
   const [confidence, setConfidence] = useState<Confidence | null>(null)
   const [probeChoice, setProbeChoice] = useState<number | null>(null)
+  const [practiceChoice, setPracticeChoice] = useState<number | null>(null)
 
   const reset = () => {
     setStep('first')
     setFirstChoice(null)
     setConfidence(null)
     setProbeChoice(null)
+    setPracticeChoice(null)
   }
 
   const probe = firstChoice === null ? null : probes[firstChoice]
-  const probeCorrect = probe !== null && probeChoice === 0
+  const probeCorrect = probe !== null && probeChoice === probe.answerIndex
   const result = firstChoice !== null && confidence !== null
     ? diagnosis(firstChoice, probeCorrect, confidence)
     : null
@@ -195,7 +225,7 @@ export function MisconceptionLabPage() {
               <AnswerSummary
                 title="확인 문제"
                 chosen={probe.choices[probeChoice]}
-                answer={probe.choices[0]}
+                answer={probe.choices[probe.answerIndex]}
                 correct={probeCorrect}
               />
             </div>
@@ -213,6 +243,27 @@ export function MisconceptionLabPage() {
               <p className="mt-2 text-xs text-muted-foreground">
                 이 시범은 교안 PDF 원본이나 페이지 번호와 연결되지 않았습니다.
               </p>
+            </div>
+            <div className="flex flex-col gap-3 rounded-md border p-4">
+              <p className="font-medium">이제 직접 적용해 보기</p>
+              <p className="text-muted-foreground">
+                설명을 확인했으니 새 숫자에 규칙을 적용해 보세요. 이 문제는 진단 결과에 반영되지 않습니다.
+              </p>
+              <pre className="rounded-md bg-muted p-3 font-mono">{probe.practice.code}</pre>
+              <ChoiceGroup
+                choices={probe.practice.choices}
+                selected={practiceChoice}
+                onSelect={setPracticeChoice}
+                label="복습 문제의 답"
+                disabled={practiceChoice !== null}
+              />
+              {practiceChoice !== null && (
+                <p aria-live="polite" className="rounded-md bg-muted p-3 leading-relaxed">
+                  <strong>{practiceChoice === probe.practice.answerIndex ? '맞았습니다.' : '다시 복습해 보세요.'}</strong>{' '}
+                  정답은 {probe.practice.choices[probe.practice.answerIndex]}입니다.{' '}
+                  {probe.practice.explanation}
+                </p>
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
               이 결과는 학습용 안내이며 점수·숙련도를 변경하지 않습니다.
@@ -232,11 +283,13 @@ function ChoiceGroup({
   selected,
   onSelect,
   label,
+  disabled = false,
 }: {
   choices: string[]
   selected: number | null
   onSelect: (index: number) => void
   label: string
+  disabled?: boolean
 }) {
   return (
     <div className="flex flex-col gap-2" role="radiogroup" aria-label={label}>
@@ -247,8 +300,9 @@ function ChoiceGroup({
           role="radio"
           aria-checked={selected === index}
           onClick={() => onSelect(index)}
+          disabled={disabled}
           className={cn(
-            'rounded-md border px-4 py-3 text-left font-mono transition-colors hover:bg-accent',
+            'rounded-md border px-4 py-3 text-left font-mono transition-colors hover:bg-accent disabled:cursor-default',
             selected === index && 'border-primary bg-primary/10',
           )}
         >
