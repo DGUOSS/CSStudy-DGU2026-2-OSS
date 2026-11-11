@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -36,9 +35,9 @@ export function MisconceptionLabPage() {
             기초프로그래밍의 실제 샘플 문제를 바탕으로 만든 체험입니다. 답변은 저장되지 않습니다.
           </p>
         </div>
-        <Link to="/" className="text-sm text-primary underline">
+        <a href="https://dgu-study.vercel.app/" className="text-sm text-primary underline">
           동국 스터디로 돌아가기
-        </Link>
+        </a>
       </div>
 
       <div className="flex gap-2 text-xs sm:text-sm" aria-label="진행 단계">
