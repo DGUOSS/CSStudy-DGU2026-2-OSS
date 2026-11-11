@@ -6,6 +6,6 @@ export function resultText(r: Schemas['UploadOut']): string {
   const pages = `같은 쪽 ${r.pages_same}, 수정된 쪽 ${r.pages_modified}, 새 쪽 ${r.pages_new}`
   const moved = r.relinked_problems ? ` 문제 ${r.relinked_problems}개의 근거를 새 자료로 옮겼습니다.` : ''
   if (r.action === 'updated')
-    return `기존 자료 ${(r.replaced_ids ?? []).length}개를 새 판으로 바꿨습니다 (${pages}).${moved}`
-  return `새 자료로 올렸습니다 (${pages}).${moved}`
+    return `'${r.title}': 기존 자료 ${(r.replaced_ids ?? []).length}개를 새 판으로 바꿨습니다 (${pages}).${moved}`
+  return `'${r.title}'(으)로 올렸습니다 (${pages}).${moved}`
 }

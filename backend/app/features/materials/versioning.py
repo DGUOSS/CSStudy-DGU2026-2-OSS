@@ -16,9 +16,9 @@ import re
 from dataclasses import dataclass, field
 from typing import Literal
 
-from sqlmodel import Session, select
+from sqlmodel import Session, func, select
 
-from app.models import Chapter, Material, Problem
+from app.models import Chapter, Course, Material, Problem, Subject
 
 SAME_PAGE = 0.9
 MODIFIED_PAGE = 0.5
@@ -26,6 +26,22 @@ COVER = 0.7
 MIN_PAGE_CHARS = 20  # 표지·빈 쪽처럼 글자가 거의 없는 쪽은 판단에서 뺀다
 
 Action = Literal["new", "updated", "duplicate"]
+
+KIND_LABEL = {"lecture": "교안", "exam": "족보", "note": "시험정보"}
+
+
+def material_title(subject_name: str, kind: str, seq: int) -> str:
+    """자료 제목 규칙: '과목명 종류 번호' (예: 기초프로그래밍 족보 2)."""
+    return f"{subject_name} {KIND_LABEL.get(kind, '자료')} {seq}"
+
+
+def next_seq(session: Session, course_id: int, kind: str) -> int:
+    """강좌·종류별 다음 번호. 옛 판까지 포함해 가장 큰 번호 + 1."""
+    top = session.exec(
+        select(func.max(Material.seq)).where(Material.course_id == course_id, Material.kind == kind)
+    ).one()
+    return (top or 0) + 1
+
 
 _WEEK = re.compile(r"(?:week|wk|w)[\s_\-]*0*(\d{1,2})|0*(\d{1,2})\s*주\s*차?", re.IGNORECASE)
 
@@ -139,11 +155,21 @@ def add_material(
         dup = max(latest, key=lambda m: _sim(_grams("".join(pages)), _grams("".join(m.pages))))
         return dup, "duplicate", 0, d
     replaced = [m for m in latest if m.id in d.replaced]
+    # 제목은 자동으로 붙는다. 새 판은 대체한 옛 판의 번호를 이어받는다.
+    # 넘겨받은 title(원래 파일명 등)은 주차를 읽는 데만 쓴다.
+    inherited = [m.seq for m in replaced if m.seq]
+    seq = min(inherited) if inherited else next_seq(session, course_id, kind)
+    subject_name = session.exec(
+        select(Subject.name)
+        .join(Course, Course.subject_id == Subject.id)
+        .where(Course.id == course_id)
+    ).one()
     material = Material(
         course_id=course_id,
         uploader_id=uploader_id,
         kind=kind,
-        title=title,
+        title=material_title(subject_name, kind, seq),
+        seq=seq,
         filename=filename,
         page_count=len(pages),
         pages=pages,

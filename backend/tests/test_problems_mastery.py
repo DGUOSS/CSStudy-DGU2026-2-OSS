@@ -1,8 +1,11 @@
 from app.features.mastery import bkt
 
 
-def test_problem_hides_answer_and_prefers_unseen_concepts(client, login, course_with_problems):
+def test_problem_hides_answer_and_prefers_unseen_concepts(
+    client, login, course_with_problems, enroll
+):
     login()
+    enroll(course_with_problems["course"].subject_id)
     ch = course_with_problems["chapter"].id
     problems = client.get(f"/api/v1/chapters/{ch}/problems?count=2").json()
     assert all("answer_index" not in p for p in problems)
@@ -11,8 +14,9 @@ def test_problem_hides_answer_and_prefers_unseen_concepts(client, login, course_
     assert names == {"A", "B"}
 
 
-def test_attempt_updates_mastery(client, login, course_with_problems):
+def test_attempt_updates_mastery(client, login, course_with_problems, enroll):
     login()
+    enroll(course_with_problems["course"].subject_id)
     p_a, _, p_ab = course_with_problems["problems"]
 
     r = client.post(f"/api/v1/problems/{p_a.id}/attempts", json={"chosen_index": 1}).json()
@@ -32,8 +36,9 @@ def test_attempt_updates_mastery(client, login, course_with_problems):
     assert by_name["B"]["attempts"] == 1
 
 
-def test_attempt_validation(client, login, course_with_problems):
+def test_attempt_validation(client, login, course_with_problems, enroll):
     login()
+    enroll(course_with_problems["course"].subject_id)
     pid = course_with_problems["problems"][0].id
     assert (
         client.post(f"/api/v1/problems/{pid}/attempts", json={"chosen_index": 9}).status_code == 422
@@ -41,7 +46,9 @@ def test_attempt_validation(client, login, course_with_problems):
     assert client.post("/api/v1/problems/999/attempts", json={"chosen_index": 0}).status_code == 404
 
 
-def test_chapters_list(client, course_with_problems):
+def test_chapters_list(client, login, course_with_problems, enroll):
+    login()
+    enroll(course_with_problems["course"].subject_id)
     cid = course_with_problems["course"].id
     [ch] = client.get(f"/api/v1/courses/{cid}/chapters").json()
     assert ch["concepts"] == ["A", "B"] and ch["problem_count"] == 3

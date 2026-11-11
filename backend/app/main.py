@@ -4,8 +4,10 @@ from app.features.admin.router import router as admin_router
 from app.features.auth.router import router as auth_router
 from app.features.course_requests.router import router as course_requests_router
 from app.features.courses.router import router as courses_router
+from app.features.exams.router import router as exams_router
 from app.features.mastery.router import router as mastery_router
 from app.features.materials.router import router as materials_router
+from app.features.my_subjects.router import router as my_subjects_router
 from app.features.problems.router import router as problems_router
 
 app = FastAPI(title="dgu-study", version="0.2.0")
@@ -26,5 +28,7 @@ api.include_router(problems_router)
 api.include_router(mastery_router)
 api.include_router(course_requests_router)
 api.include_router(admin_router)
+api.include_router(my_subjects_router)
+api.include_router(exams_router)
 
 app.include_router(api)

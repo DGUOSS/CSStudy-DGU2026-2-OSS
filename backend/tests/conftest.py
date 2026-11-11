@@ -43,6 +43,18 @@ def login(client):
 
 
 @pytest.fixture
+def enroll(client):
+    """로그인한 사용자의 내 과목에 과목을 넣는다(그 과목의 강좌에 들어갈 수 있게)."""
+
+    def _enroll(subject_id: int, status: str = "current"):
+        r = client.put(f"/api/v1/me/subjects/{subject_id}", json={"status": status})
+        assert r.status_code == 200, r.text
+        return r.json()
+
+    return _enroll
+
+
+@pytest.fixture
 def course_with_problems(session):
     """챕터 1개, 개념 2개(A, B), 문제 3개(A / B / A+B)."""
     subject = Subject(name="기초프로그래밍")

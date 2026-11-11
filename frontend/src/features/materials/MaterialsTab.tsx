@@ -60,7 +60,6 @@ export function MaterialsTab({ courseId }: { courseId: number }) {
 export function UploadForm({ courseId }: { courseId: number }) {
   const qc = useQueryClient()
   const fileRef = useRef<HTMLInputElement>(null)
-  const [title, setTitle] = useState('')
   const [kind, setKind] = useState<Kind>('lecture')
 
   const upload = useMutation({
@@ -68,7 +67,6 @@ export function UploadForm({ courseId }: { courseId: number }) {
       const form = new FormData()
       form.append('file', file)
       form.append('kind', kind)
-      form.append('title', title)
       return unwrap(
         api.POST('/api/v1/courses/{course_id}/materials', {
           params: { path: { course_id: courseId } },
@@ -79,7 +77,6 @@ export function UploadForm({ courseId }: { courseId: number }) {
       )
     },
     onSuccess: () => {
-      setTitle('')
       if (fileRef.current) fileRef.current.value = ''
       qc.invalidateQueries({ queryKey: ['courses', courseId] })
       qc.invalidateQueries({ queryKey: ['subjects'] })
@@ -99,16 +96,9 @@ export function UploadForm({ courseId }: { courseId: number }) {
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="title">제목</Label>
-            <Input
-              id="title"
-              placeholder="예: 10주차 포인터"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
+          <p className="text-sm text-muted-foreground">
+            이름은 자동으로 붙습니다(예: 과목명 족보 2). 새 판을 올리면 옛 판의 이름을 이어받습니다.
+          </p>
           <div className="grid gap-2">
             <Label>종류</Label>
             <div className="flex gap-2">

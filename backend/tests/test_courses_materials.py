@@ -28,7 +28,7 @@ def test_subject_course_flow(client, login, session):
     assert client.get("/api/v1/courses/999").status_code == 404
 
 
-def test_upload_pdf(client, login, course_with_problems):
+def test_upload_pdf(client, login, course_with_problems, enroll):
     cid = course_with_problems["course"].id
     files = {
         "file": (
@@ -43,6 +43,7 @@ def test_upload_pdf(client, login, course_with_problems):
     )
 
     login()
+    enroll(course_with_problems["course"].subject_id)
     r = client.post(f"/api/v1/courses/{cid}/materials", files=files, data=data)
     assert r.status_code == 201, r.text
     m = r.json()
@@ -54,8 +55,9 @@ def test_upload_pdf(client, login, course_with_problems):
     assert len(client.get(f"/api/v1/courses/{cid}/materials").json()) == 1
 
 
-def test_upload_rejects_non_pdf(client, login, course_with_problems):
+def test_upload_rejects_non_pdf(client, login, course_with_problems, enroll):
     login()
+    enroll(course_with_problems["course"].subject_id)
     cid = course_with_problems["course"].id
     r = client.post(
         f"/api/v1/courses/{cid}/materials",

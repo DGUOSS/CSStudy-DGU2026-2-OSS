@@ -6,6 +6,7 @@ from sqlmodel import func, select
 
 from app.core.db import SessionDep
 from app.core.security import AdminUser, CurrentUser
+from app.features.my_subjects.router import require_course_access, require_subject_access
 from app.models import Chapter, Course, Material, Problem, Professor, Subject
 
 router = APIRouter(tags=["courses"])
@@ -137,9 +138,10 @@ def create_subject(body: SubjectIn, session: SessionDep, _: AdminUser) -> Subjec
 
 
 @router.get("/subjects/{subject_id}/courses")
-def list_courses(subject_id: int, session: SessionDep) -> list[CourseOut]:
+def list_courses(subject_id: int, session: SessionDep, user: CurrentUser) -> list[CourseOut]:
     if session.get(Subject, subject_id) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "과목이 없습니다")
+    require_subject_access(session, user, subject_id)
     courses = session.exec(select(Course).where(Course.subject_id == subject_id)).all()
     out = [_course_out(session, c) for c in courses]
     return sorted(out, key=lambda c: c.professor_name)
@@ -177,15 +179,18 @@ def create_course(body: CourseIn, session: SessionDep, user: AdminUser) -> Cours
 
 
 @router.get("/courses/{course_id}")
-def get_course(course_id: int, session: SessionDep) -> CourseOut:
-    return _course_out(session, get_course_or_404(session, course_id))
+def get_course(course_id: int, session: SessionDep, user: CurrentUser) -> CourseOut:
+    course = get_course_or_404(session, course_id)
+    require_course_access(session, user, course)
+    return _course_out(session, course)
 
 
 @router.patch("/courses/{course_id}")
 def update_course(
-    course_id: int, body: CourseUpdate, session: SessionDep, _: CurrentUser
+    course_id: int, body: CourseUpdate, session: SessionDep, user: CurrentUser
 ) -> CourseOut:
     course = get_course_or_404(session, course_id)
+    require_course_access(session, user, course)
     if body.info is not None:
         course.info = body.info
     if body.exam_info is not None:

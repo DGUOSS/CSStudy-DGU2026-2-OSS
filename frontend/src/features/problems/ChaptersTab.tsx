@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
+import { ExamPicker } from '@/features/exams/ExamPicker'
 import { pct, useMastery } from '@/features/mastery/queries'
 
 export function ChaptersTab({ courseId }: { courseId: number }) {
@@ -28,6 +29,7 @@ export function ChaptersTab({ courseId }: { courseId: number }) {
 
   return (
     <div className="flex flex-col gap-3">
+      <ExamPicker courseId={courseId} />
       <p className="text-sm text-muted-foreground">
         챕터를 골라 원하는 만큼 푸세요. 아직 안 나온 개념의 문제가 먼저 나옵니다.
       </p>
