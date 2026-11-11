@@ -1,5 +1,7 @@
 """챕터 목록, 문제 출제, 채점."""
 
+import re
+
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlmodel import func, select
@@ -9,7 +11,15 @@ from app.core.security import CurrentUser
 from app.features.courses.router import get_course_or_404
 from app.features.mastery.service import concept_states
 from app.features.my_subjects.router import require_course_access
-from app.models import Attempt, Chapter, Concept, Material, Problem, ProblemConcept
+from app.models import (
+    Attempt,
+    Chapter,
+    Concept,
+    Material,
+    MisconceptionProbe,
+    Problem,
+    ProblemConcept,
+)
 
 router = APIRouter(tags=["problems"])
 
@@ -56,12 +66,57 @@ class MasteryChange(BaseModel):
 
 
 class AttemptResult(BaseModel):
+    attempt_id: int
     correct: bool
     answer_index: int
     explanation: str
     evidence: str | None
     source: SourceOut | None
     mastery: list[MasteryChange]
+    misconception_probe: "MisconceptionProbeOut | None"
+
+
+class MisconceptionProbeOut(BaseModel):
+    question: str
+    choices: list[str]
+
+
+class MisconceptionProbeAnswerResult(BaseModel):
+    correct: bool
+    answer_index: int
+    hypothesis: str
+    explanation: str
+    evidence: str
+    source: SourceOut
+    title: str
+    detail: str
+
+
+def _approved_probe(
+    session: SessionDep, problem: Problem, wrong_choice_index: int, course_id: int
+) -> MisconceptionProbe | None:
+    probe = session.exec(
+        select(MisconceptionProbe).where(
+            MisconceptionProbe.problem_id == problem.id,
+            MisconceptionProbe.wrong_choice_index == wrong_choice_index,
+            MisconceptionProbe.status == "approved",
+        )
+    ).first()
+    if not probe or not probe.source_material_id or not probe.source_page:
+        return None
+    material = session.get(Material, probe.source_material_id)
+    if (
+        not material
+        or material.course_id != course_id
+        or material.kind != "lecture"
+        or material.status != "approved"
+        or material.replaced_by is not None
+        or not 1 <= probe.source_page <= len(material.pages)
+    ):
+        return None
+    evidence = re.sub(r"\s+", "", probe.evidence or "")
+    page = re.sub(r"\s+", "", material.pages[probe.source_page - 1])
+    return probe if evidence and evidence in page else None
 
 
 def _concepts_of(session: SessionDep, problem_ids: list[int]) -> dict[int, list[Concept]]:
@@ -193,11 +248,10 @@ def submit_attempt(
     before = concept_states(session, user.id, ids)
 
     correct = body.chosen_index == problem.answer_index
-    session.add(
-        Attempt(
-            user_id=user.id, problem_id=problem.id, chosen_index=body.chosen_index, correct=correct
-        )
+    attempt = Attempt(
+        user_id=user.id, problem_id=problem.id, chosen_index=body.chosen_index, correct=correct
     )
+    session.add(attempt)
     session.commit()
     after = concept_states(session, user.id, ids)
 
@@ -210,6 +264,7 @@ def submit_attempt(
             )
 
     return AttemptResult(
+        attempt_id=attempt.id,
         correct=correct,
         answer_index=problem.answer_index,
         explanation=problem.explanation,
@@ -221,4 +276,47 @@ def submit_attempt(
             )
             for c in concepts
         ],
+        misconception_probe=(
+            MisconceptionProbeOut(question=probe.question, choices=probe.choices)
+            if not correct
+            and (probe := _approved_probe(session, problem, body.chosen_index, chapter.course_id))
+            else None
+        ),
+    )
+
+
+@router.post("/attempts/{attempt_id}/misconception-probe")
+def submit_misconception_probe(
+    attempt_id: int, body: AttemptIn, session: SessionDep, user: CurrentUser
+) -> MisconceptionProbeAnswerResult:
+    attempt = session.get(Attempt, attempt_id)
+    if not attempt or attempt.user_id != user.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "풀이 기록이 없습니다")
+    problem = session.get(Problem, attempt.problem_id)
+    chapter = session.get(Chapter, problem.chapter_id) if problem else None
+    if not chapter:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "문제가 없습니다")
+    require_course_access(session, user, get_course_or_404(session, chapter.course_id))
+    probe = _approved_probe(session, problem, attempt.chosen_index, chapter.course_id)
+    if attempt.correct or not probe:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "승인된 확인 문제가 없습니다")
+    if not 0 <= body.chosen_index < len(probe.choices):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "보기 번호가 잘못됐습니다")
+    material = session.get(Material, probe.source_material_id)
+    correct = body.chosen_index == probe.answer_index
+    return MisconceptionProbeAnswerResult(
+        correct=correct,
+        answer_index=probe.answer_index,
+        hypothesis=probe.hypothesis,
+        explanation=probe.explanation,
+        evidence=probe.evidence,
+        source=SourceOut(material_id=material.id, title=material.title, page=probe.source_page),
+        title=(
+            "다른 상황에서는 규칙을 적용했습니다" if correct else "이 규칙을 다시 확인해 보세요"
+        ),
+        detail=(
+            "처음 문제는 틀렸지만 확인 문제는 맞았습니다. 첫 오답만으로 오개념을 확정할 수 없습니다."
+            if correct
+            else "두 상황에서 같은 규칙을 적용하지 못했습니다. 오개념 가능성이 있으니 교안 근거를 복습하고 다른 문제에서도 확인해 보세요."
+        ),
     )

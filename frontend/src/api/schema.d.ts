@@ -271,6 +271,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/attempts/{attempt_id}/misconception-probe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Misconception Probe */
+        post: operations["submit_misconception_probe_api_v1_attempts__attempt_id__misconception_probe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/courses/{course_id}/mastery": {
         parameters: {
             query?: never;
@@ -645,6 +662,8 @@ export interface components {
         };
         /** AttemptResult */
         AttemptResult: {
+            /** Attempt Id */
+            attempt_id: number;
             /** Correct */
             correct: boolean;
             /** Answer Index */
@@ -656,6 +675,7 @@ export interface components {
             source: components["schemas"]["SourceOut"] | null;
             /** Mastery */
             mastery: components["schemas"]["MasteryChange"][];
+            misconception_probe: components["schemas"]["MisconceptionProbeOut"] | null;
         };
         /** Body_admin_create_course_api_v1_admin_courses_post */
         Body_admin_create_course_api_v1_admin_courses_post: {
@@ -936,6 +956,31 @@ export interface components {
             title?: string | null;
             /** Kind */
             kind?: ("lecture" | "exam" | "note") | null;
+        };
+        /** MisconceptionProbeAnswerResult */
+        MisconceptionProbeAnswerResult: {
+            /** Correct */
+            correct: boolean;
+            /** Answer Index */
+            answer_index: number;
+            /** Hypothesis */
+            hypothesis: string;
+            /** Explanation */
+            explanation: string;
+            /** Evidence */
+            evidence: string;
+            source: components["schemas"]["SourceOut"];
+            /** Title */
+            title: string;
+            /** Detail */
+            detail: string;
+        };
+        /** MisconceptionProbeOut */
+        MisconceptionProbeOut: {
+            /** Question */
+            question: string;
+            /** Choices */
+            choices: string[];
         };
         /** MySubjectIn */
         MySubjectIn: {
@@ -1759,6 +1804,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AttemptResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_misconception_probe_api_v1_attempts__attempt_id__misconception_probe_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attempt_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttemptIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MisconceptionProbeAnswerResult"];
                 };
             };
             /** @description Validation Error */

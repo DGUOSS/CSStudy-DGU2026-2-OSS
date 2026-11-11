@@ -918,6 +918,74 @@
         }
       }
     },
+    "/api/v1/attempts/{attempt_id}/misconception-probe": {
+      "post": {
+        "tags": [
+          "problems"
+        ],
+        "summary": "Submit Misconception Probe",
+        "operationId": "submit_misconception_probe_api_v1_attempts__attempt_id__misconception_probe_post",
+        "parameters": [
+          {
+            "name": "attempt_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Attempt Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttemptIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MisconceptionProbeAnswerResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/courses/{course_id}/mastery": {
       "get": {
         "tags": [
@@ -2421,6 +2489,10 @@
       },
       "AttemptResult": {
         "properties": {
+          "attempt_id": {
+            "type": "integer",
+            "title": "Attempt Id"
+          },
           "correct": {
             "type": "boolean",
             "title": "Correct"
@@ -2460,16 +2532,28 @@
             },
             "type": "array",
             "title": "Mastery"
+          },
+          "misconception_probe": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MisconceptionProbeOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
         "required": [
+          "attempt_id",
           "correct",
           "answer_index",
           "explanation",
           "evidence",
           "source",
-          "mastery"
+          "mastery",
+          "misconception_probe"
         ],
         "title": "AttemptResult"
       },
@@ -3285,6 +3369,74 @@
         },
         "type": "object",
         "title": "MaterialUpdate"
+      },
+      "MisconceptionProbeAnswerResult": {
+        "properties": {
+          "correct": {
+            "type": "boolean",
+            "title": "Correct"
+          },
+          "answer_index": {
+            "type": "integer",
+            "title": "Answer Index"
+          },
+          "hypothesis": {
+            "type": "string",
+            "title": "Hypothesis"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "evidence": {
+            "type": "string",
+            "title": "Evidence"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceOut"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "correct",
+          "answer_index",
+          "hypothesis",
+          "explanation",
+          "evidence",
+          "source",
+          "title",
+          "detail"
+        ],
+        "title": "MisconceptionProbeAnswerResult"
+      },
+      "MisconceptionProbeOut": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "choices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Choices"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question",
+          "choices"
+        ],
+        "title": "MisconceptionProbeOut"
       },
       "MySubjectIn": {
         "properties": {

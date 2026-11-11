@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronLeft, RotateCcw, X } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
-import { api, type Schemas, unwrap } from '@/api/client'
+import { api, ApiError, type Schemas, unwrap } from '@/api/client'
 import { Empty, ErrorText, Loading } from '@/components/States'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 
 const COUNT = 5
 type Result = Schemas['AttemptResult']
+type ProbeResult = Schemas['MisconceptionProbeAnswerResult']
 
 export function QuizPage() {
   const courseId = Number(useParams().courseId)
@@ -118,6 +119,7 @@ function ProblemCard({
   isLast: boolean
 }) {
   const [chosen, setChosen] = useState<number | null>(null)
+  const [probeChosen, setProbeChosen] = useState<number | null>(null)
   const submit = useMutation({
     mutationFn: (chosen_index: number) =>
       unwrap(
@@ -129,6 +131,19 @@ function ProblemCard({
     onSuccess: onAnswered,
   })
   const result = submit.data
+  const probeSubmit = useMutation({
+    mutationFn: (chosen_index: number) =>
+      unwrap(
+        api.POST('/api/v1/attempts/{attempt_id}/misconception-probe', {
+          params: { path: { attempt_id: result!.attempt_id } },
+          body: { chosen_index },
+        }),
+      ),
+  })
+  const probeResult = probeSubmit.data
+  const probeUnavailable = probeSubmit.error instanceof ApiError && probeSubmit.error.status === 404
+  const waitingForProbe = !!result?.misconception_probe && !probeResult && !probeUnavailable
+  const reveal = !!result && !waitingForProbe
 
   const choose = (i: number) => {
     if (result || submit.isPending) return
@@ -153,8 +168,8 @@ function ProblemCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
         {problem.choices.map((choice, i) => {
-          const isAnswer = result && i === result.answer_index
-          const isWrongPick = result && i === chosen && !result.correct
+          const isAnswer = reveal && i === result?.answer_index
+          const isWrongPick = reveal && i === chosen && !result?.correct
           return (
             <button
               key={choice}
@@ -177,14 +192,72 @@ function ProblemCard({
           )
         })}
         <ErrorText error={submit.error} />
-        {result && <Explanation result={result} />}
-        {result && (
+        {result?.misconception_probe && !probeUnavailable && (
+          <div className="mt-3 flex flex-col gap-3 rounded-lg border border-primary/40 p-4 text-sm">
+            <p className="font-semibold">한 가지를 더 확인해 볼게요</p>
+            <p className="text-muted-foreground">처음 답의 정답과 해설은 확인 문제를 푼 뒤에 보여드립니다. 이 답은 숙련도 점수에 반영되지 않습니다.</p>
+            <p className="whitespace-pre-wrap font-medium">{result.misconception_probe.question}</p>
+            <div className="flex flex-col gap-2">
+              {result.misconception_probe.choices.map((choice, i) => (
+                <button
+                  key={`${i}-${choice}`}
+                  type="button"
+                  disabled={!!probeResult || probeSubmit.isPending}
+                  onClick={() => { setProbeChosen(i); probeSubmit.mutate(i) }}
+                  className={cn(
+                    'flex cursor-pointer gap-3 rounded-lg border px-4 py-3 text-left disabled:cursor-default',
+                    probeChosen === i && !probeResult && 'border-primary bg-primary/10',
+                    probeResult && i === probeResult.answer_index && 'border-success bg-success/10',
+                    probeResult && i === probeChosen && !probeResult.correct && 'border-destructive bg-destructive/10',
+                  )}
+                >
+                  <span className="font-semibold text-muted-foreground">{i + 1}</span>
+                  <span className="whitespace-pre-wrap">{choice}</span>
+                </button>
+              ))}
+            </div>
+            <ErrorText error={probeSubmit.error} />
+            {probeResult && <ProbeExplanation result={probeResult} />}
+          </div>
+        )}
+        {probeUnavailable && <p className="mt-2 text-sm text-muted-foreground">확인 문제가 검토 중으로 변경되어 원래 문제의 해설을 보여드립니다.</p>}
+        {reveal && <Explanation result={result} />}
+        {reveal && (
           <Button className="mt-2 self-end" onClick={onNext}>
             {isLast ? '결과 보기' : '다음 문제'}
           </Button>
         )}
       </CardContent>
     </Card>
+  )
+}
+
+function ProbeExplanation({ result }: { result: ProbeResult }) {
+  const [showPage, setShowPage] = useState(false)
+  const page = useQuery({
+    queryKey: ['material-page', result.source.material_id, result.source.page],
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/v1/materials/{material_id}/pages/{page}', {
+          params: { path: { material_id: result.source.material_id, page: result.source.page! } },
+        }),
+      ),
+    enabled: showPage && !!result.source.page,
+  })
+  return (
+    <div className="grid gap-3 rounded-md bg-muted p-4">
+      <p className="font-semibold">{result.title}</p>
+      <p>{result.detail}</p>
+      <p><span className="font-medium">추정한 생각:</span> {result.hypothesis}</p>
+      <p><span className="font-medium">확인 문제 해설:</span> {result.explanation}</p>
+      <blockquote className="border-l-2 border-primary pl-3 text-muted-foreground">
+        {result.evidence}
+        <div className="mt-1 text-xs">— {result.source.title} {result.source.page}쪽{' '}
+          {result.source.page && <button type="button" className="cursor-pointer text-primary underline" onClick={() => setShowPage((value) => !value)}>{showPage ? '접기' : '교안 보기'}</button>}
+        </div>
+      </blockquote>
+      {showPage && <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-md border bg-card p-3 text-xs">{page.data?.text ?? '불러오는 중…'}</pre>}
+    </div>
   )
 }
 
