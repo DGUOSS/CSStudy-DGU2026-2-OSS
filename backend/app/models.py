@@ -4,6 +4,7 @@
       강좌 ─< 자료(Material)
       강좌 ─< 챕터(Chapter) ─< 개념(Concept)
       챕터 ─< 문제(Problem) >─< 개념   (ProblemConcept)
+      문제 ─< 오개념 확인 문제(MisconceptionProbe)
       사용자(User) ─< 풀이 기록(Attempt) >─ 문제
       사용자 ─< 강좌 추가 요청(CourseRequest) ─ (승인 후) 강좌
       사용자 ─< 내 과목(UserSubject) >─ 과목     (등록한 과목의 강좌에만 들어갈 수 있다)
@@ -147,6 +148,28 @@ class ProblemConcept(SQLModel, table=True):
     __tablename__ = "problem_concepts"
     problem_id: int = Field(foreign_key="problems.id", primary_key=True)
     concept_id: int = Field(foreign_key="concepts.id", primary_key=True)
+
+
+class MisconceptionProbe(SQLModel, table=True):
+    """문제의 특정 오답에 연결된 오개념 가설과 확인 문제. 승인 전에는 학생에게 보이지 않는다."""
+
+    __tablename__ = "misconception_probes"
+    __table_args__ = (UniqueConstraint("problem_id", "wrong_choice_index"),)
+    id: int | None = Field(default=None, primary_key=True)
+    problem_id: int = Field(foreign_key="problems.id", index=True)
+    wrong_choice_index: int
+    hypothesis: str = Field(sa_column=Column(Text, nullable=False))
+    question: str = Field(sa_column=Column(Text, nullable=False))
+    choices: list[str] = Field(sa_column=Column(JSON, nullable=False))
+    answer_index: int
+    explanation: str = Field(sa_column=Column(Text, nullable=False))
+    evidence: str | None = Field(default=None, sa_column=Column(Text))
+    source_material_id: int | None = Field(default=None, foreign_key="materials.id")
+    source_page: int | None = None
+    status: str = Field(default="draft", max_length=20)  # draft | approved
+    reviewed_by: int | None = Field(default=None, foreign_key="users.id")
+    reviewed_at: datetime | None = None
+    created_at: datetime = Field(default_factory=_now)
 
 
 class Attempt(SQLModel, table=True):

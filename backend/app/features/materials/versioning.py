@@ -18,7 +18,7 @@ from typing import Literal
 
 from sqlmodel import Session, func, select
 
-from app.models import Chapter, Course, Material, Problem, Subject
+from app.models import Chapter, Course, Material, MisconceptionProbe, Problem, Subject
 
 SAME_PAGE = 0.9
 MODIFIED_PAGE = 0.5
@@ -128,6 +128,20 @@ def relink_problems(
             prob.source_material_id, prob.source_page = material.id, page
             session.add(prob)
             moved += 1
+    probes = session.exec(
+        select(MisconceptionProbe)
+        .join(Problem, Problem.id == MisconceptionProbe.problem_id)
+        .join(Chapter, Chapter.id == Problem.chapter_id)
+        .where(Chapter.course_id == course_id, MisconceptionProbe.evidence.is_not(None))  # type: ignore[union-attr]
+    ).all()
+    for probe in probes:
+        if only is not None and probe.problem_id not in only:
+            continue
+        key = _norm(probe.evidence or "")
+        page = next((i + 1 for i, p in enumerate(pages) if key and key in p), None)
+        if page and (probe.source_material_id, probe.source_page) != (material.id, page):
+            probe.source_material_id, probe.source_page = material.id, page
+            session.add(probe)
     return moved
 
 

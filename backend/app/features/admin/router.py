@@ -29,6 +29,7 @@ from app.models import (
     ExamSelection,
     Material,
     MaterialVote,
+    MisconceptionProbe,
     Problem,
     ProblemConcept,
     Professor,
@@ -214,6 +215,12 @@ def _purge_course(session, course: Course) -> None:
     p_ids = [p.id for p in problems]
     if p_ids:
         _delete_all(
+            session,
+            session.exec(
+                select(MisconceptionProbe).where(MisconceptionProbe.problem_id.in_(p_ids))
+            ).all(),  # type: ignore[attr-defined]
+        )
+        _delete_all(
             session, session.exec(select(Attempt).where(Attempt.problem_id.in_(p_ids))).all()
         )  # type: ignore[attr-defined]
         _delete_all(
@@ -276,6 +283,12 @@ def admin_delete_material(material_id: int, session: SessionDep, _: AdminUser) -
     for p in probs:
         p.source_material_id, p.source_page = None, None
         session.add(p)
+    probes = session.exec(
+        select(MisconceptionProbe).where(MisconceptionProbe.source_material_id == m.id)
+    ).all()
+    for probe in probes:
+        probe.source_material_id, probe.source_page = None, None
+        session.add(probe)
     session.flush()
     latest = session.exec(
         select(Material).where(
@@ -284,7 +297,7 @@ def admin_delete_material(material_id: int, session: SessionDep, _: AdminUser) -
             Material.replaced_by.is_(None),  # type: ignore[union-attr]
         )
     ).all()
-    orphan = {p.id for p in probs}
+    orphan = {p.id for p in probs} | {probe.problem_id for probe in probes}
     for other in latest:
         relink_problems(session, m.course_id, other, only=orphan)
     # 챕터가 이 자료를 가리키면 되살아난 이전 판으로(없으면 연결만 끊는다)

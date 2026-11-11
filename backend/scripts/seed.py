@@ -25,6 +25,7 @@ from app.models import (  # noqa: E402
     Concept,
     Course,
     Material,
+    MisconceptionProbe,
     Problem,
     ProblemConcept,
     Professor,
@@ -71,6 +72,24 @@ def check(seed: dict, pdfs: dict[str, list[str]]) -> list[str]:
                 errors.append(f"{label}: 보기가 중복됨")
             if unknown := set(p["concepts"]) - names:
                 errors.append(f"{label}: 챕터에 없는 개념 {unknown}")
+            seen_wrong_choices: set[int] = set()
+            for probe in p.get("misconception_probes", []):
+                wrong = probe["wrong_choice_index"]
+                if wrong in seen_wrong_choices or not 0 <= wrong < len(p["choices"]):
+                    errors.append(f"{label}: 확인 문제의 오답 보기 번호가 중복되거나 범위를 벗어남")
+                if wrong == p["answer"]:
+                    errors.append(f"{label}: 정답 보기에는 오개념 확인 문제를 붙일 수 없음")
+                seen_wrong_choices.add(wrong)
+                if len(probe["choices"]) < 2 or len(set(probe["choices"])) != len(
+                    probe["choices"]
+                ):
+                    errors.append(f"{label}: 확인 문제의 보기는 서로 다른 값 2개 이상이어야 함")
+                if not 0 <= probe["answer"] < len(probe["choices"]):
+                    errors.append(f"{label}: 확인 문제의 정답 번호가 보기 범위를 벗어남")
+                if not all(
+                    probe[field].strip() for field in ("hypothesis", "question", "explanation")
+                ):
+                    errors.append(f"{label}: 오개념 가설·문제·해설을 모두 입력해야 함")
             pages = pdfs.get(ch["material"])
             if pages is not None and find_page(pages, p["evidence"]) is None:
                 errors.append(f"{label}: 근거 문장을 {ch['material']}에서 못 찾음")
@@ -140,23 +159,49 @@ def seed_one(session: Session, seed: dict, pdfs: dict[str, list[str]]) -> dict[s
                 )
             ).first()
             if exists:
-                continue
-            problem = Problem(
-                chapter_id=chapter.id,
-                question=p["question"],
-                choices=p["choices"],
-                answer_index=p["answer"],
-                explanation=p["explanation"],
-                evidence=p["evidence"],
-                source_material_id=material.id if material else None,
-                source_page=find_page(material.pages, p["evidence"]) if material else None,
-                origin="sample",
-            )
-            session.add(problem)
-            session.flush()
-            for name in p["concepts"]:
-                session.add(ProblemConcept(problem_id=problem.id, concept_id=concepts[name].id))
-            added += 1
+                problem = exists
+                if problem.choices != p["choices"] or problem.answer_index != p["answer"]:
+                    raise ValueError(f"기존 문제의 보기 또는 정답이 시드와 다릅니다: {p['question']}")
+            else:
+                problem = Problem(
+                    chapter_id=chapter.id,
+                    question=p["question"],
+                    choices=p["choices"],
+                    answer_index=p["answer"],
+                    explanation=p["explanation"],
+                    evidence=p["evidence"],
+                    source_material_id=material.id if material else None,
+                    source_page=find_page(material.pages, p["evidence"]) if material else None,
+                    origin="sample",
+                )
+                session.add(problem)
+                session.flush()
+                for name in p["concepts"]:
+                    session.add(ProblemConcept(problem_id=problem.id, concept_id=concepts[name].id))
+                added += 1
+            for probe in p.get("misconception_probes", []):
+                wrong = probe["wrong_choice_index"]
+                existing_probe = session.exec(
+                    select(MisconceptionProbe).where(
+                        MisconceptionProbe.problem_id == problem.id,
+                        MisconceptionProbe.wrong_choice_index == wrong,
+                    )
+                ).first()
+                if existing_probe is None:
+                    session.add(
+                        MisconceptionProbe(
+                            problem_id=problem.id,
+                            wrong_choice_index=wrong,
+                            hypothesis=probe["hypothesis"],
+                            question=probe["question"],
+                            choices=probe["choices"],
+                            answer_index=probe["answer"],
+                            explanation=probe["explanation"],
+                            evidence=p["evidence"],
+                            source_material_id=problem.source_material_id,
+                            source_page=problem.source_page,
+                        )
+                    )
     return {"course_id": course.id, "materials": len(materials), "problems_added": added}
 
 
