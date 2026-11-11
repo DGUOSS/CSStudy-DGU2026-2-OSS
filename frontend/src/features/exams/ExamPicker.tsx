@@ -85,7 +85,7 @@ export function ExamPicker({ courseId }: { courseId: number }) {
       <CardContent className="flex flex-col gap-3">
         {exams.data.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            아직 올라온 족보가 없습니다. 자료 탭에서 종류를 기출·족보로 골라 올려 주세요.
+            아직 올라온 족보가 없습니다. 자료 탭의 '족보'에서 올려 주세요.
           </p>
         ) : (
           <ul className="flex flex-col divide-y rounded-lg border">

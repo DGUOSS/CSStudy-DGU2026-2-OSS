@@ -28,6 +28,8 @@ def test_only_my_subjects_are_accessible(client, login, course_with_problems, en
     assert client.get("/api/v1/subjects").status_code == 200
 
     mine = enroll(course.subject_id, "taken")
+    # 강좌·시험 정보는 관리자만 고친다
+    assert client.patch(f"/api/v1/courses/{course.id}", json={"info": "x"}).status_code == 403
     assert mine["status"] == "taken" and mine["source"] == "manual"
     assert client.get(f"/api/v1/courses/{course.id}").status_code == 200
     assert len(client.get("/api/v1/me/subjects").json()) == 1

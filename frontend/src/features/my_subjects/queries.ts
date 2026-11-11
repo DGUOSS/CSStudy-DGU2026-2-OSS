@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, api, unwrap } from '@/api/client'
 
 export type MyStatus = 'current' | 'taken'
-export const STATUS_LABEL: Record<string, string> = { current: '수강 중', taken: '수강함' }
 
 /** 내 과목(수강했거나 수강 중인 과목). 이 과목의 강좌에만 들어갈 수 있다. */
 export const useMySubjects = () =>

@@ -13,7 +13,7 @@ const TABS = [
   { key: 'solve', label: '문제 풀이' },
   { key: 'mastery', label: '숙련도' },
   { key: 'materials', label: '자료' },
-  { key: 'info', label: '강좌·시험 정보' },
+  { key: 'info', label: '강좌 정보' },
 ] as const
 
 type TabKey = (typeof TABS)[number]['key']

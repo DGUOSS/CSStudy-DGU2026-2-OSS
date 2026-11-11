@@ -1,12 +1,11 @@
 import { ChevronRight, Plus } from 'lucide-react'
 import { Link } from 'react-router'
 import { Empty, ErrorText, Loading } from '@/components/States'
-import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useAuth } from '@/features/auth/useAuth'
 import { MySubjectButtons } from '@/features/my_subjects/MySubjectButtons'
-import { STATUS_LABEL, useMySubjects } from '@/features/my_subjects/queries'
+import { useMySubjects } from '@/features/my_subjects/queries'
 import { useSubjects } from './queries'
 
 export function SubjectsPage() {
@@ -14,8 +13,8 @@ export function SubjectsPage() {
   const mine = useMySubjects()
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
-  const statusOf = new Map(mine.data?.map((m) => [m.subject_id, m.status]))
-  const my = subjects.data?.filter((s) => statusOf.has(s.id)) ?? []
+  const myIds = new Set(mine.data?.map((m) => m.subject_id))
+  const my = subjects.data?.filter((s) => myIds.has(s.id)) ?? []
 
   return (
     <div className="flex flex-col gap-6">
@@ -28,17 +27,14 @@ export function SubjectsPage() {
       {subjects.isPending || mine.isPending ? (
         <Loading />
       ) : my.length === 0 ? (
-        <Empty>아직 내 과목이 없습니다. 아래 전체 과목에서 수강 중·수강함을 눌러 추가하세요.</Empty>
+        <Empty>아직 내 과목이 없습니다. 아래 전체 과목에서 '내 과목에 추가'를 누르세요.</Empty>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {my.map((s) => (
             <Link key={s.id} to={`/subjects/${s.id}`}>
               <Card className="flex items-center justify-between p-5 transition-colors hover:bg-accent">
                 <div>
-                  <div className="flex items-center gap-2 font-semibold">
-                    {s.name}
-                    <Badge variant="secondary">{STATUS_LABEL[statusOf.get(s.id) ?? '']}</Badge>
-                  </div>
+                  <div className="font-semibold">{s.name}</div>
                   <div className="text-sm text-muted-foreground">
                     {s.code && `${s.code} · `}강좌 {s.course_count}개
                   </div>
@@ -63,7 +59,7 @@ export function SubjectsPage() {
                 className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0">
-                  {isAdmin || statusOf.has(s.id) ? (
+                  {isAdmin || myIds.has(s.id) ? (
                     <Link to={`/subjects/${s.id}`} className="font-medium hover:underline">
                       {s.name}
                     </Link>
@@ -74,7 +70,7 @@ export function SubjectsPage() {
                     {s.code && `${s.code} · `}강좌 {s.course_count}개
                   </div>
                 </div>
-                <MySubjectButtons subjectId={s.id} status={statusOf.get(s.id)} />
+                <MySubjectButtons subjectId={s.id} added={myIds.has(s.id)} />
               </li>
             ))}
           </ul>

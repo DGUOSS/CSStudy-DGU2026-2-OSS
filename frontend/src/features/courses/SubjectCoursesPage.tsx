@@ -30,7 +30,7 @@ export function SubjectCoursesPage() {
       ) : isForbidden(courses.error) ? (
         <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm text-muted-foreground">
-            내 과목에 넣은 과목만 들어갈 수 있습니다. 수강 중이거나 수강했다면 추가해 주세요.
+            내 과목에 넣은 과목만 들어갈 수 있습니다. 수강 중이거나 수강했던 과목이면 추가해 주세요.
           </div>
           <MySubjectButtons subjectId={subjectId} />
         </Card>

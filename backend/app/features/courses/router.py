@@ -187,10 +187,10 @@ def get_course(course_id: int, session: SessionDep, user: CurrentUser) -> Course
 
 @router.patch("/courses/{course_id}")
 def update_course(
-    course_id: int, body: CourseUpdate, session: SessionDep, user: CurrentUser
+    course_id: int, body: CourseUpdate, session: SessionDep, _: AdminUser
 ) -> CourseOut:
+    """강좌 정보·시험 정보는 강좌마다 하나인 공용 안내라서 관리자만 고친다."""
     course = get_course_or_404(session, course_id)
-    require_course_access(session, user, course)
     if body.info is not None:
         course.info = body.info
     if body.exam_info is not None:
