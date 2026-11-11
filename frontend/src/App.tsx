@@ -1,6 +1,7 @@
 import { createBrowserRouter, RouterProvider } from 'react-router'
 import { Layout } from '@/components/Layout'
 import { AdminCoursesPage } from '@/features/admin/AdminCoursesPage'
+import { AdminMisconceptionProbesPage } from '@/features/admin/AdminMisconceptionProbesPage'
 import { AuthPage } from '@/features/auth/AuthPage'
 import { AdminRequestsPage } from '@/features/course_requests/AdminRequestsPage'
 import { MyRequestsPage } from '@/features/course_requests/MyRequestsPage'
@@ -27,6 +28,7 @@ const router = createBrowserRouter([
       { path: '/requests/new', element: <RequestCoursePage /> },
       { path: '/admin/courses', element: <AdminCoursesPage /> },
       { path: '/admin/requests', element: <AdminRequestsPage /> },
+      { path: '/admin/misconception-probes', element: <AdminMisconceptionProbesPage /> },
     ],
   },
 ])

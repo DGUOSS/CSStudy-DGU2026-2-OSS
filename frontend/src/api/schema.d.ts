@@ -451,6 +451,74 @@ export interface paths {
         patch: operations["admin_update_material_api_v1_admin_materials__material_id__patch"];
         trace?: never;
     };
+    "/api/v1/admin/misconception-probes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Probes */
+        get: operations["list_probes_api_v1_admin_misconception_probes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/misconception-probes/{probe_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Probe */
+        put: operations["update_probe_api_v1_admin_misconception_probes__probe_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/misconception-probes/{probe_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve Probe */
+        post: operations["approve_probe_api_v1_admin_misconception_probes__probe_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/misconception-probes/{probe_id}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Return Probe To Draft */
+        post: operations["return_probe_to_draft_api_v1_admin_misconception_probes__probe_id__draft_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/subjects": {
         parameters: {
             query?: never;
@@ -900,6 +968,73 @@ export interface components {
              */
             created_at: string;
         };
+        /** ProbeReviewOut */
+        ProbeReviewOut: {
+            /** Id */
+            id: number;
+            /** Course Id */
+            course_id: number;
+            /** Course Name */
+            course_name: string;
+            /** Professor Name */
+            professor_name: string;
+            /** Problem Question */
+            problem_question: string;
+            /** Problem Choices */
+            problem_choices: string[];
+            /** Problem Answer Index */
+            problem_answer_index: number;
+            /** Wrong Choice Index */
+            wrong_choice_index: number;
+            /** Hypothesis */
+            hypothesis: string;
+            /** Question */
+            question: string;
+            /** Choices */
+            choices: string[];
+            /** Answer Index */
+            answer_index: number;
+            /** Explanation */
+            explanation: string;
+            /** Evidence */
+            evidence: string | null;
+            /** Source Material Id */
+            source_material_id: number | null;
+            /** Source Material Title */
+            source_material_title: string | null;
+            /** Source Page Text */
+            source_page_text: string | null;
+            /** Available Materials */
+            available_materials: components["schemas"]["ReviewMaterialOut"][];
+            /** Source Page */
+            source_page: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "approved";
+            /** Reviewed At */
+            reviewed_at: string | null;
+        };
+        /** ProbeReviewUpdate */
+        ProbeReviewUpdate: {
+            /** Hypothesis */
+            hypothesis: string;
+            /** Question */
+            question: string;
+            /** Choices */
+            choices: string[];
+            /** Answer Index */
+            answer_index: number;
+            /** Explanation */
+            explanation: string;
+            /** Evidence */
+            evidence: string;
+            /** Source Material Id */
+            source_material_id: number;
+            /** Source Page */
+            source_page: number;
+        };
         /**
          * ProblemOut
          * @description 풀이 화면용. 정답은 넣지 않는다.
@@ -922,6 +1057,15 @@ export interface components {
         RejectIn: {
             /** Reason */
             reason: string;
+        };
+        /** ReviewMaterialOut */
+        ReviewMaterialOut: {
+            /** Id */
+            id: number;
+            /** Title */
+            title: string;
+            /** Page Count */
+            page_count: number;
         };
         /** SelectionIn */
         SelectionIn: {
@@ -2060,6 +2204,140 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MaterialOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_probes_api_v1_admin_misconception_probes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProbeReviewOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_probe_api_v1_admin_misconception_probes__probe_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                probe_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProbeReviewUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProbeReviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_probe_api_v1_admin_misconception_probes__probe_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                probe_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProbeReviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    return_probe_to_draft_api_v1_admin_misconception_probes__probe_id__draft_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                probe_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProbeReviewOut"];
                 };
             };
             /** @description Validation Error */

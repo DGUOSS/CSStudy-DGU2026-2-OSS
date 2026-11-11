@@ -19,6 +19,9 @@ export function AdminNav() {
       <NavLink to="/admin/requests" className={tab}>
         추가 요청
       </NavLink>
+      <NavLink to="/admin/misconception-probes" className={tab}>
+        오개념 확인 문제
+      </NavLink>
     </nav>
   )
 }

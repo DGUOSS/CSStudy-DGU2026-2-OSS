@@ -1721,6 +1721,243 @@
         }
       }
     },
+    "/api/v1/admin/misconception-probes": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Probes",
+        "operationId": "list_probes_api_v1_admin_misconception_probes_get",
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProbeReviewOut"
+                  },
+                  "title": "Response List Probes Api V1 Admin Misconception Probes Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/misconception-probes/{probe_id}": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update Probe",
+        "operationId": "update_probe_api_v1_admin_misconception_probes__probe_id__put",
+        "parameters": [
+          {
+            "name": "probe_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Probe Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProbeReviewUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProbeReviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/misconception-probes/{probe_id}/approve": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Approve Probe",
+        "operationId": "approve_probe_api_v1_admin_misconception_probes__probe_id__approve_post",
+        "parameters": [
+          {
+            "name": "probe_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Probe Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProbeReviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/misconception-probes/{probe_id}/draft": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Return Probe To Draft",
+        "operationId": "return_probe_to_draft_api_v1_admin_misconception_probes__probe_id__draft_post",
+        "parameters": [
+          {
+            "name": "probe_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Probe Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProbeReviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/me/subjects": {
       "get": {
         "tags": [
@@ -3133,6 +3370,232 @@
         ],
         "title": "MySubjectOut"
       },
+      "ProbeReviewOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "course_id": {
+            "type": "integer",
+            "title": "Course Id"
+          },
+          "course_name": {
+            "type": "string",
+            "title": "Course Name"
+          },
+          "professor_name": {
+            "type": "string",
+            "title": "Professor Name"
+          },
+          "problem_question": {
+            "type": "string",
+            "title": "Problem Question"
+          },
+          "problem_choices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Problem Choices"
+          },
+          "problem_answer_index": {
+            "type": "integer",
+            "title": "Problem Answer Index"
+          },
+          "wrong_choice_index": {
+            "type": "integer",
+            "title": "Wrong Choice Index"
+          },
+          "hypothesis": {
+            "type": "string",
+            "title": "Hypothesis"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "choices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Choices"
+          },
+          "answer_index": {
+            "type": "integer",
+            "title": "Answer Index"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          },
+          "source_material_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Material Id"
+          },
+          "source_material_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Material Title"
+          },
+          "source_page_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Page Text"
+          },
+          "available_materials": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewMaterialOut"
+            },
+            "type": "array",
+            "title": "Available Materials"
+          },
+          "source_page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Page"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "approved"
+            ],
+            "title": "Status"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "course_id",
+          "course_name",
+          "professor_name",
+          "problem_question",
+          "problem_choices",
+          "problem_answer_index",
+          "wrong_choice_index",
+          "hypothesis",
+          "question",
+          "choices",
+          "answer_index",
+          "explanation",
+          "evidence",
+          "source_material_id",
+          "source_material_title",
+          "source_page_text",
+          "available_materials",
+          "source_page",
+          "status",
+          "reviewed_at"
+        ],
+        "title": "ProbeReviewOut"
+      },
+      "ProbeReviewUpdate": {
+        "properties": {
+          "hypothesis": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Hypothesis"
+          },
+          "question": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Question"
+          },
+          "choices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 2,
+            "title": "Choices"
+          },
+          "answer_index": {
+            "type": "integer",
+            "title": "Answer Index"
+          },
+          "explanation": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Explanation"
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Evidence"
+          },
+          "source_material_id": {
+            "type": "integer",
+            "title": "Source Material Id"
+          },
+          "source_page": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Source Page"
+          }
+        },
+        "type": "object",
+        "required": [
+          "hypothesis",
+          "question",
+          "choices",
+          "answer_index",
+          "explanation",
+          "evidence",
+          "source_material_id",
+          "source_page"
+        ],
+        "title": "ProbeReviewUpdate"
+      },
       "ProblemOut": {
         "properties": {
           "id": {
@@ -3192,6 +3655,29 @@
           "reason"
         ],
         "title": "RejectIn"
+      },
+      "ReviewMaterialOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "page_count": {
+            "type": "integer",
+            "title": "Page Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "page_count"
+        ],
+        "title": "ReviewMaterialOut"
       },
       "SelectionIn": {
         "properties": {
