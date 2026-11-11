@@ -13,6 +13,7 @@ type Probe = {
   choices: string[]
   answerIndex: number
   explanation: string
+  evidence: string
   practice: {
     code: string
     choices: string[]
@@ -21,54 +22,74 @@ type Probe = {
   }
 }
 
-const firstChoices = ['[007]', '[  7]', '[0007]']
+const firstChoices = ['[7]', '[  7]', '[007]', '[7  ]']
+const firstAnswerIndex = 2
+const zeroFillEvidence = '%03d : 필드 폭을 3칸 확보하고 오른쪽 정렬, 남은 자리는 0으로 채움'
 const probes: Record<number, Probe> = {
   0: {
-    hypothesis: '처음 답은 맞았습니다. 다른 숫자에도 규칙을 적용하는지 확인합니다.',
-    question: '숫자를 바꿔도 같은 규칙이 적용될까요?',
-    code: 'printf("[%03d]", 42);',
-    choices: ['[042]', '[ 42]'],
-    answerIndex: 0,
-    explanation: '42는 두 자리이므로 폭 3의 남은 한 칸을 0으로 채웁니다.',
+    hypothesis: '출력 폭을 무시하고 숫자만 출력한다고 생각했을 가능성이 있습니다.',
+    question: '교안 예제의 숫자 20에는 출력 폭이 어떻게 적용될까요?',
+    code: 'printf("[%03d]", 20);',
+    choices: ['[20]', '[020]'],
+    answerIndex: 1,
+    explanation: '20은 두 자리이므로 부족한 한 칸을 0으로 채워 020이 됩니다.',
+    evidence: zeroFillEvidence,
     practice: {
-      code: 'printf("[%04d]", 8);',
-      choices: ['[0008]', '[   8]'],
-      answerIndex: 0,
-      explanation: '8은 한 자리이므로 부족한 세 칸을 0으로 채웁니다.',
+      code: 'printf("[%03d]", 1);',
+      choices: ['[1]', '[001]'],
+      answerIndex: 1,
+      explanation: '1은 한 자리이므로 부족한 두 칸을 0으로 채웁니다.',
     },
   },
   1: {
     hypothesis: '빈칸을 0 대신 공백으로 채운다고 생각했을 가능성이 있습니다.',
-    question: '출력 폭을 4로 바꾸면 어떻게 될까요?',
-    code: 'printf("[%04d]", 23);',
-    choices: ['[  23]', '[0023]'],
+    question: '교안 예제의 숫자 1에는 공백과 0 중 무엇이 채워질까요?',
+    code: 'printf("[%03d]", 1);',
+    choices: ['[  1]', '[001]'],
     answerIndex: 1,
-    explanation: '%04d는 총 4칸을 확보하고 부족한 두 칸을 0으로 채웁니다.',
+    explanation: '%03d는 부족한 두 칸을 공백이 아니라 0으로 채웁니다.',
+    evidence: zeroFillEvidence,
     practice: {
-      code: 'printf("[%05d]", 12);',
-      choices: ['[   12]', '[00012]'],
+      code: 'printf("[%03d]", 20);',
+      choices: ['[ 20]', '[020]'],
       answerIndex: 1,
-      explanation: '12는 두 자리이므로 부족한 세 칸을 0으로 채웁니다.',
+      explanation: '20은 두 자리이므로 부족한 한 칸을 0으로 채웁니다.',
     },
   },
   2: {
-    hypothesis: '출력 폭을 숫자 앞에 더하는 0의 개수로 생각했을 가능성이 있습니다.',
-    question: '숫자가 이미 출력 폭보다 길다면 어떻게 될까요?',
-    code: 'printf("[%03d]", 1234);',
-    choices: ['[0001234]', '[1234]'],
-    answerIndex: 1,
-    explanation: '폭 3은 최소 너비입니다. 이미 네 자리인 1234 앞에는 0을 추가하지 않습니다.',
+    hypothesis: '처음 답은 맞았습니다. 교안의 다른 숫자에도 규칙을 적용하는지 확인합니다.',
+    question: '교안 예제의 숫자 300은 어떻게 출력될까요?',
+    code: 'printf("[%03d]", 300);',
+    choices: ['[300]', '[0300]'],
+    answerIndex: 0,
+    explanation: '300은 이미 세 자리이므로 0을 더하지 않습니다.',
+    evidence: zeroFillEvidence,
     practice: {
-      code: 'printf("[%02d]", 123);',
-      choices: ['[123]', '[00123]'],
+      code: 'printf("[%03d]", 20);',
+      choices: ['[020]', '[20]'],
       answerIndex: 0,
-      explanation: '123은 이미 최소 출력 폭 2보다 길어 0을 더하지 않습니다.',
+      explanation: '20은 두 자리이므로 부족한 한 칸을 0으로 채웁니다.',
+    },
+  },
+  3: {
+    hypothesis: '0 채우기와 오른쪽 정렬 대신 왼쪽 정렬을 적용했을 가능성이 있습니다.',
+    question: '교안에 나온 %03d와 %-3d는 어떻게 다를까요?',
+    code: 'printf("[%03d]|[%-3d]", 1, 1);',
+    choices: ['[1  ]|[1  ]', '[001]|[1  ]'],
+    answerIndex: 1,
+    explanation: '%03d는 오른쪽 정렬하며 0을 채우고, %-3d는 왼쪽 정렬합니다.',
+    evidence: '%-3d : 필드 폭을 3칸 확보하고 왼쪽 정렬',
+    practice: {
+      code: 'printf("[%-3d]", 20);',
+      choices: ['[20 ]', '[020]'],
+      answerIndex: 0,
+      explanation: '%-3d는 왼쪽 정렬하므로 20 뒤의 한 칸이 공백입니다.',
     },
   },
 }
 
 function diagnosis(firstChoice: number, probeCorrect: boolean, confidence: Confidence) {
-  if (firstChoice === 0) {
+  if (firstChoice === firstAnswerIndex) {
     return probeCorrect
       ? {
           title: '두 상황에서 규칙을 적용했습니다',
@@ -118,7 +139,7 @@ export function MisconceptionLabPage() {
           <p className="text-sm font-medium text-primary">기능 시범</p>
           <h1 className="mt-1 text-2xl font-bold">오개념 반례 실험실</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            기초프로그래밍의 printf 형식 지정자를 활용한 시범 문제입니다. 답변은 저장되지 않습니다.
+            기초프로그래밍 교안 week2.pdf 32쪽의 필드 폭 지정 예제를 토대로 만들었습니다. 답변은 저장되지 않습니다.
           </p>
         </div>
         <a href="https://dgu-study.vercel.app/" className="text-sm text-primary underline">
@@ -219,8 +240,8 @@ export function MisconceptionLabPage() {
               <AnswerSummary
                 title="처음 판단"
                 chosen={firstChoices[firstChoice!]}
-                answer={firstChoices[0]}
-                correct={firstChoice === 0}
+                answer={firstChoices[firstAnswerIndex]}
+                correct={firstChoice === firstAnswerIndex}
               />
               <AnswerSummary
                 title="확인 문제"
@@ -235,13 +256,21 @@ export function MisconceptionLabPage() {
               <p className="mt-2 leading-relaxed">{probe.hypothesis}</p>
             </div>
             <div className="rounded-md border p-4">
-              <p className="font-medium">규칙과 확인 문제 풀이</p>
+              <p className="font-medium">교안 근거와 확인 문제 풀이</p>
+              {probe.evidence !== zeroFillEvidence && (
+                <blockquote className="mt-2 border-l-2 border-primary pl-3 text-muted-foreground">
+                  {zeroFillEvidence}
+                </blockquote>
+              )}
+              <blockquote className="mt-2 border-l-2 border-primary pl-3 text-muted-foreground">
+                {probe.evidence}
+              </blockquote>
               <p className="mt-2 leading-relaxed">
                 %03d에서 3은 최소 출력 폭, 0은 부족한 자리를 0으로 채우라는 뜻입니다.
                 그래서 7은 007로 출력됩니다. {probe.explanation}
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
-                이 시범은 교안 PDF 원본이나 페이지 번호와 연결되지 않았습니다.
+                출처: 기초프로그래밍 week2.pdf 32쪽. PDF 원본 열기는 아직 연결되지 않았습니다.
               </p>
             </div>
             <div className="flex flex-col gap-3 rounded-md border p-4">

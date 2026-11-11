@@ -72,6 +72,7 @@ def check(seed: dict, pdfs: dict[str, list[str]]) -> list[str]:
                 errors.append(f"{label}: 보기가 중복됨")
             if unknown := set(p["concepts"]) - names:
                 errors.append(f"{label}: 챕터에 없는 개념 {unknown}")
+            pages = pdfs.get(ch["material"])
             seen_wrong_choices: set[int] = set()
             for probe in p.get("misconception_probes", []):
                 wrong = probe["wrong_choice_index"]
@@ -90,7 +91,9 @@ def check(seed: dict, pdfs: dict[str, list[str]]) -> list[str]:
                     probe[field].strip() for field in ("hypothesis", "question", "explanation")
                 ):
                     errors.append(f"{label}: 오개념 가설·문제·해설을 모두 입력해야 함")
-            pages = pdfs.get(ch["material"])
+                evidence = probe.get("evidence", p["evidence"])
+                if pages is not None and find_page(pages, evidence) is None:
+                    errors.append(f"{label}: 확인 문제의 근거 문장을 {ch['material']}에서 못 찾음")
             if pages is not None and find_page(pages, p["evidence"]) is None:
                 errors.append(f"{label}: 근거 문장을 {ch['material']}에서 못 찾음")
     return errors
@@ -181,6 +184,22 @@ def seed_one(session: Session, seed: dict, pdfs: dict[str, list[str]]) -> dict[s
                 added += 1
             for probe in p.get("misconception_probes", []):
                 wrong = probe["wrong_choice_index"]
+                evidence = probe.get("evidence", p["evidence"])
+                source_material = material
+                if source_material is None and problem.source_material_id:
+                    source_material = session.get(Material, problem.source_material_id)
+                fields = {
+                    "hypothesis": probe["hypothesis"],
+                    "question": probe["question"],
+                    "choices": probe["choices"],
+                    "answer_index": probe["answer"],
+                    "explanation": probe["explanation"],
+                    "evidence": evidence,
+                    "source_material_id": source_material.id if source_material else None,
+                    "source_page": (
+                        find_page(source_material.pages, evidence) if source_material else None
+                    ),
+                }
                 existing_probe = session.exec(
                     select(MisconceptionProbe).where(
                         MisconceptionProbe.problem_id == problem.id,
@@ -192,16 +211,13 @@ def seed_one(session: Session, seed: dict, pdfs: dict[str, list[str]]) -> dict[s
                         MisconceptionProbe(
                             problem_id=problem.id,
                             wrong_choice_index=wrong,
-                            hypothesis=probe["hypothesis"],
-                            question=probe["question"],
-                            choices=probe["choices"],
-                            answer_index=probe["answer"],
-                            explanation=probe["explanation"],
-                            evidence=p["evidence"],
-                            source_material_id=problem.source_material_id,
-                            source_page=problem.source_page,
+                            **fields,
                         )
                     )
+                elif existing_probe.status == "draft":
+                    for name, value in fields.items():
+                        setattr(existing_probe, name, value)
+                    session.add(existing_probe)
     return {"course_id": course.id, "materials": len(materials), "problems_added": added}
 
 

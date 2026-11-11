@@ -38,7 +38,10 @@ def test_probe_seed_is_draft_and_idempotent(session):
     assert {p.wrong_choice_index for p in probes} == {0, 1, 3}
     assert all(p.status == "draft" and p.reviewed_by is None for p in probes)
     assert all(0 <= p.answer_index < len(p.choices) for p in probes)
-    assert all(p.evidence == problem.evidence for p in probes)
+    assert {p.evidence for p in probes} == {
+        problem.evidence,
+        "%-3d : 필드 폭을 3칸 확보하고 왼쪽 정렬",
+    }
 
 
 def test_probe_seed_rejects_answer_and_duplicate_wrong_choice():
@@ -53,3 +56,41 @@ def test_probe_seed_rejects_answer_and_duplicate_wrong_choice():
     invalid["wrong_choice_index"] = 0
     errors = seed.check(data, {})
     assert any("중복되거나" in error for error in errors)
+
+
+def test_probe_evidence_must_exist_in_lecture_page():
+    data = load_seed()
+    problem = data["chapters"][0]["problems"][1]
+    data["chapters"] = [data["chapters"][0]]
+    data["chapters"][0]["problems"] = [problem]
+    page = problem["evidence"] + "\n" + problem["misconception_probes"][2]["evidence"]
+    pdfs = {"week2.pdf": [""] * 31 + [page]}
+    assert seed.check(data, pdfs) == []
+
+    problem["misconception_probes"][2]["evidence"] = "교안에 없는 문장"
+    assert any("확인 문제의 근거 문장" in error for error in seed.check(data, pdfs))
+
+
+def test_reseed_updates_draft_but_preserves_approved_probe(session):
+    data = load_seed()
+    seed.seed_one(session, data, {})
+    session.commit()
+    probe = session.exec(
+        select(MisconceptionProbe).where(MisconceptionProbe.wrong_choice_index == 0)
+    ).one()
+
+    draft = data["chapters"][0]["problems"][1]["misconception_probes"][0]
+    draft["explanation"] = "새로 검토할 설명"
+    seed.seed_one(session, data, {})
+    session.commit()
+    session.refresh(probe)
+    assert probe.explanation == "새로 검토할 설명"
+
+    probe.status = "approved"
+    session.add(probe)
+    session.commit()
+    draft["explanation"] = "승인 뒤 바뀐 시드 설명"
+    seed.seed_one(session, data, {})
+    session.commit()
+    session.refresh(probe)
+    assert probe.explanation == "새로 검토할 설명"
