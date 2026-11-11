@@ -7,6 +7,12 @@ LECTURE = [
 ]
 
 
+OTHER = [
+    "Functions receive copies of their arguments when called by value",
+    "Passing an address lets a function change the caller's variable",
+]
+
+
 def _pdf(pages, name="week03.pdf"):
     return {"file": (name, make_pdf(pages), "application/pdf")}
 
@@ -16,10 +22,16 @@ def test_request_approve_flow(client, login, session):
     assert client.post("/api/v1/course-requests", data=form).status_code == 401
 
     login("u@dgu.ac.kr", "학생")
-    r = client.post("/api/v1/course-requests", data=form, files=_pdf(LECTURE))
+    two = [
+        ("files", ("week03.pdf", make_pdf(LECTURE), "application/pdf")),
+        ("files", ("week04.pdf", make_pdf(OTHER), "application/pdf")),
+    ]
+    r = client.post("/api/v1/course-requests", data=form, files=two)
     assert r.status_code == 201, r.text
     req = r.json()
-    assert req["status"] == "pending" and req["has_material"] and req["material_page_count"] == 2
+    assert req["status"] == "pending" and req["has_material"]
+    assert req["material_count"] == 2 and req["material_page_count"] == 4
+    assert req["material_filenames"] == ["week03.pdf", "week04.pdf"]
     # 같은 강좌 요청이 대기 중이면 또 만들지 않는다
     assert client.post("/api/v1/course-requests", data=form).status_code == 409
     assert len(client.get("/api/v1/course-requests/mine").json()) == 1
@@ -42,7 +54,14 @@ def test_request_approve_flow(client, login, session):
     course = client.get(f"/api/v1/courses/{done['course_id']}").json()
     assert course["subject_name"] == "자료구조와 알고리즘" and course["professor_name"] == "홍길동"
     mats = client.get(f"/api/v1/courses/{done['course_id']}/materials").json()
-    assert len(mats) == 1 and mats[0]["kind"] == "lecture" and mats[0]["week"] == 3
+    assert [(m["kind"], m["week"]) for m in mats] == [("lecture", 3), ("lecture", 4)]
+    # 제목은 사용자 입력이 아니라 '과목명 교안 번호' 규칙으로 붙는다
+    assert [m["title"] for m in mats] == [
+        "자료구조와 알고리즘 교안 1",
+        "자료구조와 알고리즘 교안 2",
+    ]
+    done_req = client.get("/api/v1/admin/course-requests", params={"status": "approved"}).json()[0]
+    assert done_req["material_count"] == 2  # 승인 뒤에도 파일 목록은 남는다(본문만 지움)
     # 처리된 요청은 다시 처리할 수 없다
     assert client.post(f"/api/v1/admin/course-requests/{req['id']}/approve").status_code == 409
     # 이제 있는 강좌라 요청 대신 409

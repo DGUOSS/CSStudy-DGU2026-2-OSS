@@ -124,7 +124,7 @@ function RequestCard({ r }: { r: CourseRequest }) {
         {r.subject_code && `${r.subject_code} · `}
         {r.semester && `${r.semester} · `}
         {r.has_material
-          ? `교안: ${r.material_title ?? ''}${r.material_page_count ? ` (${r.material_page_count}쪽)` : ''}`
+          ? `교안 ${r.material_count}개${r.material_page_count ? ` (${r.material_page_count}쪽)` : ''}: ${r.material_filenames.join(', ')}`
           : '교안 없음'}
       </div>
       {r.note && <p className="text-sm">메모: {r.note}</p>}

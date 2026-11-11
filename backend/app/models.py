@@ -75,6 +75,11 @@ class CourseRequest(SQLModel, table=True):
     material_title: str | None = Field(default=None, max_length=200)
     material_filename: str | None = Field(default=None, max_length=255)
     material_pages: list[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
+    # 여러 파일: [{"filename", "page_count", "pages"}]. 승인·반려 뒤에는 pages만 비운다.
+    # (위의 material_* 세 칸은 파일 하나만 받던 예전 요청용으로 남겨 둔다)
+    material_files: list[dict] = Field(
+        default_factory=list, sa_column=Column(JSON, nullable=False, server_default="[]")
+    )
     status: str = Field(default="pending", max_length=20, index=True)  # pending|approved|rejected
     reject_reason: str | None = Field(default=None, sa_column=Column(Text))
     reviewed_by: int | None = Field(default=None, foreign_key="users.id")

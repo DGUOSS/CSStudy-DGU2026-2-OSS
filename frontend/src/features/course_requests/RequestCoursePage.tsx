@@ -22,7 +22,7 @@ export function RequestCoursePage() {
   const [semester, setSemester] = useState('')
   const [note, setNote] = useState('')
   const [withMaterial, setWithMaterial] = useState(true)
-  const [materialTitle, setMaterialTitle] = useState('')
+  const [picked, setPicked] = useState<File[]>([])
 
   const send = useMutation({
     mutationFn: () => {
@@ -32,11 +32,8 @@ export function RequestCoursePage() {
       if (subjectCode) form.append('subject_code', subjectCode)
       if (semester) form.append('semester', semester)
       if (note) form.append('note', note)
-      const file = fileRef.current?.files?.[0]
-      if (withMaterial && file) {
-        form.append('file', file)
-        if (materialTitle) form.append('material_title', materialTitle)
-      }
+      // 여러 파일을 함께 보낸다. 제목은 승인할 때 '과목명 교안 번호' 규칙으로 자동으로 붙는다.
+      if (withMaterial) for (const f of picked) form.append('files', f)
       return unwrap(
         api.POST('/api/v1/course-requests', {
           // multipart는 openapi-fetch가 타입으로 표현하지 못해서 FormData를 그대로 보낸다
@@ -136,19 +133,27 @@ export function RequestCoursePage() {
                 </Button>
               </div>
               {withMaterial ? (
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2">
                   <Input
                     ref={fileRef}
                     type="file"
                     accept="application/pdf,.pdf"
+                    multiple
                     required
                     aria-label="교안 PDF"
+                    onChange={(e) => setPicked(Array.from(e.target.files ?? []))}
                   />
-                  <Input
-                    placeholder="교안 제목 (선택, 예: 1~7주차)"
-                    value={materialTitle}
-                    onChange={(e) => setMaterialTitle(e.target.value)}
-                  />
+                  <p className="text-xs text-muted-foreground">
+                    PDF를 여러 개 한 번에 고를 수 있습니다. 자료 이름은 &apos;과목명 교안 번호&apos;로
+                    자동으로 붙습니다.
+                  </p>
+                  {picked.length > 0 && (
+                    <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                      {picked.map((f) => (
+                        <li key={f.name}>{f.name}</li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">

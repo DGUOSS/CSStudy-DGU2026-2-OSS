@@ -37,7 +37,7 @@ export function MyRequestsPage() {
               </div>
               <div className="text-sm text-muted-foreground">
                 {r.semester && `${r.semester} · `}
-                {r.has_material ? `교안 ${r.material_title ?? ''}` : '교안 없음'} ·{' '}
+                {r.has_material ? `교안 ${r.material_count}개` : '교안 없음'} ·{' '}
                 {new Date(r.created_at).toLocaleDateString()}
               </div>
               {r.status === 'rejected' && r.reject_reason && (

@@ -161,7 +161,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Update Course */
+        /**
+         * Update Course
+         * @description 강좌 정보·시험 정보는 강좌마다 하나인 공용 안내라서 관리자만 고친다.
+         */
         patch: operations["update_course_api_v1_courses__course_id__patch"];
         trace?: never;
     };
@@ -296,7 +299,8 @@ export interface paths {
         put?: never;
         /**
          * Create Request
-         * @description file을 안 보내면 '교안 없음' 요청이다.
+         * @description 교안 PDF를 여러 개 낼 수 있다(files). 안 보내면 '교안 없음' 요청이다.
+         *     자료 제목은 사용자가 정하지 않는다. 승인할 때 '과목명 교안 번호' 규칙으로 붙는다.
          */
         post: operations["create_request_api_v1_course_requests_post"];
         delete?: never;
@@ -617,10 +621,8 @@ export interface components {
              * @default
              */
             note?: string;
-            /** Material Title */
-            material_title?: string | null;
-            /** File */
-            file?: string | null;
+            /** Files */
+            files?: string[] | null;
         };
         /** Body_upload_material_api_v1_courses__course_id__materials_post */
         Body_upload_material_api_v1_courses__course_id__materials_post: {
@@ -739,8 +741,10 @@ export interface components {
             note: string;
             /** Has Material */
             has_material: boolean;
-            /** Material Title */
-            material_title: string | null;
+            /** Material Count */
+            material_count: number;
+            /** Material Filenames */
+            material_filenames: string[];
             /** Material Page Count */
             material_page_count: number;
             /** Status */

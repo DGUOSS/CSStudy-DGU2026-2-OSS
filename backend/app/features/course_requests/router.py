@@ -34,8 +34,9 @@ class CourseRequestOut(BaseModel):
     semester: str | None
     note: str
     has_material: bool
-    material_title: str | None
-    material_page_count: int
+    material_count: int
+    material_filenames: list[str]
+    material_page_count: int  # 모든 파일 쪽 수 합계
     status: str
     reject_reason: str | None
     course_id: int | None
@@ -55,8 +56,24 @@ class RejectIn(BaseModel):
     reason: str = Field(min_length=1, max_length=500)
 
 
+def _files(r: CourseRequest) -> list[dict]:
+    """요청에 딸린 교안 파일들. 예전 단일 파일 칸도 하나의 파일로 본다."""
+    files = list(r.material_files or [])
+    if r.material_filename:
+        files.insert(
+            0,
+            {
+                "filename": r.material_filename,
+                "page_count": len(r.material_pages),
+                "pages": r.material_pages,
+            },
+        )
+    return files
+
+
 def _out(session: SessionDep, r: CourseRequest) -> CourseRequestOut:
     requester = session.get(User, r.requester_id)
+    files = _files(r)
     return CourseRequestOut(
         id=r.id,
         requester_name=requester.name if requester else None,
@@ -65,15 +82,25 @@ def _out(session: SessionDep, r: CourseRequest) -> CourseRequestOut:
         professor_name=r.professor_name,
         semester=r.semester,
         note=r.note,
-        has_material=bool(r.material_pages or r.material_filename),
-        material_title=r.material_title,
-        material_page_count=len(r.material_pages),
+        has_material=bool(files),
+        material_count=len(files),
+        material_filenames=[f["filename"] for f in files],
+        material_page_count=sum(f.get("page_count") or len(f.get("pages", [])) for f in files),
         status=r.status,
         reject_reason=r.reject_reason,
         course_id=r.course_id,
         created_at=r.created_at,
         reviewed_at=r.reviewed_at,
     )
+
+
+def _drop_pages(r: CourseRequest) -> None:
+    """파일 이름과 쪽 수만 남기고 본문은 지운다."""
+    r.material_files = [
+        {"filename": f["filename"], "page_count": f.get("page_count") or len(f.get("pages", []))}
+        for f in r.material_files or []
+    ]
+    r.material_pages = []
 
 
 def _find_course(session: SessionDep, subject_name: str, professor_name: str) -> Course | None:
@@ -102,10 +129,10 @@ async def create_request(
     subject_code: Annotated[str | None, Form(max_length=20)] = None,
     semester: Annotated[str | None, Form(max_length=20)] = None,
     note: Annotated[str, Form(max_length=1000)] = "",
-    material_title: Annotated[str | None, Form(max_length=200)] = None,
-    file: Annotated[UploadFile | None, File()] = None,
+    files: Annotated[list[UploadFile] | None, File()] = None,
 ) -> CourseRequestOut:
-    """file을 안 보내면 '교안 없음' 요청이다."""
+    """교안 PDF를 여러 개 낼 수 있다(files). 안 보내면 '교안 없음' 요청이다.
+    자료 제목은 사용자가 정하지 않는다. 승인할 때 '과목명 교안 번호' 규칙으로 붙는다."""
     subject_name, professor_name = subject_name.strip(), professor_name.strip()
     existing = _find_course(session, subject_name, professor_name)
     if existing:
@@ -122,7 +149,11 @@ async def create_request(
     ).first()
     if dup:
         raise HTTPException(status.HTTP_409_CONFLICT, "같은 강좌 요청이 이미 대기 중입니다")
-    filename, pages = (await read_pdf(file)) if file is not None and file.filename else (None, [])
+    material_files = []
+    for f in files or []:
+        if f.filename:
+            filename, pages = await read_pdf(f)
+            material_files.append({"filename": filename, "page_count": len(pages), "pages": pages})
     r = CourseRequest(
         requester_id=user.id,
         subject_name=subject_name,
@@ -130,9 +161,7 @@ async def create_request(
         professor_name=professor_name,
         semester=(semester or "").strip() or None,
         note=note.strip(),
-        material_title=((material_title or "").strip() or filename) if pages else None,
-        material_filename=filename,
-        material_pages=pages,
+        material_files=material_files,
     )
     session.add(r)
     session.commit()
@@ -179,17 +208,19 @@ def approve_request(
         professor_name=professor_name,
         created_by=r.requester_id,
     )
-    if r.material_pages:
-        add_material(  # 결과(대체 여부 등)는 강좌 자료 목록에 반영된다
-            session,
-            course_id=course.id,
-            uploader_id=r.requester_id,
-            kind="lecture",
-            title=r.material_title or r.material_filename or "교안",
-            filename=r.material_filename or "upload.pdf",
-            pages=r.material_pages,
-        )
-        r.material_pages = []  # 자료로 옮겼으니 요청에는 남기지 않는다
+    for f in _files(r):
+        if f.get("pages"):
+            add_material(  # 제목은 '과목명 교안 번호'로 자동, 중복·새 판은 판 관리 규칙대로
+                session,
+                course_id=course.id,
+                uploader_id=r.requester_id,
+                kind="lecture",
+                title=f["filename"],
+                filename=f["filename"],
+                pages=f["pages"],
+            )
+            session.flush()
+    _drop_pages(r)  # 자료로 옮겼으니 요청에는 본문을 남기지 않는다
     r.subject_name, r.professor_name = subject_name, professor_name
     r.status, r.course_id = "approved", course.id
     r.reviewed_by, r.reviewed_at = admin.id, datetime.now(UTC)
@@ -208,7 +239,7 @@ def reject_request(
         raise HTTPException(status.HTTP_409_CONFLICT, "이미 처리된 요청입니다")
     r.status, r.reject_reason = "rejected", body.reason.strip()
     r.reviewed_by, r.reviewed_at = admin.id, datetime.now(UTC)
-    r.material_pages = []  # 반려된 교안 본문은 지운다
+    _drop_pages(r)  # 반려된 교안 본문은 지운다
     session.add(r)
     session.commit()
     session.refresh(r)
