@@ -1,8 +1,8 @@
 name: CI
+# PR마다 검사한다. main에 push될 때는 deploy.yml이 이 검사를 먼저 부른 뒤 배포한다.
 on:
   pull_request:
-  push:
-    branches: [main]
+  workflow_call:
 
 jobs:
   backend:
