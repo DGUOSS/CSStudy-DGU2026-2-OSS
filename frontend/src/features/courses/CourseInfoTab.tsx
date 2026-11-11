@@ -9,8 +9,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/features/auth/useAuth'
 
 /**
- * 강좌 정보·시험 정보: 강좌마다 하나인 공용 안내(수업 방식, 평가 비율, 시험 범위 등).
- * 모두에게 같은 내용이 보이고 관리자만 고친다. 사용자가 가진 시험 관련 파일은 자료 탭 '시험 정보'에 올린다.
+ * 강좌 정보: 강좌마다 하나인 공용 안내(수업 방식, 과제, 평가 비율 등). 관리자만 고친다.
+ * 시험 정보는 여기 두지 않고 자료 탭 '시험 정보'에 파일로 올린다.
  */
 export function CourseInfoTab({ course }: { course: Schemas['CourseOut'] }) {
   const { user } = useAuth()
@@ -18,10 +18,9 @@ export function CourseInfoTab({ course }: { course: Schemas['CourseOut'] }) {
   return (
     <div className="flex flex-col gap-4">
       <InfoBlock title="강좌 정보" text={course.info} />
-      <InfoBlock title="시험 정보" text={course.exam_info} />
       <p className="text-xs text-muted-foreground">
-        이 내용은 관리자가 정리합니다. 시험 관련 자료가 있으면 자료 탭의 '시험 정보'에 올려
-        주세요.
+        이 내용은 관리자가 정리합니다. 시험 범위·일정 같은 시험 정보는 자료 탭의 '시험 정보'에서
+        보고 올려 주세요.
       </p>
     </div>
   )
@@ -43,23 +42,22 @@ function InfoBlock({ title, text }: { title: string; text: string }) {
 function CourseInfoEditor({ course }: { course: Schemas['CourseOut'] }) {
   const qc = useQueryClient()
   const [info, setInfo] = useState(course.info)
-  const [examInfo, setExamInfo] = useState(course.exam_info)
   const save = useMutation({
     mutationFn: () =>
       unwrap(
         api.PATCH('/api/v1/courses/{course_id}', {
           params: { path: { course_id: course.id } },
-          body: { info, exam_info: examInfo },
+          body: { info },
         }),
       ),
     onSuccess: (data) => qc.setQueryData(['courses', course.id], data),
   })
-  const changed = info !== course.info || examInfo !== course.exam_info
+  const changed = info !== course.info
 
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
-        관리자만 고칠 수 있습니다. 모든 사용자에게 같은 내용이 보입니다.
+        관리자만 고칠 수 있습니다. 모든 사용자에게 같은 내용이 보입니다. 시험 정보는 자료 탭 '시험 정보'에 파일로 올립니다.
       </p>
       <div className="grid gap-2">
         <Label htmlFor="info">강좌 정보</Label>
@@ -68,15 +66,6 @@ function CourseInfoEditor({ course }: { course: Schemas['CourseOut'] }) {
           placeholder="수업 방식, 과제, 평가 비율 등"
           value={info}
           onChange={(e) => setInfo(e.target.value)}
-        />
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="exam">시험 정보</Label>
-        <Textarea
-          id="exam"
-          placeholder="시험 일정, 범위, 출제 유형(객관식/코드 작성 등)"
-          value={examInfo}
-          onChange={(e) => setExamInfo(e.target.value)}
         />
       </div>
       <ErrorText error={save.error} />

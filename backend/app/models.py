@@ -54,6 +54,7 @@ class Course(SQLModel, table=True):
     subject_id: int = Field(foreign_key="subjects.id", index=True)
     professor_id: int = Field(foreign_key="professors.id", index=True)
     info: str = Field(default="", sa_column=Column(Text, nullable=False, default=""))
+    # 안 씀: 시험 정보는 자료(kind=note)로 올린다. 화면에서는 뺐고 칸만 남아 있다.
     exam_info: str = Field(default="", sa_column=Column(Text, nullable=False, default=""))
     created_by: int | None = Field(default=None, foreign_key="users.id")
     created_at: datetime = Field(default_factory=_now)
