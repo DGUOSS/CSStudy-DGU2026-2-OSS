@@ -68,9 +68,10 @@ def test_request_without_material_and_reject(client, login, session):
     assert client.post("/api/v1/course-requests", data=form).status_code == 201
 
 
-def test_material_versions(client, login, session, course_with_problems):
+def test_material_versions(client, login, session, course_with_problems, enroll):
     cid = course_with_problems["course"].id
     login()
+    enroll(course_with_problems["course"].subject_id)
     up = lambda pages, name, title: client.post(  # noqa: E731
         f"/api/v1/courses/{cid}/materials",
         files=_pdf(pages, name),
@@ -122,10 +123,11 @@ WEEK_A = ["Arrays store elements of the same type contiguously", "Index starts f
 WEEK_B = ["Functions receive copies of arguments by value", "Return statement ends a function"]
 
 
-def test_big_file_replaces_week_files(client, login, course_with_problems):
+def test_big_file_replaces_week_files(client, login, course_with_problems, enroll):
     """주차별 파일 두 개 -> 학기 전체 큰 파일 하나(일부 수정)로 다시 올리면 둘 다 대체된다."""
     cid = course_with_problems["course"].id
     login()
+    enroll(course_with_problems["course"].subject_id)
     post = lambda pages, name: client.post(  # noqa: E731
         f"/api/v1/courses/{cid}/materials",
         files=_pdf(pages, name),
@@ -140,10 +142,11 @@ def test_big_file_replaces_week_files(client, login, course_with_problems):
     assert [m["id"] for m in client.get(f"/api/v1/courses/{cid}/materials").json()] == [big["id"]]
 
 
-def test_partial_update_of_big_file(client, login, session, course_with_problems):
+def test_partial_update_of_big_file(client, login, session, course_with_problems, enroll):
     """큰 교안의 일부만 고친 파일은 큰 교안을 대체하지 않고 새 자료로 붙는다. 근거는 최신 쪽으로 옮긴다."""
     cid = course_with_problems["course"].id
     login()
+    enroll(course_with_problems["course"].subject_id)
     post = lambda pages, name: client.post(  # noqa: E731
         f"/api/v1/courses/{cid}/materials",
         files=_pdf(pages, name),

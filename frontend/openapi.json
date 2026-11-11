@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "dgu-study",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "paths": {
     "/api/v1/health": {
@@ -274,6 +274,22 @@
               "type": "integer",
               "title": "Subject Id"
             }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
           }
         ],
         "responses": {
@@ -379,6 +395,22 @@
             "schema": {
               "type": "integer",
               "title": "Course Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
             }
           }
         ],
@@ -499,6 +531,22 @@
               "default": false,
               "title": "All Versions"
             }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
           }
         ],
         "responses": {
@@ -533,7 +581,7 @@
           "materials"
         ],
         "summary": "Upload Material",
-        "description": "같은 내용이면 등록하지 않고(200, duplicate), 같은 자료의 수정본이면 새 판으로 대체한다(updated).",
+        "description": "같은 내용이면 등록하지 않고(200, duplicate), 같은 자료의 수정본이면 새 판으로 대체한다(updated).\n\n제목은 '과목명 종류 번호'로 자동으로 붙는다. title은 주차를 읽는 데만 쓴다(선택).",
         "operationId": "upload_material_api_v1_courses__course_id__materials_post",
         "parameters": [
           {
@@ -622,6 +670,22 @@
               "type": "integer",
               "title": "Page"
             }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
           }
         ],
         "responses": {
@@ -663,6 +727,22 @@
             "schema": {
               "type": "integer",
               "title": "Course Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
             }
           }
         ],
@@ -1639,6 +1719,381 @@
           }
         }
       }
+    },
+    "/api/v1/me/subjects": {
+      "get": {
+        "tags": [
+          "my-subjects"
+        ],
+        "summary": "List My Subjects",
+        "operationId": "list_my_subjects_api_v1_me_subjects_get",
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MySubjectOut"
+                  },
+                  "title": "Response List My Subjects Api V1 Me Subjects Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/subjects/{subject_id}": {
+      "put": {
+        "tags": [
+          "my-subjects"
+        ],
+        "summary": "Add My Subject",
+        "description": "내 과목에 넣는다. 이미 있으면 상태(수강 중/수강함)와 학기만 바꾼다.",
+        "operationId": "add_my_subject_api_v1_me_subjects__subject_id__put",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Subject Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MySubjectIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MySubjectOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "my-subjects"
+        ],
+        "summary": "Remove My Subject",
+        "operationId": "remove_my_subject_api_v1_me_subjects__subject_id__delete",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Subject Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/courses/{course_id}/exams": {
+      "get": {
+        "tags": [
+          "exams"
+        ],
+        "summary": "List Exams",
+        "description": "족보 목록(최신판). 좋아요-싫어요가 큰 순.",
+        "operationId": "list_exams_api_v1_courses__course_id__exams_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExamOut"
+                  },
+                  "title": "Response List Exams Api V1 Courses  Course Id  Exams Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/materials/{material_id}/vote": {
+      "put": {
+        "tags": [
+          "exams"
+        ],
+        "summary": "Vote Exam",
+        "operationId": "vote_exam_api_v1_materials__material_id__vote_put",
+        "parameters": [
+          {
+            "name": "material_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Material Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoteIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoteOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/courses/{course_id}/exam-selection": {
+      "put": {
+        "tags": [
+          "exams"
+        ],
+        "summary": "Select Exams",
+        "description": "문제 풀이 전에 참고할 족보를 고른다(이전 선택을 통째로 바꾼다). 빈 목록이면 선택 해제.",
+        "operationId": "select_exams_api_v1_courses__course_id__exam_selection_put",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExamOut"
+                  },
+                  "title": "Response Select Exams Api V1 Courses  Course Id  Exam Selection Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1932,17 +2387,22 @@
             "title": "Kind"
           },
           "title": {
-            "type": "string",
-            "maxLength": 200,
-            "minLength": 1,
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Title"
           }
         },
         "type": "object",
         "required": [
           "file",
-          "kind",
-          "title"
+          "kind"
         ],
         "title": "Body_upload_material_api_v1_courses__course_id__materials_post"
       },
@@ -2324,6 +2784,77 @@
         "type": "object",
         "title": "CourseUpdate"
       },
+      "ExamOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "course_id": {
+            "type": "integer",
+            "title": "Course Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "page_count": {
+            "type": "integer",
+            "title": "Page Count"
+          },
+          "uploader_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uploader Name"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "likes": {
+            "type": "integer",
+            "title": "Likes"
+          },
+          "dislikes": {
+            "type": "integer",
+            "title": "Dislikes"
+          },
+          "my_vote": {
+            "type": "integer",
+            "title": "My Vote"
+          },
+          "selected": {
+            "type": "boolean",
+            "title": "Selected"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "course_id",
+          "title",
+          "filename",
+          "page_count",
+          "uploader_name",
+          "created_at",
+          "likes",
+          "dislikes",
+          "my_vote",
+          "selected"
+        ],
+        "title": "ExamOut"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2525,6 +3056,90 @@
         "type": "object",
         "title": "MaterialUpdate"
       },
+      "MySubjectIn": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "current",
+              "taken"
+            ],
+            "title": "Status",
+            "default": "current"
+          },
+          "semester": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Semester"
+          }
+        },
+        "type": "object",
+        "title": "MySubjectIn"
+      },
+      "MySubjectOut": {
+        "properties": {
+          "subject_id": {
+            "type": "integer",
+            "title": "Subject Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "semester": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Semester"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_id",
+          "name",
+          "code",
+          "status",
+          "semester",
+          "source",
+          "created_at"
+        ],
+        "title": "MySubjectOut"
+      },
       "ProblemOut": {
         "properties": {
           "id": {
@@ -2584,6 +3199,22 @@
           "reason"
         ],
         "title": "RejectIn"
+      },
+      "SelectionIn": {
+        "properties": {
+          "material_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Material Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material_ids"
+        ],
+        "title": "SelectionIn"
       },
       "SignupIn": {
         "properties": {
@@ -2924,6 +3555,52 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VoteIn": {
+        "properties": {
+          "value": {
+            "type": "integer",
+            "enum": [
+              1,
+              -1,
+              0
+            ],
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "title": "VoteIn"
+      },
+      "VoteOut": {
+        "properties": {
+          "material_id": {
+            "type": "integer",
+            "title": "Material Id"
+          },
+          "likes": {
+            "type": "integer",
+            "title": "Likes"
+          },
+          "dislikes": {
+            "type": "integer",
+            "title": "Dislikes"
+          },
+          "my_vote": {
+            "type": "integer",
+            "title": "My Vote"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material_id",
+          "likes",
+          "dislikes",
+          "my_vote"
+        ],
+        "title": "VoteOut"
       }
     }
   }

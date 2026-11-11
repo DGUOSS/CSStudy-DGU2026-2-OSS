@@ -6,6 +6,9 @@
       챕터 ─< 문제(Problem) >─< 개념   (ProblemConcept)
       사용자(User) ─< 풀이 기록(Attempt) >─ 문제
       사용자 ─< 강좌 추가 요청(CourseRequest) ─ (승인 후) 강좌
+      사용자 ─< 내 과목(UserSubject) >─ 과목     (등록한 과목의 강좌에만 들어갈 수 있다)
+      사용자 ─< 족보 평가(MaterialVote) >─ 자료(족보)
+      사용자 ─< 족보 선택(ExamSelection) >─ 자료(족보)   (문제 생성 때 참고할 족보)
 """
 
 from datetime import UTC, datetime
@@ -93,8 +96,11 @@ class Material(SQLModel, table=True):
     status: str = Field(default="approved", max_length=20)  # 지금은 자동 승인
     # 판 관리: 같은 주차·같은 문서의 새 판이 올라오면 옛 판의 replaced_by에 새 판 id를 적는다.
     # 옛 판은 지우지 않는다(옛 문제의 근거 쪽 링크가 깨지지 않게). 목록에는 최신판만 보인다.
-    week: int | None = None  # 제목·파일명에서 읽은 주차
+    week: int | None = None  # 파일명에서 읽은 주차
     version: int = 1
+    # 강좌·종류별 번호. 제목은 '과목명 종류 번호'(예: 기초프로그래밍 족보 2)로 자동으로 붙는다.
+    # 새 판은 대체한 옛 판의 번호를 이어받는다.
+    seq: int | None = None
     replaced_by: int | None = Field(default=None, foreign_key="materials.id")
     created_at: datetime = Field(default_factory=_now)
 
@@ -144,4 +150,36 @@ class Attempt(SQLModel, table=True):
     problem_id: int = Field(foreign_key="problems.id", index=True)
     chosen_index: int
     correct: bool
+    created_at: datetime = Field(default_factory=_now)
+
+
+class UserSubject(SQLModel, table=True):
+    """내 과목: 수강했거나 수강 중인 과목. 지금은 사용자가 직접 고르고, 나중에 엔드림스에서 가져온다."""
+
+    __tablename__ = "user_subjects"
+    user_id: int = Field(foreign_key="users.id", primary_key=True)
+    subject_id: int = Field(foreign_key="subjects.id", primary_key=True, index=True)
+    status: str = Field(default="current", max_length=20)  # current(수강 중) | taken(수강함)
+    semester: str | None = Field(default=None, max_length=20)  # 예: 2026-2
+    source: str = Field(default="manual", max_length=20)  # manual | ndrims
+    created_at: datetime = Field(default_factory=_now)
+
+
+class MaterialVote(SQLModel, table=True):
+    """족보 좋아요(+1)/싫어요(-1). 사용자당 자료 하나에 한 표."""
+
+    __tablename__ = "material_votes"
+    user_id: int = Field(foreign_key="users.id", primary_key=True)
+    material_id: int = Field(foreign_key="materials.id", primary_key=True, index=True)
+    value: int  # 1 | -1
+    created_at: datetime = Field(default_factory=_now)
+
+
+class ExamSelection(SQLModel, table=True):
+    """문제 풀이 전에 고른 족보. 문제 생성(services/llm.py)이 이 족보를 출제 스타일 예시로 참고한다."""
+
+    __tablename__ = "exam_selections"
+    user_id: int = Field(foreign_key="users.id", primary_key=True)
+    material_id: int = Field(foreign_key="materials.id", primary_key=True)
+    course_id: int = Field(foreign_key="courses.id", index=True)
     created_at: datetime = Field(default_factory=_now)

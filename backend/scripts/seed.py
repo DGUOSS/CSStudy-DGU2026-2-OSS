@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.core.db import engine  # noqa: E402
 from app.features.materials.pdf import extract_pages  # noqa: E402
+from app.features.materials.versioning import material_title, next_seq, parse_week  # noqa: E402
 from app.models import (  # noqa: E402
     Chapter,
     Concept,
@@ -110,6 +111,13 @@ def seed_one(session: Session, seed: dict, pdfs: dict[str, list[str]]) -> dict[s
             course_id=course.id,
             filename=m["file"],
         )
+        material = materials[m["file"]]
+        if material.seq is None:  # 업로드와 같은 이름 규칙: '과목명 교안 n'
+            material.week = parse_week(m["title"], m["file"])
+            material.seq = next_seq(session, course.id, "lecture")
+            material.title = material_title(subject.name, "lecture", material.seq)
+            session.add(material)
+            session.flush()
 
     added = 0
     for ch in seed["chapters"]:

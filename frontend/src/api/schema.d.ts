@@ -181,6 +181,8 @@ export interface paths {
         /**
          * Upload Material
          * @description 같은 내용이면 등록하지 않고(200, duplicate), 같은 자료의 수정본이면 새 판으로 대체한다(updated).
+         *
+         *     제목은 '과목명 종류 번호'로 자동으로 붙는다. title은 주차를 읽는 데만 쓴다(선택).
          */
         post: operations["upload_material_api_v1_courses__course_id__materials_post"];
         delete?: never;
@@ -445,6 +447,101 @@ export interface paths {
         patch: operations["admin_update_material_api_v1_admin_materials__material_id__patch"];
         trace?: never;
     };
+    "/api/v1/me/subjects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Subjects */
+        get: operations["list_my_subjects_api_v1_me_subjects_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/subjects/{subject_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Add My Subject
+         * @description 내 과목에 넣는다. 이미 있으면 상태(수강 중/수강함)와 학기만 바꾼다.
+         */
+        put: operations["add_my_subject_api_v1_me_subjects__subject_id__put"];
+        post?: never;
+        /** Remove My Subject */
+        delete: operations["remove_my_subject_api_v1_me_subjects__subject_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/courses/{course_id}/exams": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Exams
+         * @description 족보 목록(최신판). 좋아요-싫어요가 큰 순.
+         */
+        get: operations["list_exams_api_v1_courses__course_id__exams_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/materials/{material_id}/vote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Vote Exam */
+        put: operations["vote_exam_api_v1_materials__material_id__vote_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/courses/{course_id}/exam-selection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Select Exams
+         * @description 문제 풀이 전에 참고할 족보를 고른다(이전 선택을 통째로 바꾼다). 빈 목록이면 선택 해제.
+         */
+        put: operations["select_exams_api_v1_courses__course_id__exam_selection_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -535,7 +632,7 @@ export interface components {
              */
             kind: "lecture" | "exam" | "note";
             /** Title */
-            title: string;
+            title?: string | null;
         };
         /** ChapterMasteryOut */
         ChapterMasteryOut: {
@@ -667,6 +764,34 @@ export interface components {
             /** Exam Info */
             exam_info?: string | null;
         };
+        /** ExamOut */
+        ExamOut: {
+            /** Id */
+            id: number;
+            /** Course Id */
+            course_id: number;
+            /** Title */
+            title: string;
+            /** Filename */
+            filename: string;
+            /** Page Count */
+            page_count: number;
+            /** Uploader Name */
+            uploader_name: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Likes */
+            likes: number;
+            /** Dislikes */
+            dislikes: number;
+            /** My Vote */
+            my_vote: number;
+            /** Selected */
+            selected: boolean;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -740,6 +865,37 @@ export interface components {
             /** Kind */
             kind?: ("lecture" | "exam" | "note") | null;
         };
+        /** MySubjectIn */
+        MySubjectIn: {
+            /**
+             * Status
+             * @default current
+             * @enum {string}
+             */
+            status?: "current" | "taken";
+            /** Semester */
+            semester?: string | null;
+        };
+        /** MySubjectOut */
+        MySubjectOut: {
+            /** Subject Id */
+            subject_id: number;
+            /** Name */
+            name: string;
+            /** Code */
+            code: string | null;
+            /** Status */
+            status: string;
+            /** Semester */
+            semester: string | null;
+            /** Source */
+            source: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /**
          * ProblemOut
          * @description 풀이 화면용. 정답은 넣지 않는다.
@@ -762,6 +918,11 @@ export interface components {
         RejectIn: {
             /** Reason */
             reason: string;
+        };
+        /** SelectionIn */
+        SelectionIn: {
+            /** Material Ids */
+            material_ids: number[];
         };
         /** SignupIn */
         SignupIn: {
@@ -893,6 +1054,25 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** VoteIn */
+        VoteIn: {
+            /**
+             * Value
+             * @enum {integer}
+             */
+            value: 1 | -1 | 0;
+        };
+        /** VoteOut */
+        VoteOut: {
+            /** Material Id */
+            material_id: number;
+            /** Likes */
+            likes: number;
+            /** Dislikes */
+            dislikes: number;
+            /** My Vote */
+            my_vote: number;
         };
     };
     responses: never;
@@ -1102,7 +1282,9 @@ export interface operations {
             path: {
                 subject_id: number;
             };
-            cookie?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
         };
         requestBody?: never;
         responses: {
@@ -1168,7 +1350,9 @@ export interface operations {
             path: {
                 course_id: number;
             };
-            cookie?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
         };
         requestBody?: never;
         responses: {
@@ -1238,7 +1422,9 @@ export interface operations {
             path: {
                 course_id: number;
             };
-            cookie?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
         };
         requestBody?: never;
         responses: {
@@ -1307,7 +1493,9 @@ export interface operations {
                 material_id: number;
                 page: number;
             };
-            cookie?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
         };
         requestBody?: never;
         responses: {
@@ -1338,7 +1526,9 @@ export interface operations {
             path: {
                 course_id: number;
             };
-            cookie?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
         };
         requestBody?: never;
         responses: {
@@ -1866,6 +2056,212 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MaterialOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_subjects_api_v1_me_subjects_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MySubjectOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_my_subject_api_v1_me_subjects__subject_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subject_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MySubjectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MySubjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_my_subject_api_v1_me_subjects__subject_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subject_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_exams_api_v1_courses__course_id__exams_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExamOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    vote_exam_api_v1_materials__material_id__vote_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                material_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    select_exams_api_v1_courses__course_id__exam_selection_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SelectionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExamOut"][];
                 };
             };
             /** @description Validation Error */

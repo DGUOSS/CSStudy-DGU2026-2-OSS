@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useAuth } from '@/features/auth/useAuth'
+import { MySubjectButtons } from '@/features/my_subjects/MySubjectButtons'
+import { isForbidden } from '@/features/my_subjects/queries'
 import { useCourses, useSubjects } from './queries'
 
 export function SubjectCoursesPage() {
@@ -25,6 +27,13 @@ export function SubjectCoursesPage() {
       </div>
       {courses.isPending ? (
         <Loading />
+      ) : isForbidden(courses.error) ? (
+        <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-sm text-muted-foreground">
+            내 과목에 넣은 과목만 들어갈 수 있습니다. 수강 중이거나 수강했다면 추가해 주세요.
+          </div>
+          <MySubjectButtons subjectId={subjectId} />
+        </Card>
       ) : courses.data?.length === 0 ? (
         <Empty>아직 등록된 강좌가 없습니다. 아래에서 추가를 요청해 주세요.</Empty>
       ) : (
@@ -45,7 +54,7 @@ export function SubjectCoursesPage() {
           ))}
         </div>
       )}
-      <ErrorText error={courses.error} />
+      {!isForbidden(courses.error) && <ErrorText error={courses.error} />}
       <Card className="flex flex-col items-start gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-muted-foreground">
           찾는 교수님 강좌가 없나요? 교안과 함께 요청하면 관리자가 확인한 뒤 열어 드립니다.

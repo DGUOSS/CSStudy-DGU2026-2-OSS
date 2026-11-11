@@ -6,6 +6,7 @@ from app.core.db import SessionDep
 from app.core.security import CurrentUser
 from app.features.courses.router import get_course_or_404
 from app.features.mastery.service import concept_states
+from app.features.my_subjects.router import require_course_access
 from app.models import Chapter, Concept
 
 router = APIRouter(tags=["mastery"])
@@ -30,7 +31,7 @@ class ChapterMasteryOut(BaseModel):
 def course_mastery(
     course_id: int, session: SessionDep, user: CurrentUser
 ) -> list[ChapterMasteryOut]:
-    get_course_or_404(session, course_id)
+    require_course_access(session, user, get_course_or_404(session, course_id))
     chapters = session.exec(
         select(Chapter).where(Chapter.course_id == course_id).order_by(Chapter.order)
     ).all()

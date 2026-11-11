@@ -13,6 +13,7 @@ from app.core.security import CurrentUser
 from app.features.courses.router import get_course_or_404
 from app.features.materials.pdf import PdfError, extract_pages
 from app.features.materials.versioning import Action, add_material
+from app.features.my_subjects.router import require_course_access
 from app.models import Material, User
 
 router = APIRouter(tags=["materials"])
@@ -70,10 +71,10 @@ def _out(session: SessionDep, m: Material) -> MaterialOut:
 
 @router.get("/courses/{course_id}/materials")
 def list_materials(
-    course_id: int, session: SessionDep, all_versions: bool = False
+    course_id: int, session: SessionDep, user: CurrentUser, all_versions: bool = False
 ) -> list[MaterialOut]:
     """기본은 최신판만. all_versions=true면 옛 판까지."""
-    get_course_or_404(session, course_id)
+    require_course_access(session, user, get_course_or_404(session, course_id))
     cond = [Material.course_id == course_id]
     if not all_versions:
         cond.append(Material.replaced_by.is_(None))  # type: ignore[union-attr]
@@ -122,17 +123,20 @@ async def upload_material(
     response: Response,
     file: Annotated[UploadFile, File()],
     kind: Annotated[Kind, Form()],
-    title: Annotated[str, Form(min_length=1, max_length=200)],
+    title: Annotated[str | None, Form(max_length=200)] = None,
 ) -> UploadOut:
-    """같은 내용이면 등록하지 않고(200, duplicate), 같은 자료의 수정본이면 새 판으로 대체한다(updated)."""
-    get_course_or_404(session, course_id)
+    """같은 내용이면 등록하지 않고(200, duplicate), 같은 자료의 수정본이면 새 판으로 대체한다(updated).
+
+    제목은 '과목명 종류 번호'로 자동으로 붙는다. title은 주차를 읽는 데만 쓴다(선택).
+    """
+    require_course_access(session, user, get_course_or_404(session, course_id))
     filename, pages = await read_pdf(file)
     material, action, relinked, diff = add_material(
         session,
         course_id=course_id,
         uploader_id=user.id,
         kind=kind,
-        title=title.strip(),
+        title=(title or "").strip() or filename,
         filename=filename,
         pages=pages,
     )
@@ -168,9 +172,12 @@ async def read_pdf(file: UploadFile) -> tuple[str, list[str]]:
 
 
 @router.get("/materials/{material_id}/pages/{page}")
-def get_material_page(material_id: int, page: int, session: SessionDep) -> MaterialPageOut:
+def get_material_page(
+    material_id: int, page: int, session: SessionDep, user: CurrentUser
+) -> MaterialPageOut:
     """문제 해설의 '근거 쪽' 링크에서 쓴다. page는 1부터."""
     m = session.get(Material, material_id)
     if m is None or not 1 <= page <= m.page_count:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "자료나 쪽이 없습니다")
+    require_course_access(session, user, get_course_or_404(session, m.course_id))
     return MaterialPageOut(material_id=m.id, page=page, text=m.pages[page - 1])

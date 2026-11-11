@@ -24,5 +24,9 @@ class LLMNotConfigured(RuntimeError):
 def generate_problems(
     chapter_text: str, concepts: list[str], style_examples: list[str], count: int = 5
 ) -> list[GeneratedProblem]:
-    """교안 텍스트와 그 교수님 기출 예시(style_examples)로 문제를 만든다."""
+    """교안 텍스트와 그 교수님 기출 예시(style_examples)로 문제를 만든다.
+
+    style_examples: 사용자가 문제 풀이 전에 고른 족보 본문.
+    app.features.exams.router.exam_style_examples(session, user_id, course_id)로 얻는다.
+    """
     raise LLMNotConfigured("LLM API가 아직 정해지지 않았습니다")

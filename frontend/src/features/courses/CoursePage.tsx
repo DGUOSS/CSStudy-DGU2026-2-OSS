@@ -1,6 +1,7 @@
 import { ChevronLeft } from 'lucide-react'
 import { Link, useParams, useSearchParams } from 'react-router'
-import { ErrorText, Loading } from '@/components/States'
+import { Empty, ErrorText, Loading } from '@/components/States'
+import { isForbidden } from '@/features/my_subjects/queries'
 import { cn } from '@/lib/utils'
 import { MasteryTab } from '@/features/mastery/MasteryTab'
 import { MaterialsTab } from '@/features/materials/MaterialsTab'
@@ -24,6 +25,15 @@ export function CoursePage() {
   const tab = (params.get('tab') as TabKey | null) ?? 'solve'
 
   if (course.isPending) return <Loading />
+  if (isForbidden(course.error))
+    return (
+      <Empty>
+        내 과목에 넣은 과목의 강좌만 들어갈 수 있습니다.{' '}
+        <Link to="/" className="text-primary hover:underline">
+          내 과목에서 추가하기
+        </Link>
+      </Empty>
+    )
   if (!course.data) return <ErrorText error={course.error} />
   const c = course.data
 

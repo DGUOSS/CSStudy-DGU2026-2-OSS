@@ -10,6 +10,9 @@ chapters ─< problems >─< concepts         problem_concepts로 연결 (한 �
 users ─< attempts >─ problems             풀이 기록. 숙련도는 이 기록으로 계산한다 (따로 저장하지 않음)
 users ─< course_requests ─ courses        과목·강좌 추가 요청, 관리자가 승인하면 강좌와 연결
 materials ─ materials(replaced_by)        자료의 판 관리: 옛 판이 새 판을 가리킨다
+users ─< user_subjects >─ subjects        내 과목(수강 중/수강함). 이 과목의 강좌에만 들어간다
+users ─< material_votes >─ materials      족보 좋아요/싫어요
+users ─< exam_selections >─ materials     문제 풀기 전에 고른 족보(문제 생성 때 참고)
 ```
 
 | 테이블 | 주요 칸 |
@@ -18,13 +21,16 @@ materials ─ materials(replaced_by)        자료의 판 관리: 옛 판이 새
 | subjects | name(고유), code(학수번호) |
 | professors | name, department |
 | courses | subject_id, professor_id, info, exam_info, created_by |
-| materials | course_id, uploader_id, kind(lecture/exam/note), title, filename, page_count, pages(JSON), status, week(표시용), version, replaced_by(새 판 id, 최신판은 NULL) |
+| materials | course_id, uploader_id, kind(lecture/exam/note), title, filename, page_count, pages(JSON), status, week(표시용), version, seq(강좌·종류별 번호, 제목 '과목명 종류 번호'), replaced_by(새 판 id, 최신판은 NULL) |
 | course_requests | requester_id, subject_name, subject_code, professor_name, semester, note, material_title/filename/pages(JSON, 승인 전까지만), status(pending/approved/rejected), reject_reason, reviewed_by, reviewed_at, course_id |
 | chapters | course_id, order, title, material_id |
 | concepts | chapter_id, name |
 | problems | chapter_id, question, choices(JSON), answer_index(0부터), explanation, evidence, source_material_id, source_page, origin(sample/llm/exam) |
 | problem_concepts | problem_id, concept_id |
 | attempts | user_id, problem_id, chosen_index, correct, created_at |
+| user_subjects | (user_id, subject_id) 기본키, status(current/taken), semester, source(manual/ndrims) |
+| material_votes | (user_id, material_id) 기본키, value(1/-1) |
+| exam_selections | (user_id, material_id) 기본키, course_id |
 
 ## 테이블을 바꿀 때
 1. `git pull`로 main을 먼저 받는다 (두 사람이 동시에 바꾸면 변경 이력이 갈라진다).

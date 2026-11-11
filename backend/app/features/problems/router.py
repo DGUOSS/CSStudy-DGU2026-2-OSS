@@ -8,6 +8,7 @@ from app.core.db import SessionDep
 from app.core.security import CurrentUser
 from app.features.courses.router import get_course_or_404
 from app.features.mastery.service import concept_states
+from app.features.my_subjects.router import require_course_access
 from app.models import Attempt, Chapter, Concept, Material, Problem, ProblemConcept
 
 router = APIRouter(tags=["problems"])
@@ -76,8 +77,8 @@ def _concepts_of(session: SessionDep, problem_ids: list[int]) -> dict[int, list[
 
 
 @router.get("/courses/{course_id}/chapters")
-def list_chapters(course_id: int, session: SessionDep) -> list[ChapterOut]:
-    get_course_or_404(session, course_id)
+def list_chapters(course_id: int, session: SessionDep, user: CurrentUser) -> list[ChapterOut]:
+    require_course_access(session, user, get_course_or_404(session, course_id))
     chapters = session.exec(
         select(Chapter).where(Chapter.course_id == course_id).order_by(Chapter.order)
     ).all()
@@ -121,8 +122,10 @@ def next_problems(
     우선순위: ① 아직 한 번도 안 나온 개념이 들어간 문제 ② 아직 안 푼 문제
     ③ 숙련도가 낮은 개념의 문제. 같으면 id 순.
     """
-    if session.get(Chapter, chapter_id) is None:
+    chapter = session.get(Chapter, chapter_id)
+    if chapter is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "챕터가 없습니다")
+    require_course_access(session, user, get_course_or_404(session, chapter.course_id))
     problems = session.exec(select(Problem).where(Problem.chapter_id == chapter_id)).all()
     if not problems:
         return []
@@ -180,6 +183,8 @@ def submit_attempt(
     problem = session.get(Problem, problem_id)
     if problem is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "문제가 없습니다")
+    chapter = session.get(Chapter, problem.chapter_id)
+    require_course_access(session, user, get_course_or_404(session, chapter.course_id))
     if not 0 <= body.chosen_index < len(problem.choices):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "보기 번호가 잘못됐습니다")
 
