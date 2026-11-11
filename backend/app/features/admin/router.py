@@ -2,11 +2,11 @@
 
 - 새 강좌 만들기: 과목명·교수명과 교안 PDF 여러 개를 한 번에. 교안은 판 관리 규칙(versioning)으로 붙는다.
 - 고치기: 과목명·학수번호, 강좌의 교수명, 자료 제목·종류.
-- 지우기 (실수 방지)
-  - 과목: 강좌가 하나도 없을 때만.
-  - 강좌: 챕터·문제가 없을 때만. 딸린 자료와 추가 요청 연결은 함께 정리한다.
-  - 자료: 언제나 가능. 최신판을 지우면 바로 이전 판들이 다시 최신판이 되고,
-    이 자료를 근거로 쓰던 문제는 근거 문장을 남은 자료에서 다시 찾는다(못 찾으면 근거 쪽만 비운다).
+- 지우기 (화면에서 한 번 더 확인받는다)
+  - 과목: 딸린 강좌 전부와 '내 과목' 등록까지 함께 지운다.
+  - 강좌: 딸린 자료·챕터·개념·문제·풀이 기록·족보 평가와 선택을 함께 지운다. 추가 요청은 연결만 끊는다.
+  - 자료: 최신판을 지우면 바로 이전 판들이 다시 최신판이 되고, 이 자료를 근거로 쓰던 문제는
+    근거 문장을 남은 자료에서 다시 찾는다(못 찾으면 근거 쪽만 비운다). 챕터 연결은 이전 판으로 옮긴다.
 """
 
 from typing import Annotated, Literal
@@ -21,13 +21,19 @@ from app.features.courses.router import CourseOut, SubjectOut, _course_out, ensu
 from app.features.materials.router import MaterialOut, UploadOut, _out, read_pdf
 from app.features.materials.versioning import add_material, relink_problems
 from app.models import (
+    Attempt,
     Chapter,
+    Concept,
     Course,
     CourseRequest,
+    ExamSelection,
     Material,
+    MaterialVote,
     Problem,
+    ProblemConcept,
     Professor,
     Subject,
+    UserSubject,
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -142,10 +148,11 @@ def admin_delete_subject(subject_id: int, session: SessionDep, _: AdminUser) -> 
     subject = session.get(Subject, subject_id)
     if subject is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "과목이 없습니다")
-    if session.exec(select(Course).where(Course.subject_id == subject_id)).first():
-        raise HTTPException(
-            status.HTTP_409_CONFLICT, "강좌가 있는 과목은 지울 수 없습니다. 강좌부터 지워 주세요"
-        )
+    for course in session.exec(select(Course).where(Course.subject_id == subject_id)).all():
+        _purge_course(session, course)
+    for us in session.exec(select(UserSubject).where(UserSubject.subject_id == subject_id)).all():
+        session.delete(us)
+    session.flush()
     session.delete(subject)
     session.commit()
 
@@ -181,23 +188,61 @@ def admin_delete_course(course_id: int, session: SessionDep, _: AdminUser) -> No
     course = session.get(Course, course_id)
     if course is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "강좌가 없습니다")
-    if session.exec(select(Chapter).where(Chapter.course_id == course_id)).first():
-        raise HTTPException(
-            status.HTTP_409_CONFLICT, "챕터·문제가 있는 강좌는 지울 수 없습니다 (풀이 기록 보호)"
-        )
-    for r in session.exec(select(CourseRequest).where(CourseRequest.course_id == course_id)).all():
+    _purge_course(session, course)
+    session.commit()
+
+
+def _delete_all(session, rows) -> None:
+    for r in rows:
+        session.delete(r)
+    session.flush()
+
+
+def _purge_course(session, course: Course) -> None:
+    """강좌와 딸린 것 전부를 지운다(커밋은 부르는 쪽에서)."""
+    cid = course.id
+    for r in session.exec(select(CourseRequest).where(CourseRequest.course_id == cid)).all():
         r.course_id = None
         session.add(r)
-    materials = session.exec(select(Material).where(Material.course_id == course_id)).all()
+    chapters = session.exec(select(Chapter).where(Chapter.course_id == cid)).all()
+    ch_ids = [c.id for c in chapters]
+    problems = (
+        session.exec(select(Problem).where(Problem.chapter_id.in_(ch_ids))).all()  # type: ignore[attr-defined]
+        if ch_ids
+        else []
+    )
+    p_ids = [p.id for p in problems]
+    if p_ids:
+        _delete_all(
+            session, session.exec(select(Attempt).where(Attempt.problem_id.in_(p_ids))).all()
+        )  # type: ignore[attr-defined]
+        _delete_all(
+            session,
+            session.exec(select(ProblemConcept).where(ProblemConcept.problem_id.in_(p_ids))).all(),  # type: ignore[attr-defined]
+        )
+    _delete_all(session, problems)
+    if ch_ids:
+        _delete_all(
+            session, session.exec(select(Concept).where(Concept.chapter_id.in_(ch_ids))).all()
+        )  # type: ignore[attr-defined]
+    _delete_all(session, chapters)
+    _delete_all(
+        session, session.exec(select(ExamSelection).where(ExamSelection.course_id == cid)).all()
+    )
+    materials = session.exec(select(Material).where(Material.course_id == cid)).all()
+    m_ids = [m.id for m in materials]
+    if m_ids:
+        _delete_all(
+            session,
+            session.exec(select(MaterialVote).where(MaterialVote.material_id.in_(m_ids))).all(),  # type: ignore[attr-defined]
+        )
     for m in materials:  # 판 연결부터 끊고 지운다
         m.replaced_by = None
         session.add(m)
     session.flush()
-    for m in materials:
-        session.delete(m)
-    session.flush()
+    _delete_all(session, materials)
     session.delete(course)
-    session.commit()
+    session.flush()
 
 
 @router.patch("/materials/{material_id}")
@@ -242,5 +287,15 @@ def admin_delete_material(material_id: int, session: SessionDep, _: AdminUser) -
     orphan = {p.id for p in probs}
     for other in latest:
         relink_problems(session, m.course_id, other, only=orphan)
+    # 챕터가 이 자료를 가리키면 되살아난 이전 판으로(없으면 연결만 끊는다)
+    for ch in session.exec(select(Chapter).where(Chapter.material_id == m.id)).all():
+        ch.material_id = restored[0].id if restored else None
+        session.add(ch)
+    _delete_all(
+        session, session.exec(select(MaterialVote).where(MaterialVote.material_id == m.id)).all()
+    )
+    _delete_all(
+        session, session.exec(select(ExamSelection).where(ExamSelection.material_id == m.id)).all()
+    )
     session.delete(m)
     session.commit()

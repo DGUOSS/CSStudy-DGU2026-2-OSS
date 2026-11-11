@@ -9,12 +9,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { useCourses, useSubjects } from '@/features/courses/queries'
 import { UploadForm } from '@/features/materials/MaterialsTab'
 import { resultText } from '@/features/materials/resultText'
 import { AdminNav } from './AdminNav'
 
-const KIND_LABEL: Record<string, string> = { lecture: '교안', exam: '기출·족보', note: '시험 정보' }
+const KIND_LABEL: Record<string, string> = { lecture: '교안', exam: '족보', note: '시험 정보' }
 type Kind = 'lecture' | 'exam' | 'note'
 
 /** 관리자: 과목·강좌를 직접 만들고(교안 여러 개 함께), 기존 과목·강좌·교안을 고치고 지운다. */
@@ -25,7 +26,8 @@ export function AdminCoursesPage() {
       <div>
         <h1 className="text-2xl font-bold">관리</h1>
         <p className="text-sm text-muted-foreground">
-          교안은 쪽 내용으로 비교해서 같은 내용은 건너뛰고, 수정본은 새 판으로 바꿉니다.
+          과목을 펼치면 강좌가, 강좌의 '자료 관리'를 펼치면 자료별 수정·삭제·추가가 나옵니다. 교안은
+          쪽 내용으로 비교해서 같은 내용은 건너뛰고, 수정본은 새 판으로 바꿉니다.
         </p>
       </div>
       <AdminNav />
@@ -138,7 +140,7 @@ function CreateCourseCard({ subjectNames }: { subjectNames: string[] }) {
             </div>
             <Input ref={fileRef} type="file" accept="application/pdf,.pdf" multiple aria-label="PDF" />
             <p className="text-xs text-muted-foreground">
-              이미 있는 강좌를 적으면 강좌는 그대로 두고 자료만 붙입니다. 파일 이름이 자료 제목이 됩니다.
+              이미 있는 강좌를 적으면 강좌는 그대로 두고 자료만 붙입니다. 제목은 '과목명 종류 번호'로 자동으로 붙습니다.
             </p>
           </div>
           <ErrorText error={create.error} />
@@ -205,9 +207,6 @@ function SubjectRow({ subject }: { subject: Schemas['SubjectOut'] }) {
   return (
     <Card className="p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={() => setOpen(!open)} aria-label="펼치기">
-          {open ? <ChevronDown /> : <ChevronRight />}
-        </Button>
         {editing ? (
           <>
             <Input className="max-w-56" value={name} onChange={(e) => setName(e.target.value)} />
@@ -226,9 +225,17 @@ function SubjectRow({ subject }: { subject: Schemas['SubjectOut'] }) {
           </>
         ) : (
           <>
-            <span className="font-semibold">{subject.name}</span>
-            {subject.code && <Badge variant="outline">{subject.code}</Badge>}
-            <span className="text-sm text-muted-foreground">강좌 {subject.course_count}개</span>
+            <button
+              type="button"
+              onClick={() => setOpen(!open)}
+              className="flex cursor-pointer items-center gap-2 text-left"
+              aria-expanded={open}
+            >
+              {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+              <span className="font-semibold">{subject.name}</span>
+              {subject.code && <Badge variant="outline">{subject.code}</Badge>}
+              <span className="text-sm text-muted-foreground">강좌 {subject.course_count}개</span>
+            </button>
             <div className="ml-auto flex gap-1">
               <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
                 <Pencil />
@@ -237,7 +244,11 @@ function SubjectRow({ subject }: { subject: Schemas['SubjectOut'] }) {
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => confirm(`'${subject.name}' 과목을 지울까요?`) && remove.mutate()}
+                onClick={() =>
+                  confirm(
+                    `'${subject.name}' 과목을 지울까요?\n딸린 강좌 ${subject.course_count}개와 그 안의 자료·문제·풀이 기록, 사용자들의 '내 과목' 등록까지 모두 지워집니다.`,
+                  ) && remove.mutate()
+                }
               >
                 <Trash2 />
                 삭제
@@ -300,9 +311,6 @@ function CourseRow({ course }: { course: Schemas['CourseOut'] }) {
   return (
     <div className="rounded-lg border p-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={() => setOpen(!open)} aria-label="자료 펼치기">
-          {open ? <ChevronDown /> : <ChevronRight />}
-        </Button>
         {editing ? (
           <>
             <Input className="max-w-48" value={prof} onChange={(e) => setProf(e.target.value)} />
@@ -321,6 +329,15 @@ function CourseRow({ course }: { course: Schemas['CourseOut'] }) {
             <Badge variant="secondary">자료 {course.material_count}</Badge>
             <Badge variant="secondary">문제 {course.problem_count}</Badge>
             <div className="ml-auto flex gap-1">
+              <Button
+                size="sm"
+                variant={open ? 'secondary' : 'outline'}
+                onClick={() => setOpen(!open)}
+                aria-expanded={open}
+              >
+                {open ? <ChevronDown /> : <ChevronRight />}
+                자료 관리
+              </Button>
               <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
                 <Pencil />
                 교수명 수정
@@ -329,7 +346,9 @@ function CourseRow({ course }: { course: Schemas['CourseOut'] }) {
                 size="sm"
                 variant="ghost"
                 onClick={() =>
-                  confirm(`${course.professor_name} 교수님 강좌와 자료를 지울까요?`) && remove.mutate()
+                  confirm(
+                    `${course.professor_name} 교수님 강좌를 지울까요?\n자료 ${course.material_count}개, 문제 ${course.problem_count}개와 풀이 기록·족보 평가까지 모두 지워집니다.`,
+                  ) && remove.mutate()
                 }
               >
                 <Trash2 />
@@ -343,6 +362,7 @@ function CourseRow({ course }: { course: Schemas['CourseOut'] }) {
       {open && (
         <div className="mt-3 flex flex-col gap-3">
           <MaterialsAdmin courseId={course.id} />
+          <CourseInfoAdmin course={course} />
           <UploadForm courseId={course.id} />
         </div>
       )}
@@ -464,5 +484,44 @@ function MaterialRow({ m, courseId }: { m: Schemas['MaterialOut']; courseId: num
       </div>
       <ErrorText error={save.error ?? remove.error} />
     </li>
+  )
+}
+
+function CourseInfoAdmin({ course }: { course: Schemas['CourseOut'] }) {
+  const qc = useQueryClient()
+  const [info, setInfo] = useState(course.info)
+  const save = useMutation({
+    mutationFn: () =>
+      unwrap(
+        api.PATCH('/api/v1/courses/{course_id}', {
+          params: { path: { course_id: course.id } },
+          body: { info },
+        }),
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['courses'] }),
+  })
+  return (
+    <div className="grid gap-2 rounded-lg border p-3">
+      <Label htmlFor={`info-${course.id}`}>강좌 정보 (모든 사용자에게 보임)</Label>
+      <Textarea
+        id={`info-${course.id}`}
+        placeholder="수업 방식, 과제, 평가 비율 등"
+        value={info}
+        onChange={(e) => setInfo(e.target.value)}
+      />
+      <ErrorText error={save.error} />
+      <div className="flex items-center gap-3">
+        <Button
+          size="sm"
+          onClick={() => save.mutate()}
+          disabled={info === course.info || save.isPending}
+        >
+          저장
+        </Button>
+        {save.isSuccess && info === course.info && (
+          <span className="text-sm text-muted-foreground">저장했습니다</span>
+        )}
+      </div>
+    </div>
   )
 }

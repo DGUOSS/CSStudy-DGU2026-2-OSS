@@ -80,9 +80,9 @@
 | GET | /admin/course-requests?status= | 관리자 | 요청 목록 |
 | POST | /admin/course-requests/{id}/approve, /reject | 관리자 | 승인(이름 수정 가능), 반려(사유 필수) |
 | POST | /admin/courses | 관리자 | 과목·교수·강좌 만들기(있으면 그대로) + 자료 PDF 여러 개 (판 관리 적용) |
-| PATCH·DELETE | /admin/subjects/{id} | 관리자 | 과목명·학수번호 수정, 삭제(강좌가 없을 때만) |
-| PATCH·DELETE | /admin/courses/{id} | 관리자 | 교수명 수정, 삭제(챕터·문제가 없을 때만, 자료도 함께 삭제) |
-| PATCH·DELETE | /admin/materials/{id} | 관리자 | 제목·종류 수정, 삭제(최신판을 지우면 이전 판이 다시 최신판, 문제 근거는 남은 자료에서 다시 찾음) |
+| PATCH·DELETE | /admin/subjects/{id} | 관리자 | 과목명·학수번호 수정, 삭제(딸린 강좌 전부와 '내 과목' 등록까지 함께) |
+| PATCH·DELETE | /admin/courses/{id} | 관리자 | 교수명 수정, 삭제(자료·챕터·문제·풀이 기록·족보 평가와 선택까지 함께) |
+| PATCH·DELETE | /admin/materials/{id} | 관리자 | 제목·종류 수정, 삭제(최신판을 지우면 이전 판이 다시 최신판, 문제 근거는 남은 자료에서 다시 찾음, 챕터 연결은 이전 판으로, 족보 평가·선택은 함께 삭제) |
 
 전체 명세는 서버 실행 후 http://localhost:8000/docs
 
