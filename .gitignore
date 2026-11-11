@@ -1,36 +1,22 @@
-# Local configuration and credentials
+# 키
 .env
 .env.*
 !.env.example
-
 # Python
-.venv/
-venv/
+.venv
 __pycache__/
-*.py[cod]
-*.egg-info/
+*.pyc
 .pytest_cache/
 .ruff_cache/
-.coverage
-htmlcov/
-build/
-dist/
-
-# Frontend
+# Node
 node_modules/
-.next/
-coverage/
-
-# Uploaded materials and generated data
-uploads/
-storage/
-tmp/
-*.log
-*.db
-*.sqlite3
-
-# Editors and OS
-.idea/
-.vscode/
+dist/
+# 기타
 .DS_Store
-Thumbs.db
+CLAUDE.local.md
+uploads/
+
+# 교안 원본 (저작권, 각자 보관)
+data/raw/
+# Vercel CLI
+.vercel

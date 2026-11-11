@@ -1,10 +1,30 @@
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 
-from app.api.health import router as health_router
+from app.features.admin.router import router as admin_router
+from app.features.auth.router import router as auth_router
+from app.features.course_requests.router import router as course_requests_router
+from app.features.courses.router import router as courses_router
+from app.features.mastery.router import router as mastery_router
+from app.features.materials.router import router as materials_router
+from app.features.problems.router import router as problems_router
 
-app = FastAPI(
-    title="StudyPlanner API",
-    description="DGU 공개SW 프로젝트 주간 학습 플래너 API",
-    version="0.1.0",
-)
-app.include_router(health_router)
+app = FastAPI(title="dgu-study")
+
+api = APIRouter(prefix="/api/v1")
+
+
+@api.get("/health", tags=["health"])
+def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+# 기능을 추가하면 여기에 한 줄 등록한다
+api.include_router(auth_router)
+api.include_router(courses_router)
+api.include_router(materials_router)
+api.include_router(problems_router)
+api.include_router(mastery_router)
+api.include_router(course_requests_router)
+api.include_router(admin_router)
+
+app.include_router(api)
