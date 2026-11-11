@@ -8,7 +8,7 @@ from app.features.mastery.router import router as mastery_router
 from app.features.materials.router import router as materials_router
 from app.features.problems.router import router as problems_router
 
-app = FastAPI(title="dgu-study")
+app = FastAPI(title="dgu-study", version="0.2.0")
 
 api = APIRouter(prefix="/api/v1")
 
