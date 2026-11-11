@@ -6,8 +6,61 @@ import { cn } from '@/lib/utils'
 type Confidence = '낮음' | '보통' | '높음'
 type Step = 'first' | 'probe' | 'result'
 
-const firstChoices = ['[007]', '[  7]']
-const probeChoices = ['[042]', '[ 42]']
+type Probe = {
+  hypothesis: string
+  question: string
+  code: string
+  choices: string[]
+  explanation: string
+}
+
+const firstChoices = ['[007]', '[  7]', '[0007]']
+const probes: Record<number, Probe> = {
+  0: {
+    hypothesis: '처음 답은 맞았습니다. 다른 숫자에도 규칙을 적용하는지 확인합니다.',
+    question: '숫자를 바꿔도 같은 규칙이 적용될까요?',
+    code: 'printf("[%03d]", 42);',
+    choices: ['[042]', '[ 42]'],
+    explanation: '42는 두 자리이므로 폭 3의 남은 한 칸을 0으로 채웁니다.',
+  },
+  1: {
+    hypothesis: '빈칸을 0 대신 공백으로 채운다고 생각했을 가능성이 있습니다.',
+    question: '출력 폭을 4로 바꾸면 어떻게 될까요?',
+    code: 'printf("[%04d]", 23);',
+    choices: ['[0023]', '[  23]'],
+    explanation: '%04d는 총 4칸을 확보하고 부족한 두 칸을 0으로 채웁니다.',
+  },
+  2: {
+    hypothesis: '출력 폭을 숫자 앞에 더하는 0의 개수로 생각했을 가능성이 있습니다.',
+    question: '숫자가 이미 출력 폭보다 길다면 어떻게 될까요?',
+    code: 'printf("[%03d]", 1234);',
+    choices: ['[1234]', '[0001234]'],
+    explanation: '폭 3은 최소 너비입니다. 이미 네 자리인 1234 앞에는 0을 추가하지 않습니다.',
+  },
+}
+
+function diagnosis(firstChoice: number, probeCorrect: boolean, confidence: Confidence) {
+  if (firstChoice === 0) {
+    return probeCorrect
+      ? {
+          title: '두 상황에서 규칙을 적용했습니다',
+          detail: '이번 두 답은 맞았습니다. 다른 형식 지정자까지 이해했다고 단정할 수는 없습니다.',
+        }
+      : {
+          title: '추가 확인이 필요합니다',
+          detail: '첫 답은 맞았지만 다른 숫자에서는 규칙을 적용하지 못했습니다. 첫 정답만으로 이해를 확정하기 어렵습니다.',
+        }
+  }
+  return probeCorrect
+    ? {
+        title: '다른 상황에서는 규칙을 적용했습니다',
+        detail: '처음 답은 틀렸지만 확인 문제는 맞았습니다. 한 번의 오답으로 오개념을 확정할 수 없습니다.',
+      }
+    : {
+        title: '이 생각을 다시 확인해 보세요',
+        detail: `두 상황에서 같은 규칙을 잘못 적용했습니다. 처음 답에 대한 확신도는 '${confidence}'였습니다. 오개념 가능성이 있지만, 실제 진단에는 별도의 문제로 추가 확인이 필요합니다.`,
+      }
+}
 
 export function MisconceptionLabPage() {
   const [step, setStep] = useState<Step>('first')
@@ -22,8 +75,11 @@ export function MisconceptionLabPage() {
     setProbeChoice(null)
   }
 
-  const firstWrong = firstChoice === 1
-  const probeWrong = probeChoice === 1
+  const probe = firstChoice === null ? null : probes[firstChoice]
+  const probeCorrect = probe !== null && probeChoice === 0
+  const result = firstChoice !== null && confidence !== null
+    ? diagnosis(firstChoice, probeCorrect, confidence)
+    : null
 
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-6 px-4 py-10 sm:px-6">
@@ -32,7 +88,7 @@ export function MisconceptionLabPage() {
           <p className="text-sm font-medium text-primary">기능 시범</p>
           <h1 className="mt-1 text-2xl font-bold">오개념 반례 실험실</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            기초프로그래밍의 실제 샘플 문제를 바탕으로 만든 체험입니다. 답변은 저장되지 않습니다.
+            기초프로그래밍의 printf 형식 지정자를 활용한 시범 문제입니다. 답변은 저장되지 않습니다.
           </p>
         </div>
         <a href="https://dgu-study.vercel.app/" className="text-sm text-primary underline">
@@ -41,7 +97,7 @@ export function MisconceptionLabPage() {
       </div>
 
       <div className="flex gap-2 text-xs sm:text-sm" aria-label="진행 단계">
-        {['1. 처음 판단', '2. 다른 상황', '3. 생각 정리'].map((label, index) => (
+        {['1. 처음 판단', '2. 확인 문제', '3. 생각 정리'].map((label, index) => (
           <span
             key={label}
             className={cn(
@@ -89,28 +145,28 @@ export function MisconceptionLabPage() {
               disabled={firstChoice === null || confidence === null}
               onClick={() => setStep('probe')}
             >
-              답 제출하고 다음 상황 보기
+              답 제출하고 확인 문제 보기
             </Button>
           </CardContent>
         </Card>
       )}
 
-      {step === 'probe' && (
+      {step === 'probe' && probe && (
         <Card>
           <CardHeader>
-            <h2 className="text-lg font-semibold">숫자를 바꿔서 다시 생각해 볼까요?</h2>
+            <h2 className="text-lg font-semibold">{probe.question}</h2>
             <p className="text-sm text-muted-foreground">
               첫 답은 {firstChoices[firstChoice!]}였고, 확신도는 {confidence}이었습니다.
               결과 설명은 이 문제를 푼 뒤에 볼 수 있습니다.
             </p>
-            <pre className="rounded-md bg-muted p-4 text-sm">{'printf("[%03d]", 42);'}</pre>
+            <pre className="rounded-md bg-muted p-4 text-sm">{probe.code}</pre>
           </CardHeader>
           <CardContent className="flex flex-col gap-5">
             <ChoiceGroup
-              choices={probeChoices}
+              choices={probe.choices}
               selected={probeChoice}
               onSelect={setProbeChoice}
-              label="다른 상황에서의 답"
+              label="확인 문제의 답"
             />
             <Button
               className="self-end"
@@ -123,7 +179,7 @@ export function MisconceptionLabPage() {
         </Card>
       )}
 
-      {step === 'result' && (
+      {step === 'result' && probe && result && probeChoice !== null && (
         <Card>
           <CardHeader>
             <h2 className="text-lg font-semibold">두 상황을 비교해 봅시다</h2>
@@ -134,42 +190,35 @@ export function MisconceptionLabPage() {
                 title="처음 판단"
                 chosen={firstChoices[firstChoice!]}
                 answer={firstChoices[0]}
-                correct={!firstWrong}
+                correct={firstChoice === 0}
               />
               <AnswerSummary
-                title="숫자를 바꾼 상황"
-                chosen={probeChoices[probeChoice!]}
-                answer={probeChoices[0]}
-                correct={!probeWrong}
+                title="확인 문제"
+                chosen={probe.choices[probeChoice]}
+                answer={probe.choices[0]}
+                correct={probeCorrect}
               />
             </div>
             <div className="rounded-md border-l-4 border-primary bg-muted p-4">
-              <p className="font-semibold">
-                {firstWrong && probeWrong
-                  ? '0으로 채우는 규칙을 공백 채우기로 생각했을 가능성이 있습니다.'
-                  : firstWrong
-                    ? '처음 답은 틀렸지만, 다른 상황에서는 규칙을 적용했습니다. 한 번의 오답으로 오개념을 단정할 수 없습니다.'
-                    : '처음 답은 맞았습니다. 다른 숫자에도 같은 규칙을 적용하는지 확인했습니다.'}
-              </p>
-              <p className="mt-2 leading-relaxed">
-                %03d에서 3은 출력 폭, 0은 빈칸을 0으로 채우라는 뜻입니다.
-                그래서 7은 007, 42는 042로 출력됩니다.
-              </p>
+              <p className="font-semibold">{result.title}</p>
+              <p className="mt-2 leading-relaxed">{result.detail}</p>
+              <p className="mt-2 leading-relaxed">{probe.hypothesis}</p>
             </div>
             <div className="rounded-md border p-4">
-              <p className="font-medium">교안 근거</p>
-              <blockquote className="mt-2 border-l-2 border-primary pl-3 text-muted-foreground">
-                %03d : 필드 폭을 3칸 확보하고 오른쪽 정렬, 남은 자리는 0으로 채움
-              </blockquote>
+              <p className="font-medium">규칙과 확인 문제 풀이</p>
+              <p className="mt-2 leading-relaxed">
+                %03d에서 3은 최소 출력 폭, 0은 부족한 자리를 0으로 채우라는 뜻입니다.
+                그래서 7은 007로 출력됩니다. {probe.explanation}
+              </p>
               <p className="mt-2 text-xs text-muted-foreground">
-                기초프로그래밍 샘플 문제에 등록된 교안 문장입니다. 이 시범에는 PDF 원본과 페이지 번호가 연결되지 않았습니다.
+                이 시범은 교안 PDF 원본이나 페이지 번호와 연결되지 않았습니다.
               </p>
             </div>
             <p className="text-xs text-muted-foreground">
-              이 시범은 점수나 숙련도를 변경하지 않습니다. 실제 기능에서는 다른 문제로 다시 확인해야 합니다.
+              이 결과는 학습용 안내이며 점수·숙련도를 변경하지 않습니다.
             </p>
             <Button variant="outline" className="self-end" onClick={reset}>
-              다시 체험하기
+              다른 답으로 다시 체험하기
             </Button>
           </CardContent>
         </Card>
