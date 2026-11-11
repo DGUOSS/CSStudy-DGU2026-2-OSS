@@ -81,9 +81,7 @@ def check(seed: dict, pdfs: dict[str, list[str]]) -> list[str]:
                 if wrong == p["answer"]:
                     errors.append(f"{label}: 정답 보기에는 오개념 확인 문제를 붙일 수 없음")
                 seen_wrong_choices.add(wrong)
-                if len(probe["choices"]) < 2 or len(set(probe["choices"])) != len(
-                    probe["choices"]
-                ):
+                if len(probe["choices"]) < 2 or len(set(probe["choices"])) != len(probe["choices"]):
                     errors.append(f"{label}: 확인 문제의 보기는 서로 다른 값 2개 이상이어야 함")
                 if not 0 <= probe["answer"] < len(probe["choices"]):
                     errors.append(f"{label}: 확인 문제의 정답 번호가 보기 범위를 벗어남")
@@ -164,7 +162,9 @@ def seed_one(session: Session, seed: dict, pdfs: dict[str, list[str]]) -> dict[s
             if exists:
                 problem = exists
                 if problem.choices != p["choices"] or problem.answer_index != p["answer"]:
-                    raise ValueError(f"기존 문제의 보기 또는 정답이 시드와 다릅니다: {p['question']}")
+                    raise ValueError(
+                        f"기존 문제의 보기 또는 정답이 시드와 다릅니다: {p['question']}"
+                    )
             else:
                 problem = Problem(
                     chapter_id=chapter.id,

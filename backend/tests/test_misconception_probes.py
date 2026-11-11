@@ -12,7 +12,6 @@ from app.models import MisconceptionProbe, Problem
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import seed  # noqa: E402
 
-
 SEED_PATH = Path(__file__).resolve().parents[2] / "data/seed/basic-programming-kang.json"
 
 
