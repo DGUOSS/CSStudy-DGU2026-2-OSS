@@ -7,7 +7,7 @@
 ## 스택
 - 백엔드: Python 3.12, FastAPI, SQLModel, Alembic, pyBKT, pypdf
 - 프론트: React, Vite, TypeScript, Tailwind, shadcn/ui 형식 부품, TanStack Query, openapi-fetch
-- DB: Neon Postgres / 배포: 프론트 Vercel, 백엔드 Render (설정 파일만 준비됨)
+- DB: Neon Postgres / 배포: 프론트 Vercel, 백엔드 Render (이 레포 main에서 자동 배포)
 
 ## 필요한 것
 Git, [uv](https://docs.astral.sh/uv/), Node LTS, pnpm. 윈도우·WSL 모두 된다.
@@ -44,8 +44,7 @@ PR을 올리면 GitHub Actions가 같은 검사를 돌린다.
 ## 배포
 - 사이트: https://dgu-study.vercel.app (Vercel, `frontend/`)
 - API: https://dgu-study-api.onrender.com (Render 무료, 싱가포르, `backend/`). 사이트의 `/api` 요청은 `frontend/vercel.json`이 여기로 넘긴다.
-- **이 레포 main에 push(또는 PR 머지)하면 자동 배포된다** (`.github/workflows/deploy.yml`).
-  검사(테스트·린트·빌드)가 통과하면 프론트는 Vercel에 배포하고, 백엔드는 배포용 레포(Kachipuchipa/dgu-study)로 전달해 Render가 배포한다.
-  백엔드는 시작할 때 `alembic upgrade head`가 먼저 돈다. 진행 상황은 GitHub의 Actions 탭에서 본다.
-- 배포에 필요한 Secrets는 `deploy.yml` 맨 위 설명 참고. 배포용 레포에는 직접 push하지 않는다(이 레포에서만 고친다).
+- **이 레포 main에 push(또는 PR 머지)하면 자동 배포된다.** Vercel(`frontend/`)과 Render(`backend/`)가 이 레포를 직접 보고 각자 배포한다.
+  백엔드는 시작할 때 `alembic upgrade head`가 먼저 돈다. 검사(테스트·린트·빌드)는 GitHub Actions(`ci.yml`)에서 돈다.
+- 배포 설정(환경 변수 등)은 Vercel·Render 대시보드에서 관리한다. 비밀값은 레포에 넣지 않는다.
 - Render 무료 서버는 15분 동안 요청이 없으면 잠든다. 첫 요청이 30초~1분 걸린다.

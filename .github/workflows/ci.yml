@@ -1,8 +1,9 @@
 name: CI
-# PR마다 검사한다. main에 push될 때는 deploy.yml이 이 검사를 먼저 부른 뒤 배포한다.
+# PR과 main push마다 검사한다. 배포는 Vercel·Render가 이 레포 main을 직접 보고 스스로 한다.
 on:
   pull_request:
-  workflow_call:
+  push:
+    branches: [main]
 
 jobs:
   backend:
