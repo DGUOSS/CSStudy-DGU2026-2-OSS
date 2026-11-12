@@ -4,6 +4,14 @@
 
 과목 → 교수 → 강좌 페이지에서 그 교수님 교안으로 만든 문제를 풀고, 개념별 숙련도를 확인한다. 기능은 [docs/SPEC.md](docs/SPEC.md), DB는 [docs/DB.md](docs/DB.md).
 
+## 오개념 반례 실험실 기능 브랜치
+
+이 브랜치(`feat/misconception-probes`)는 `main`에 병합하기 전 팀원 검토용이다.
+
+- [기능 브랜치 웹 미리보기](https://dgu-study-git-feat-misconception-probes-kachipuchipas-projects.vercel.app/lab/misconception): 고정 예시를 체험할 수 있는 별도 주소다. 현재 Vercel 로그인이 필요하다.
+- 기존 문제 풀이에 연결된 오개념 확인 기능은 [로컬 데모 안내](docs/DEMO.md)에 따라 체험한다. 브랜치 웹 미리보기의 API는 아직 운영 백엔드로 연결되어 있으므로, 온라인에서는 통합 기능을 시험하지 않는다.
+- 아래 `dgu-study.vercel.app`은 `main`의 **운영 사이트**이며 이 브랜치의 체험 주소가 아니다.
+
 ## 스택
 - 백엔드: Python 3.12, FastAPI, SQLModel, Alembic, pyBKT, pypdf
 - 프론트: React, Vite, TypeScript, Tailwind, shadcn/ui 형식 부품, TanStack Query, openapi-fetch
@@ -44,7 +52,7 @@ PR을 올리면 GitHub Actions가 같은 검사를 돌린다.
 - AI 코딩 도구 공통 규칙은 [CLAUDE.md](CLAUDE.md).
 
 ## 배포
-- 사이트: https://dgu-study.vercel.app (Vercel, `frontend/`)
+- 운영 사이트 (`main`): https://dgu-study.vercel.app (Vercel, `frontend/`)
 - API: https://dgu-study-api.onrender.com (Render 무료, 싱가포르, `backend/`). 사이트의 `/api` 요청은 `frontend/vercel.json`이 여기로 넘긴다.
 - **이 레포 main에 push(또는 PR 머지)하면 자동 배포된다.** Vercel(`frontend/`)과 Render(`backend/`)가 이 레포를 직접 보고 각자 배포한다.
   백엔드는 시작할 때 `alembic upgrade head`가 먼저 돈다. 검사(테스트·린트·빌드)는 GitHub Actions(`ci.yml`)에서 돈다.
