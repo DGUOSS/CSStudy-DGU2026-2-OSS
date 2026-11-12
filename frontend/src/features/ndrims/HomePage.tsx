@@ -4,17 +4,18 @@ import { Link } from 'react-router'
 import { ErrorText, Loading } from '@/components/States'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
+import { api, unwrap } from '@/api/client'
+import { RequestWithFiles } from '@/features/course_requests/RequestWithFiles'
 import { Card } from '@/components/ui/card'
 import { useAuth } from '@/features/auth/useAuth'
 import { ImportPanel } from './ImportPanel'
-import { useMyCourses, useRequestFromRecord } from './queries'
+import { useMyCourses } from './queries'
 
 /** 첫 화면: 수강 기록이 없으면 가져오기 안내, 있으면 내 강좌 */
 export function HomePage() {
   const mine = useMyCourses()
   const { user } = useAuth()
   const [reimport, setReimport] = useState(false)
-  const request = useRequestFromRecord()
 
   if (mine.isPending) return <Loading />
   if (!mine.data) return <ErrorText error={mine.error} />
@@ -80,7 +81,7 @@ export function HomePage() {
           <div>
             <h2 className="text-lg font-semibold">아직 열리지 않은 수업</h2>
             <p className="text-sm text-muted-foreground">
-              동국스터디에 아직 강좌가 없는 수업입니다. 요청하면 관리자가 교안을 붙여 엽니다.
+              동국스터디에 아직 강좌가 없는 수업입니다. 요청할 때 교안 PDF를 같이 올리면 더 빨리 열립니다(선택).
             </p>
           </div>
           <ul className="flex flex-col divide-y rounded-xl border bg-card">
@@ -103,24 +104,28 @@ export function HomePage() {
                     요청함{w.request_count > 1 && ` (${w.request_count}명)`}
                   </Badge>
                 ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={request.isPending || !w.professor_name}
+                  <RequestWithFiles
+                    label={`열어 달라고 요청${w.request_count > 0 ? ` (${w.request_count}명 대기)` : ''}`}
+                    disabled={!w.professor_name}
                     title={
                       w.professor_name
                         ? ''
-                        : '교수 정보가 없어 관리자가 개설 목록을 가져온 뒤 요청할 수 있습니다'
+                        : '교수 정보가 없습니다. 엔드림스에서 수강 기록을 다시 가져와 주세요'
                     }
-                    onClick={() => request.mutate(w.enrollment_id)}
-                  >
-                    열어 달라고 요청{w.request_count > 0 && ` (${w.request_count}명 대기)`}
-                  </Button>
+                    create={async () =>
+                      (
+                        await unwrap(
+                          api.POST('/api/v1/me/enrollments/{enrollment_id}/request', {
+                            params: { path: { enrollment_id: w.enrollment_id } },
+                          }),
+                        )
+                      ).request_id
+                    }
+                  />
                 )}
               </li>
             ))}
           </ul>
-          <ErrorText error={request.error} />
         </div>
       )}
     </div>

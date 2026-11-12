@@ -31,19 +31,6 @@ export function useImportNdrims(isAdmin: boolean) {
   })
 }
 
-export function useRequestFromRecord() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (enrollmentId: number) =>
-      unwrap(
-        api.POST('/api/v1/me/enrollments/{enrollment_id}/request', {
-          params: { path: { enrollment_id: enrollmentId } },
-        }),
-      ),
-    onSuccess: () => qc.invalidateQueries(),
-  })
-}
-
 export const useTerms = () =>
   useQuery({
     queryKey: ['catalog', 'terms'],
@@ -90,19 +77,6 @@ export const useCatalogSearch = (q: SearchQuery | null) =>
         }),
       ),
   })
-
-export function useCatalogRequest() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (g: OfferingGroup) =>
-      unwrap(
-        api.POST('/api/v1/catalog/request', {
-          body: { year: g.year, sem_cd: g.sem_cd, sbj_no: g.sbj_no, dvcls: g.dvcls[0] ?? '' },
-        }),
-      ),
-    onSuccess: () => qc.invalidateQueries(),
-  })
-}
 
 /** 수강 기록이 없어 막힌 경우(403) */
 export const isForbidden = (e: Error | null) => e instanceof ApiError && e.status === 403

@@ -1229,10 +1229,30 @@ export interface components {
             /** Emp No */
             emp_no?: string | null;
         };
+        /** RecordRequestOut */
+        RecordRequestOut: {
+            /** Current Term */
+            current_term: string | null;
+            /** Record Count */
+            record_count: number;
+            /** Imported At */
+            imported_at: string | null;
+            /** Courses */
+            courses: components["schemas"]["MyCourseOut"][];
+            /** Waiting */
+            waiting: components["schemas"]["WaitingOut"][];
+            /** Request Id */
+            request_id: number;
+        };
         /** RejectIn */
         RejectIn: {
             /** Reason */
             reason: string;
+        };
+        /** RequestCreatedOut */
+        RequestCreatedOut: {
+            /** Request Id */
+            request_id: number;
         };
         /** RequestIn */
         RequestIn: {
@@ -2560,7 +2580,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MyCoursesOut"];
+                    "application/json": components["schemas"]["RecordRequestOut"];
                 };
             };
             /** @description Validation Error */
@@ -2736,9 +2756,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["RequestCreatedOut"];
                 };
             };
             /** @description Validation Error */

@@ -110,6 +110,7 @@ def test_ndrims_flow(client, login, session, course_with_problems):
     # 요청: 지난 학기 수업은 내 기록에서, 이번 학기 수업은 개설 목록에서
     wid = next(w["enrollment_id"] for w in out["waiting"] if w["sbj_no"] == "CSE3001")
     me = client.post(f"/api/v1/me/enrollments/{wid}/request").json()
+    assert me["request_id"] > 0
     assert next(w for w in me["waiting"] if w["sbj_no"] == "CSE3001")["request"] == "mine"
     assert client.post(f"/api/v1/me/enrollments/{wid}/request").status_code == 409
     req = client.post(

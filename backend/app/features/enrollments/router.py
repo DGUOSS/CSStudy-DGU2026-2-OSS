@@ -178,15 +178,21 @@ def import_records(body: ImportIn, session: SessionDep, user: CurrentUser) -> Im
     )
 
 
+class RecordRequestOut(MyCoursesOut):
+    request_id: int
+
+
 @router.post("/me/enrollments/{enrollment_id}/request", status_code=status.HTTP_201_CREATED)
-def request_from_record(enrollment_id: int, session: SessionDep, user: CurrentUser) -> MyCoursesOut:
+def request_from_record(
+    enrollment_id: int, session: SessionDep, user: CurrentUser
+) -> RecordRequestOut:
     """내 수강 기록의 수업을 열어 달라고 요청한다(지난 학기에만 열린 수업도 가능)."""
     e = session.get(Enrollment, enrollment_id)
     if e is None or e.user_id != user.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "수강 기록이 없습니다")
     if e.course_id:
         raise HTTPException(status.HTTP_409_CONFLICT, "이미 열린 강좌입니다")
-    create_keyed_request(
+    r = create_keyed_request(
         session,
         user,
         source="record",
@@ -197,4 +203,4 @@ def request_from_record(enrollment_id: int, session: SessionDep, user: CurrentUs
         semester=term_label(e.year, e.sem_cd),
     )
     session.commit()
-    return _my_courses(session, user)
+    return RecordRequestOut(**_my_courses(session, user).model_dump(), request_id=r.id)

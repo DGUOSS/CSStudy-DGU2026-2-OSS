@@ -303,8 +303,14 @@ def search(
     return SearchOut(total=len(keys), items=items)
 
 
+class RequestCreatedOut(BaseModel):
+    request_id: int
+
+
 @router.post("/catalog/request", status_code=status.HTTP_201_CREATED)
-def request_from_catalog(body: RequestIn, session: SessionDep, user: CurrentUser) -> dict:
+def request_from_catalog(
+    body: RequestIn, session: SessionDep, user: CurrentUser
+) -> RequestCreatedOut:
     """이번 학기 개설 목록의 강좌를 열어 달라고 요청한다."""
     o = catalog_row(session, body.year, body.sem_cd, body.sbj_no, body.dvcls)
     if o is None:
@@ -323,4 +329,4 @@ def request_from_catalog(body: RequestIn, session: SessionDep, user: CurrentUser
         semester=f"{o.year} {sem_label(o.sem_cd)}",
     )
     session.commit()
-    return {"request_id": r.id}
+    return RequestCreatedOut(request_id=r.id)

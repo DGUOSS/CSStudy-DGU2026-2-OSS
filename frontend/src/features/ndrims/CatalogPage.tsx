@@ -7,10 +7,11 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { api, unwrap } from '@/api/client'
+import { RequestWithFiles } from '@/features/course_requests/RequestWithFiles'
 import {
   type OfferingGroup,
   type SearchQuery,
-  useCatalogRequest,
   useCatalogSearch,
   useFilters,
   useTerms,
@@ -195,7 +196,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function Row({ g }: { g: OfferingGroup }) {
-  const req = useCatalogRequest()
   const rates = Object.entries(g.eval_rates).filter(([, v]) => v != null)
   return (
     <tr className="align-top">
@@ -238,17 +238,18 @@ function Row({ g }: { g: OfferingGroup }) {
         ) : g.requested_by_me ? (
           <Badge variant="outline">요청함 ({g.request_count}명)</Badge>
         ) : (
-          <div className="flex flex-col items-start gap-1">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={req.isPending || req.isSuccess}
-              onClick={() => req.mutate(g)}
-            >
-              열어 달라고 요청{g.request_count > 0 && ` (${g.request_count}명)`}
-            </Button>
-            <ErrorText error={req.error} />
-          </div>
+          <RequestWithFiles
+            label={`열어 달라고 요청${g.request_count > 0 ? ` (${g.request_count}명)` : ''}`}
+            create={async () =>
+              (
+                await unwrap(
+                  api.POST('/api/v1/catalog/request', {
+                    body: { year: g.year, sem_cd: g.sem_cd, sbj_no: g.sbj_no, dvcls: g.dvcls[0] ?? '' },
+                  }),
+                )
+              ).request_id
+            }
+          />
         )}
       </td>
     </tr>
