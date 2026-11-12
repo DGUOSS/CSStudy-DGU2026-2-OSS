@@ -58,6 +58,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
     }
     if (/EdcRegi170\/doList/.test(url) || /EddRec050\/doList/.test(url)) {
       const grade = /EddRec050/.test(url)
+      let kept = 0
       for (const x of rows) {
         const r = {
           year: str(grade ? x.YY : x.OPEN_YY, 4),
@@ -70,7 +71,12 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
         if (!r.year || !r.sem_cd || !r.sbj_no || !r.sbj_nm) continue
         const k = [r.year, r.sem_cd, r.sbj_no, r.dvcls].join('|')
         rec[k] = { ...rec[k], ...r, emp_nm: r.emp_nm || (rec[k]?.emp_nm as string) || null }
+        kept++
       }
+      log.push(
+          `${grade ? '성적' : '수강신청'} 행 ${rows.length} → 기록 ${kept}` +
+            (rows.length && !kept ? ` (칸: ${Object.keys(rows[0]).join(',')})` : ''),
+        )
     } else if (/EdcLesn010\/doList/.test(url)) {
       for (const x of rows) {
         if (!x.SBJ_NO || !x.OPEN_YY) continue
@@ -150,7 +156,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
     const n = Object.keys(rec).length
     const m = Object.keys(cat).length
     box.innerHTML =
-      '<b style="color:#c8102e">동국스터디 가져오기</b> <span style="font-size:11px;color:#999">v3</span>' +
+      '<b style="color:#c8102e">동국스터디 가져오기</b> <span style="font-size:11px;color:#999">v4</span>' +
       '<div style="margin:6px 0">수강 기록 <b>' +
       n +
       '</b>건' +
@@ -299,14 +305,14 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
       return m ? String(m.NANA || '') : ''
     }
     // 학번: 사용자 정보 중 10자리 숫자
-    const ten = [...Object.entries(u), ...Object.entries(acc || {})]
-      .sort(([a], [b]) => Number(/STD|USER|LOGIN_ID/.test(b)) - Number(/STD|USER|LOGIN_ID/.test(a)))
-      .map(([, v]) => String(v ?? ''))
-      .find((v) => /^\d{10}$/.test(v))
+    const pref = /STD|LOGIN_ID|MEMB_NO|USER/
+    const hit = [...Object.entries(u), ...Object.entries(acc || {})]
+      .sort(([a], [b]) => Number(pref.test(b)) - Number(pref.test(a)))
+      .find(([, v]) => /^\d{10}$/.test(String(v ?? '')))
+    const ten = hit && String(hit[1])
     const stdNo = ten || (prompt('학번(10자리)을 입력해 주세요. 엔드림스 조회에만 씁니다.') ?? '').trim()
-    log.push(`학번 ${ten ? '사용자 정보에서 찾음' : '직접 입력'}`)
+    log.push(`학번 ${hit ? hit[0] + ' 칸에서 찾음' : '직접 입력'}`)
     if (!/^\d{10}$/.test(stdNo)) throw new Error('std')
-    const before = Object.keys(rec).length
     // 지난 학기들: 전체성적조회
     const recNana = await pgmNana('EddRec050')
     if (recNana)
@@ -333,15 +339,20 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
         '@d1#AUTH_CTL2_CD': '',
       })
     }
-    log.push(`모은 수강 기록 ${Object.keys(rec).length - before}건`)
+    log.push(`모은 수강 기록 모두 ${Object.keys(rec).length}건`)
     render()
-    if (Object.keys(rec).length === before) throw new Error('empty')
+    if (!Object.keys(rec).length) throw new Error('empty')
     send()
   }
 
+  let busy = false
   const run = () => {
+    if (busy) return
+    busy = true
     log.length = 0
-    auto().catch(fail)
+    auto()
+      .catch(fail)
+      .finally(() => (busy = false))
   }
   w.__dguStudy = { show: () => (box.style.display = 'block'), run }
   render()
