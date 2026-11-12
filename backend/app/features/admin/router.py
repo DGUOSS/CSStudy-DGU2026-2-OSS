@@ -26,6 +26,7 @@ from app.models import (
     Concept,
     Course,
     CourseRequest,
+    Enrollment,
     ExamSelection,
     Material,
     MaterialVote,
@@ -33,7 +34,6 @@ from app.models import (
     ProblemConcept,
     Professor,
     Subject,
-    UserSubject,
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -150,9 +150,6 @@ def admin_delete_subject(subject_id: int, session: SessionDep, _: AdminUser) -> 
         raise HTTPException(status.HTTP_404_NOT_FOUND, "과목이 없습니다")
     for course in session.exec(select(Course).where(Course.subject_id == subject_id)).all():
         _purge_course(session, course)
-    for us in session.exec(select(UserSubject).where(UserSubject.subject_id == subject_id)).all():
-        session.delete(us)
-    session.flush()
     session.delete(subject)
     session.commit()
 
@@ -204,6 +201,10 @@ def _purge_course(session, course: Course) -> None:
     for r in session.exec(select(CourseRequest).where(CourseRequest.course_id == cid)).all():
         r.course_id = None
         session.add(r)
+    # 수강 기록은 남기고 강좌 연결만 끊는다(다시 열리면 다시 이어진다)
+    for e in session.exec(select(Enrollment).where(Enrollment.course_id == cid)).all():
+        e.course_id = None
+        session.add(e)
     chapters = session.exec(select(Chapter).where(Chapter.course_id == cid)).all()
     ch_ids = [c.id for c in chapters]
     problems = (

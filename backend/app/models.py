@@ -6,7 +6,8 @@
       챕터 ─< 문제(Problem) >─< 개념   (ProblemConcept)
       사용자(User) ─< 풀이 기록(Attempt) >─ 문제
       사용자 ─< 강좌 추가 요청(CourseRequest) ─ (승인 후) 강좌
-      사용자 ─< 내 과목(UserSubject) >─ 과목     (등록한 과목의 강좌에만 들어갈 수 있다)
+      사용자 ─< 수강 기록(Enrollment) >─ 강좌   (엔드림스에서 가져온 기록. 기록이 있는 강좌에만 들어간다)
+      개설 목록(CatalogOffering)                 (엔드림스 종합강의시간표. 강좌를 만들지 않는 참고용)
       사용자 ─< 족보 평가(MaterialVote) >─ 자료(족보)
       사용자 ─< 족보 선택(ExamSelection) >─ 자료(족보)   (문제 생성 때 참고할 족보)
 """
@@ -42,6 +43,9 @@ class Professor(SQLModel, table=True):
     __tablename__ = "professors"
     id: int | None = Field(default=None, primary_key=True)
     name: str = Field(max_length=50)
+    # 엔드림스 교원번호(EMP_NO). 동명이인을 가른다. 수강 기록에서만 만든 교수는 비어 있다가
+    # 개설 목록을 가져오면 채워진다.
+    emp_no: str | None = Field(default=None, max_length=20, unique=True, index=True)
     department: str | None = Field(default=None, max_length=100)
 
 
@@ -80,6 +84,11 @@ class CourseRequest(SQLModel, table=True):
     material_files: list[dict] = Field(
         default_factory=list, sa_column=Column(JSON, nullable=False, server_default="[]")
     )
+    # 요청 근거: catalog(이번 학기 개설 목록에서 고름) | record(내 수강 기록) | manual(예전 방식)
+    source: str = Field(
+        default="manual", max_length=20, sa_column_kwargs={"server_default": "manual"}
+    )
+    professor_emp_no: str | None = Field(default=None, max_length=20)
     status: str = Field(default="pending", max_length=20, index=True)  # pending|approved|rejected
     reject_reason: str | None = Field(default=None, sa_column=Column(Text))
     reviewed_by: int | None = Field(default=None, foreign_key="users.id")
@@ -159,16 +168,54 @@ class Attempt(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_now)
 
 
-class UserSubject(SQLModel, table=True):
-    """내 과목: 수강했거나 수강 중인 과목. 지금은 사용자가 직접 고르고, 나중에 엔드림스에서 가져온다."""
+class Enrollment(SQLModel, table=True):
+    """엔드림스에서 가져온 수강 기록 한 줄(과목 찾기에 필요한 칸만). 성적·개인 정보는 저장하지 않는다.
 
-    __tablename__ = "user_subjects"
-    user_id: int = Field(foreign_key="users.id", primary_key=True)
-    subject_id: int = Field(foreign_key="subjects.id", primary_key=True, index=True)
-    status: str = Field(default="current", max_length=20)  # current(수강 중) | taken(수강함)
-    semester: str | None = Field(default=None, max_length=20)  # 예: 2026-2
-    source: str = Field(default="manual", max_length=20)  # manual | ndrims
+    엔드림스에서 수업 하나는 (연도, 학기 코드, 학수번호, 분반)으로 정해진다. course_id는 그 수업이
+    사이트의 어느 강좌(과목+교수)인지이고, 아직 열린 강좌가 없으면 비어 있다(강좌가 열리면 채운다).
+    """
+
+    __tablename__ = "enrollments"
+    __table_args__ = (UniqueConstraint("user_id", "year", "sem_cd", "sbj_no", "dvcls"),)
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    year: str = Field(max_length=4)
+    sem_cd: str = Field(max_length=20)  # 예: CM160.20 (2학기)
+    sbj_no: str = Field(max_length=20, index=True)  # 학수번호
+    sbj_nm: str = Field(max_length=200)
+    dvcls: str = Field(default="", max_length=10)  # 분반
+    emp_nm: str | None = Field(default=None, max_length=50)  # 성적 기록에만 있음
+    emp_no: str | None = Field(default=None, max_length=20)  # 개설 목록과 맞춰서 채움
+    course_id: int | None = Field(default=None, foreign_key="courses.id", index=True)
+    source: str = Field(default="ndrims", max_length=20)
     created_at: datetime = Field(default_factory=_now)
+
+
+class CatalogOffering(SQLModel, table=True):
+    """엔드림스 종합강의시간표의 개설 강좌 한 줄. 강좌 찾기·요청·교수 확정에 쓰는 참고용 목록."""
+
+    __tablename__ = "catalog_offerings"
+    __table_args__ = (UniqueConstraint("year", "sem_cd", "sbj_no", "dvcls"),)
+    id: int | None = Field(default=None, primary_key=True)
+    year: str = Field(max_length=4, index=True)
+    sem_cd: str = Field(max_length=20, index=True)
+    sbj_no: str = Field(max_length=20, index=True)
+    sbj_nm: str = Field(max_length=200)
+    dvcls: str = Field(default="", max_length=10)
+    emp_no: str | None = Field(default=None, max_length=20)
+    emp_nm: str | None = Field(default=None, max_length=50)
+    colg_nm: str | None = Field(default=None, max_length=100)
+    dpt_nm: str | None = Field(default=None, max_length=100)
+    cpdiv_nm: str | None = Field(default=None, max_length=50)  # 이수구분
+    cdt: str | None = Field(default=None, max_length=10)  # 학점
+    timetable: str | None = Field(default=None, max_length=300)
+    room: str | None = Field(default=None, max_length=300)
+    mid_rate: int | None = None
+    fnl_rate: int | None = None
+    atnd_rate: int | None = None
+    proj_rate: int | None = None
+    plan_url: str | None = Field(default=None, max_length=500)
+    imported_at: datetime = Field(default_factory=_now)
 
 
 class MaterialVote(SQLModel, table=True):

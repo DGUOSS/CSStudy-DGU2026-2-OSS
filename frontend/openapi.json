@@ -1040,6 +1040,75 @@
         }
       }
     },
+    "/api/v1/course-requests/{request_id}/files": {
+      "post": {
+        "tags": [
+          "course-requests"
+        ],
+        "summary": "Attach Files",
+        "description": "대기 중인 요청에 교안 PDF를 붙인다(요청한 사람 또는 관리자). 교안이 있어야 승인할 수 있다.",
+        "operationId": "attach_files_api_v1_course_requests__request_id__files_post",
+        "parameters": [
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Request Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_attach_files_api_v1_course_requests__request_id__files_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseRequestOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/course-requests/mine": {
       "get": {
         "tags": [
@@ -1721,13 +1790,241 @@
         }
       }
     },
-    "/api/v1/me/subjects": {
+    "/api/v1/me/courses": {
       "get": {
         "tags": [
-          "my-subjects"
+          "enrollments"
         ],
-        "summary": "List My Subjects",
-        "operationId": "list_my_subjects_api_v1_me_subjects_get",
+        "summary": "My Courses",
+        "operationId": "my_courses_api_v1_me_courses_get",
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyCoursesOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/ndrims/import": {
+      "post": {
+        "tags": [
+          "enrollments"
+        ],
+        "summary": "Import Records",
+        "description": "엔드림스 수강 기록을 받아 저장하고 강좌와 잇는다. 같은 수업을 다시 보내면 덮어쓴다.",
+        "operationId": "import_records_api_v1_me_ndrims_import_post",
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/enrollments/{enrollment_id}/request": {
+      "post": {
+        "tags": [
+          "enrollments"
+        ],
+        "summary": "Request From Record",
+        "description": "내 수강 기록의 수업을 열어 달라고 요청한다(지난 학기에만 열린 수업도 가능).",
+        "operationId": "request_from_record_api_v1_me_enrollments__enrollment_id__request_post",
+        "parameters": [
+          {
+            "name": "enrollment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Enrollment Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyCoursesOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/catalog/import": {
+      "post": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Import Catalog",
+        "description": "엔드림스 종합강의시간표 행을 저장한다(같은 학기·학수번호·분반이면 덮어쓴다).",
+        "operationId": "import_catalog_api_v1_admin_catalog_import_post",
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogImportIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogImportOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalog/terms": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "List Terms",
+        "operationId": "list_terms_api_v1_catalog_terms_get",
         "parameters": [
           {
             "name": "access_token",
@@ -1754,9 +2051,9 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/MySubjectOut"
+                    "$ref": "#/components/schemas/TermOut"
                   },
-                  "title": "Response List My Subjects Api V1 Me Subjects Get"
+                  "title": "Response List Terms Api V1 Catalog Terms Get"
                 }
               }
             }
@@ -1774,24 +2071,255 @@
         }
       }
     },
-    "/api/v1/me/subjects/{subject_id}": {
-      "put": {
+    "/api/v1/catalog/filters": {
+      "get": {
         "tags": [
-          "my-subjects"
+          "catalog"
         ],
-        "summary": "Add My Subject",
-        "description": "내 과목에 넣는다. 이미 있으면 상태(수강 중/수강함)와 학기만 바꾼다.",
-        "operationId": "add_my_subject_api_v1_me_subjects__subject_id__put",
+        "summary": "Filters",
+        "operationId": "filters_api_v1_catalog_filters_get",
         "parameters": [
           {
-            "name": "subject_id",
-            "in": "path",
+            "name": "year",
+            "in": "query",
             "required": true,
             "schema": {
-              "type": "integer",
-              "title": "Subject Id"
+              "type": "string",
+              "title": "Year"
             }
           },
+          {
+            "name": "sem_cd",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sem Cd"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FiltersOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalog/search": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Search",
+        "description": "엔드림스 종합강의시간표처럼 찾는다. 같은 과목·교수의 분반은 한 줄로 묶는다.",
+        "operationId": "search_api_v1_catalog_search_get",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Year"
+            }
+          },
+          {
+            "name": "sem_cd",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sem Cd"
+            }
+          },
+          {
+            "name": "colg",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Colg"
+            }
+          },
+          {
+            "name": "dpt",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dpt"
+            }
+          },
+          {
+            "name": "cpdiv",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cpdiv"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 50
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "prof",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 50
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prof"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalog/request": {
+      "post": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Request From Catalog",
+        "description": "이번 학기 개설 목록의 강좌를 열어 달라고 요청한다.",
+        "operationId": "request_from_catalog_api_v1_catalog_request_post",
+        "parameters": [
           {
             "name": "access_token",
             "in": "cookie",
@@ -1814,70 +2342,23 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/MySubjectIn"
+                "$ref": "#/components/schemas/RequestIn"
               }
             }
           }
         },
         "responses": {
-          "200": {
+          "201": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MySubjectOut"
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Request From Catalog Api V1 Catalog Request Post"
                 }
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "my-subjects"
-        ],
-        "summary": "Remove My Subject",
-        "operationId": "remove_my_subject_api_v1_me_subjects__subject_id__delete",
-        "parameters": [
-          {
-            "name": "subject_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Subject Id"
-            }
-          },
-          {
-            "name": "access_token",
-            "in": "cookie",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Access Token"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -2295,6 +2776,23 @@
         ],
         "title": "Body_admin_create_course_api_v1_admin_courses_post"
       },
+      "Body_attach_files_api_v1_course_requests__request_id__files_post": {
+        "properties": {
+          "files": {
+            "items": {
+              "type": "string",
+              "contentMediaType": "application/octet-stream"
+            },
+            "type": "array",
+            "title": "Files"
+          }
+        },
+        "type": "object",
+        "required": [
+          "files"
+        ],
+        "title": "Body_attach_files_api_v1_course_requests__request_id__files_post"
+      },
       "Body_create_request_api_v1_course_requests_post": {
         "properties": {
           "subject_name": {
@@ -2398,6 +2896,59 @@
         ],
         "title": "Body_upload_material_api_v1_courses__course_id__materials_post"
       },
+      "CatalogImportIn": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/OfferingIn"
+            },
+            "type": "array",
+            "maxItems": 30000,
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rows"
+        ],
+        "title": "CatalogImportIn"
+      },
+      "CatalogImportOut": {
+        "properties": {
+          "terms": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Terms"
+          },
+          "added": {
+            "type": "integer",
+            "title": "Added"
+          },
+          "updated": {
+            "type": "integer",
+            "title": "Updated"
+          },
+          "professors_linked": {
+            "type": "integer",
+            "title": "Professors Linked"
+          },
+          "records_linked": {
+            "type": "integer",
+            "title": "Records Linked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "terms",
+          "added",
+          "updated",
+          "professors_linked",
+          "records_linked"
+        ],
+        "title": "CatalogImportOut"
+      },
       "ChapterMasteryOut": {
         "properties": {
           "chapter_id": {
@@ -2464,6 +3015,27 @@
           "problem_count"
         ],
         "title": "ChapterOut"
+      },
+      "CollegeOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "departments": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Departments"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "departments"
+        ],
+        "title": "CollegeOut"
       },
       "ConceptMasteryOut": {
         "properties": {
@@ -2598,6 +3170,11 @@
           "problem_count": {
             "type": "integer",
             "title": "Problem Count"
+          },
+          "accessible": {
+            "type": "boolean",
+            "title": "Accessible",
+            "default": true
           }
         },
         "type": "object",
@@ -2684,6 +3261,25 @@
             "type": "integer",
             "title": "Material Page Count"
           },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "professor_emp_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Professor Emp No"
+          },
+          "same_pending_count": {
+            "type": "integer",
+            "title": "Same Pending Count"
+          },
           "status": {
             "type": "string",
             "title": "Status"
@@ -2741,6 +3337,9 @@
           "material_count",
           "material_filenames",
           "material_page_count",
+          "source",
+          "professor_emp_no",
+          "same_pending_count",
           "status",
           "reject_reason",
           "course_id",
@@ -2848,6 +3447,30 @@
         ],
         "title": "ExamOut"
       },
+      "FiltersOut": {
+        "properties": {
+          "colleges": {
+            "items": {
+              "$ref": "#/components/schemas/CollegeOut"
+            },
+            "type": "array",
+            "title": "Colleges"
+          },
+          "cpdivs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Cpdivs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "colleges",
+          "cpdivs"
+        ],
+        "title": "FiltersOut"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2860,6 +3483,87 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "ImportIn": {
+        "properties": {
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/RecordIn"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Records"
+          }
+        },
+        "type": "object",
+        "required": [
+          "records"
+        ],
+        "title": "ImportIn"
+      },
+      "ImportOut": {
+        "properties": {
+          "current_term": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Term"
+          },
+          "record_count": {
+            "type": "integer",
+            "title": "Record Count"
+          },
+          "imported_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imported At"
+          },
+          "courses": {
+            "items": {
+              "$ref": "#/components/schemas/MyCourseOut"
+            },
+            "type": "array",
+            "title": "Courses"
+          },
+          "waiting": {
+            "items": {
+              "$ref": "#/components/schemas/WaitingOut"
+            },
+            "type": "array",
+            "title": "Waiting"
+          },
+          "received": {
+            "type": "integer",
+            "title": "Received"
+          },
+          "added": {
+            "type": "integer",
+            "title": "Added"
+          }
+        },
+        "type": "object",
+        "required": [
+          "current_term",
+          "record_count",
+          "imported_at",
+          "courses",
+          "waiting",
+          "received",
+          "added"
+        ],
+        "title": "ImportOut"
       },
       "LoginIn": {
         "properties": {
@@ -3049,43 +3753,17 @@
         "type": "object",
         "title": "MaterialUpdate"
       },
-      "MySubjectIn": {
+      "MyCourseOut": {
         "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "current",
-              "taken"
-            ],
-            "title": "Status",
-            "default": "current"
-          },
-          "semester": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Semester"
-          }
-        },
-        "type": "object",
-        "title": "MySubjectIn"
-      },
-      "MySubjectOut": {
-        "properties": {
-          "subject_id": {
+          "course_id": {
             "type": "integer",
-            "title": "Subject Id"
+            "title": "Course Id"
           },
-          "name": {
+          "subject_name": {
             "type": "string",
-            "title": "Name"
+            "title": "Subject Name"
           },
-          "code": {
+          "sbj_no": {
             "anyOf": [
               {
                 "type": "string"
@@ -3094,13 +3772,38 @@
                 "type": "null"
               }
             ],
-            "title": "Code"
+            "title": "Sbj No"
+          },
+          "professor_name": {
+            "type": "string",
+            "title": "Professor Name"
           },
           "status": {
             "type": "string",
             "title": "Status"
           },
-          "semester": {
+          "terms": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Terms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "course_id",
+          "subject_name",
+          "sbj_no",
+          "professor_name",
+          "status",
+          "terms"
+        ],
+        "title": "MyCourseOut"
+      },
+      "MyCoursesOut": {
+        "properties": {
+          "current_term": {
             "anyOf": [
               {
                 "type": "string"
@@ -3109,29 +3812,417 @@
                 "type": "null"
               }
             ],
-            "title": "Semester"
+            "title": "Current Term"
           },
-          "source": {
-            "type": "string",
-            "title": "Source"
+          "record_count": {
+            "type": "integer",
+            "title": "Record Count"
           },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
+          "imported_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imported At"
+          },
+          "courses": {
+            "items": {
+              "$ref": "#/components/schemas/MyCourseOut"
+            },
+            "type": "array",
+            "title": "Courses"
+          },
+          "waiting": {
+            "items": {
+              "$ref": "#/components/schemas/WaitingOut"
+            },
+            "type": "array",
+            "title": "Waiting"
           }
         },
         "type": "object",
         "required": [
-          "subject_id",
-          "name",
-          "code",
-          "status",
-          "semester",
-          "source",
-          "created_at"
+          "current_term",
+          "record_count",
+          "imported_at",
+          "courses",
+          "waiting"
         ],
-        "title": "MySubjectOut"
+        "title": "MyCoursesOut"
+      },
+      "OfferingGroupOut": {
+        "properties": {
+          "year": {
+            "type": "string",
+            "title": "Year"
+          },
+          "sem_cd": {
+            "type": "string",
+            "title": "Sem Cd"
+          },
+          "sbj_no": {
+            "type": "string",
+            "title": "Sbj No"
+          },
+          "sbj_nm": {
+            "type": "string",
+            "title": "Sbj Nm"
+          },
+          "emp_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emp No"
+          },
+          "emp_nm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emp Nm"
+          },
+          "dvcls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dvcls"
+          },
+          "colg_nm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Colg Nm"
+          },
+          "dpt_nm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dpt Nm"
+          },
+          "cpdiv_nm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cpdiv Nm"
+          },
+          "cdt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cdt"
+          },
+          "timetable": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Timetable"
+          },
+          "plan_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Url"
+          },
+          "eval_rates": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Eval Rates"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "course_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Course Id"
+          },
+          "request_count": {
+            "type": "integer",
+            "title": "Request Count"
+          },
+          "requested_by_me": {
+            "type": "boolean",
+            "title": "Requested By Me"
+          },
+          "mine": {
+            "type": "boolean",
+            "title": "Mine"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "sem_cd",
+          "sbj_no",
+          "sbj_nm",
+          "emp_no",
+          "emp_nm",
+          "dvcls",
+          "colg_nm",
+          "dpt_nm",
+          "cpdiv_nm",
+          "cdt",
+          "timetable",
+          "plan_url",
+          "eval_rates",
+          "status",
+          "course_id",
+          "request_count",
+          "requested_by_me",
+          "mine"
+        ],
+        "title": "OfferingGroupOut",
+        "description": "같은 과목·교수의 분반을 한 줄로 묶은 결과. 사이트의 강좌 하나에 해당한다."
+      },
+      "OfferingIn": {
+        "properties": {
+          "year": {
+            "type": "string",
+            "pattern": "^\\d{4}$",
+            "title": "Year"
+          },
+          "sem_cd": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Sem Cd"
+          },
+          "sbj_no": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Sbj No"
+          },
+          "sbj_nm": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Sbj Nm"
+          },
+          "dvcls": {
+            "type": "string",
+            "maxLength": 10,
+            "title": "Dvcls",
+            "default": ""
+          },
+          "emp_no": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emp No"
+          },
+          "emp_nm": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emp Nm"
+          },
+          "colg_nm": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Colg Nm"
+          },
+          "dpt_nm": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dpt Nm"
+          },
+          "cpdiv_nm": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cpdiv Nm"
+          },
+          "cdt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cdt"
+          },
+          "timetable": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timetable"
+          },
+          "room": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Room"
+          },
+          "mid_rate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mid Rate"
+          },
+          "fnl_rate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fnl Rate"
+          },
+          "atnd_rate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Atnd Rate"
+          },
+          "proj_rate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proj Rate"
+          },
+          "plan_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "sem_cd",
+          "sbj_no",
+          "sbj_nm"
+        ],
+        "title": "OfferingIn"
       },
       "ProblemOut": {
         "properties": {
@@ -3178,6 +4269,60 @@
         "title": "ProblemOut",
         "description": "풀이 화면용. 정답은 넣지 않는다."
       },
+      "RecordIn": {
+        "properties": {
+          "year": {
+            "type": "string",
+            "pattern": "^\\d{4}$",
+            "title": "Year"
+          },
+          "sem_cd": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Sem Cd"
+          },
+          "sbj_no": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Sbj No"
+          },
+          "sbj_nm": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Sbj Nm"
+          },
+          "dvcls": {
+            "type": "string",
+            "maxLength": 10,
+            "title": "Dvcls",
+            "default": ""
+          },
+          "emp_nm": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emp Nm"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "sem_cd",
+          "sbj_no",
+          "sbj_nm"
+        ],
+        "title": "RecordIn",
+        "description": "엔드림스 수강신청내역(OPEN_YY·OPEN_SEM_CD…) 또는 전체성적조회(YY·SEM_CD…·EMP_NM) 한 줄."
+      },
       "RejectIn": {
         "properties": {
           "reason": {
@@ -3192,6 +4337,55 @@
           "reason"
         ],
         "title": "RejectIn"
+      },
+      "RequestIn": {
+        "properties": {
+          "year": {
+            "type": "string",
+            "title": "Year"
+          },
+          "sem_cd": {
+            "type": "string",
+            "title": "Sem Cd"
+          },
+          "sbj_no": {
+            "type": "string",
+            "title": "Sbj No"
+          },
+          "dvcls": {
+            "type": "string",
+            "title": "Dvcls",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "sem_cd",
+          "sbj_no"
+        ],
+        "title": "RequestIn"
+      },
+      "SearchOut": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OfferingGroupOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "SearchOut"
       },
       "SelectionIn": {
         "properties": {
@@ -3359,6 +4553,34 @@
         },
         "type": "object",
         "title": "SubjectUpdate"
+      },
+      "TermOut": {
+        "properties": {
+          "year": {
+            "type": "string",
+            "title": "Year"
+          },
+          "sem_cd": {
+            "type": "string",
+            "title": "Sem Cd"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "sem_cd",
+          "label",
+          "count"
+        ],
+        "title": "TermOut"
       },
       "UploadOut": {
         "properties": {
@@ -3594,6 +4816,62 @@
           "my_vote"
         ],
         "title": "VoteOut"
+      },
+      "WaitingOut": {
+        "properties": {
+          "enrollment_id": {
+            "type": "integer",
+            "title": "Enrollment Id"
+          },
+          "sbj_no": {
+            "type": "string",
+            "title": "Sbj No"
+          },
+          "sbj_nm": {
+            "type": "string",
+            "title": "Sbj Nm"
+          },
+          "professor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Professor Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "term": {
+            "type": "string",
+            "title": "Term"
+          },
+          "request": {
+            "type": "string",
+            "title": "Request"
+          },
+          "request_count": {
+            "type": "integer",
+            "title": "Request Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enrollment_id",
+          "sbj_no",
+          "sbj_nm",
+          "professor_name",
+          "status",
+          "term",
+          "request",
+          "request_count"
+        ],
+        "title": "WaitingOut",
+        "description": "수강 기록은 있지만 사이트에 아직 열린 강좌가 없는 수업."
       }
     }
   }
