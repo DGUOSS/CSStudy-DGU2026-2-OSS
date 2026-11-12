@@ -182,3 +182,21 @@ def test_same_subject_other_professor_is_locked(client, login, session, course_w
 def test_catalog_import_admin_only(client, login):
     login()
     assert client.post("/api/v1/admin/catalog/import", json={"rows": CATALOG}).status_code == 403
+
+
+def test_current_record_with_professor_from_bookmarklet(client, login, course_with_problems):
+    """개설 목록이 없어도 즐겨찾기가 붙여 보낸 교수(교원번호)로 맞춘다. 다른 교수 강좌로 붙지 않는다."""
+    course = course_with_problems["course"]  # 강동현 교수님 기초프로그래밍
+    _as(client, login, "e@dgu.ac.kr")
+    base = dict(year="2026", sem_cd=CUR, sbj_no="CSC2001", sbj_nm="기초프로그래밍")
+    r = client.post(
+        "/api/v1/me/ndrims/import",
+        json={"records": [dict(base, dvcls="02", emp_nm="김교수", emp_no="E2")]},
+    ).json()
+    assert r["courses"] == []
+    assert [(w["sbj_nm"], w["professor_name"]) for w in r["waiting"]] == [("기초프로그래밍", "김교수")]
+    assert client.get(f"/api/v1/courses/{course.id}").status_code == 403
+    # 교수 정보가 없는 기록은 어느 강좌에도 붙지 않는다
+    _as(client, login, "f@dgu.ac.kr")
+    r = client.post("/api/v1/me/ndrims/import", json={"records": [dict(base, dvcls="01")]}).json()
+    assert r["courses"] == [] and r["waiting"][0]["professor_name"] is None

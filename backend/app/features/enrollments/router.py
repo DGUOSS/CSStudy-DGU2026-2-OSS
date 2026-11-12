@@ -32,6 +32,8 @@ class RecordIn(BaseModel):
     sbj_nm: str = Field(min_length=1, max_length=200)
     dvcls: str = Field(default="", max_length=10)
     emp_nm: str | None = Field(default=None, max_length=50)
+    # 이번 학기 수업은 즐겨찾기가 종합강의시간표에서 찾아 붙여 보낸다
+    emp_no: str | None = Field(default=None, max_length=20)
 
 
 class ImportIn(BaseModel):
@@ -166,6 +168,8 @@ def import_records(body: ImportIn, session: SessionDep, user: CurrentUser) -> Im
         e.sbj_nm = rec.sbj_nm.strip()
         if rec.emp_nm:
             e.emp_nm = rec.emp_nm.strip()
+        if rec.emp_no:
+            e.emp_no = rec.emp_no.strip()
         e.course_id = resolve(session, e)
         session.add(e)
     session.commit()

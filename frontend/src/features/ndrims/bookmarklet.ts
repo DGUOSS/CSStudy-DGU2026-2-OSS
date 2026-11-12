@@ -27,6 +27,7 @@ export type NdrimsPayload = {
     sbj_nm: string
     dvcls: string
     emp_nm?: string | null
+    emp_no?: string | null
   }[]
   catalog: Record<string, string | number | null>[]
 }
@@ -38,7 +39,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
     alert('엔드림스(ndrims.dongguk.edu) 창에서 눌러 주세요.')
     return
   }
-  const VER = 5
+  const VER = 6
   // 예전 버전 상자가 남아 있으면 치우고 새로 시작한다(새로고침 없이 새 버튼이 동작하도록)
   if (w.__dguStudy && w.__dguStudy.v !== VER) {
     w.__dguStudy.box?.remove()
@@ -125,6 +126,32 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
     this: XMLHttpRequest & { __u?: string },
     ...a: unknown[]
   ) {
+    try {
+      // 종합강의시간표 화면이 조회할 때 보내는 칸(조회 조건)을 진단에 남긴다. 실행 정보·학번 같은 값은 가린다
+      if (/EdcLesn010\/doList/.test(this.__u || '')) {
+        const b = a[0]
+        const ps =
+          typeof b === 'string'
+            ? new URLSearchParams(b)
+            : b instanceof URLSearchParams
+              ? b
+              : b instanceof FormData
+                ? new URLSearchParams(
+                    [...b.entries()].map(([k, v]) => [k, String(v)] as [string, string]),
+                  )
+                : null
+        if (ps)
+          log.push(
+            '시간표 조회 칸: ' +
+              [...ps.entries()]
+                .filter(([k]) => k.startsWith('@d1#'))
+                .map(([k, v]) => k.slice(4) + '=' + (/^\d{6,}$/.test(v) ? '*' : v.slice(0, 20)))
+                .join(', '),
+          )
+      }
+    } catch {
+      /* 무시 */
+    }
     this.addEventListener('load', () => {
       try {
         take(this.__u || this.responseURL, this.responseText)
@@ -344,6 +371,34 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
         '@d1#STD_NO': stdNo,
         '@d1#AUTH_CTL2_CD': '',
       })
+    }
+    // 이번 학기 수업은 교수 칸이 없다 → 종합강의시간표에서 학수번호로 찾아 교수명·교원번호를 붙인다
+    const noProf = Object.values(rec).filter((r) => !r.emp_nm)
+    const lesnNana = noProf.length ? await pgmNana('EdcLesn010') : ''
+    if (lesnNana) {
+      for (const r of noProf) {
+        try {
+          await post('/ed/edc/lesn/EdcLesn010/doList.do', {
+            _runningNana: lesnNana,
+            ...ids,
+            '@d1#OPEN_ORGN_CLSF_CD': 'CM015.110',
+            '@d1#OPEN_YY': String(r.year),
+            '@d1#OPEN_SEM_CD': String(r.sem_cd),
+            '@d1#SBJ_NO': String(r.sbj_no),
+          })
+        } catch {
+          /* 진단에 남음 */
+        }
+        const c = cat[[r.year, r.sem_cd, r.sbj_no, r.dvcls].join('|')]
+        if (c) {
+          r.emp_nm = c.emp_nm
+          r.emp_no = c.emp_no
+        }
+      }
+      log.push(
+        `교수 찾음 ${noProf.filter((r) => r.emp_nm).length}/${noProf.length}` +
+          ` (시간표 행 ${Object.keys(cat).length})`,
+      )
     }
     log.push(`모은 수강 기록 모두 ${Object.keys(rec).length}건`)
     render()

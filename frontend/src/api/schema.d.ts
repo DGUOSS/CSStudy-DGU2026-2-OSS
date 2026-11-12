@@ -1226,6 +1226,8 @@ export interface components {
             dvcls?: string;
             /** Emp Nm */
             emp_nm?: string | null;
+            /** Emp No */
+            emp_no?: string | null;
         };
         /** RejectIn */
         RejectIn: {
