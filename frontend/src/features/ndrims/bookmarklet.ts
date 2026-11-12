@@ -168,21 +168,44 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
     ;(box.querySelector('[data-x]') as HTMLElement).onclick = () => (box.style.display = 'none')
     ;(box.querySelector('[data-s]') as HTMLElement).onclick = send
   }
+  let viaOpener = !!window.opener
+  let acked = false
+  window.addEventListener('message', (e) => {
+    if (e.origin === SITE && (e.data as { type?: string } | null)?.type === TYPE + '-ack')
+      acked = true
+  })
   function send() {
     const payload = { type: TYPE, records: Object.values(rec), catalog: Object.values(cat) }
     if (!payload.records.length && !payload.catalog.length) {
       msg('아직 모은 기록이 없습니다. 위 화면을 먼저 열어 주세요.')
       return
     }
-    if (window.opener) {
-      window.opener.postMessage(payload, SITE)
-      msg('보냈습니다. 동국스터디 창으로 돌아가세요.')
-    } else {
-      navigator.clipboard.writeText(JSON.stringify(payload)).then(
-        () => msg('동국스터디 창을 찾지 못해 복사했습니다. 가져오기 화면에 붙여 넣어 주세요.'),
-        () => msg('동국스터디 창에서 "엔드림스 열기"로 연 창에서 다시 눌러 주세요.'),
-      )
+    // 1) 우리 사이트가 연 창이면 그 창으로 보내고 받았다는 답을 기다린다
+    if (viaOpener && window.opener) {
+      acked = false
+      try {
+        window.opener.postMessage(payload, SITE)
+      } catch {
+        /* 아래에서 새 탭으로 */
+      }
+      msg('보내는 중…')
+      setTimeout(() => {
+        if (acked) return msg('보냈습니다. 동국스터디 창으로 돌아가세요.')
+        viaOpener = false
+        msg('동국스터디 창을 찾지 못했습니다. [동국스터디로 보내기]를 한 번 더 누르면 새 탭으로 보냅니다.')
+      }, 2000)
+      return
     }
+    // 2) 창 연결이 끊겼으면 우리 사이트를 새 탭으로 열고 주소 # 뒤에 담아 보낸다(# 뒤는 서버로 가지 않는다)
+    const tab = window.open(
+      SITE + '/ndrims#' + encodeURIComponent(JSON.stringify(payload)),
+      'dgu-study-import',
+    )
+    msg(
+      tab
+        ? '새 탭으로 보냈습니다. 동국스터디 탭을 확인하세요.'
+        : '[동국스터디로 보내기]를 눌러 주세요. (팝업이 막혔다면 주소창 오른쪽에서 허용)',
+    )
   }
   // 화면을 열지 않고 바로 요청한다. 엔드림스 화면이 쓰는 것과 같은 순서:
   // 로그인 정보(NANA) → 사용자 정보(LOGIN_IDEN_NO, MAIN_OPEN_KEY) → 메뉴에서 화면별 NANA → 화면 데이터
@@ -311,6 +334,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
       })
     }
     log.push(`모은 수강 기록 ${Object.keys(rec).length - before}건`)
+    render()
     if (Object.keys(rec).length === before) throw new Error('empty')
     send()
   }

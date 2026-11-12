@@ -9,6 +9,7 @@ import { CoursePage } from '@/features/courses/CoursePage'
 import { SubjectCoursesPage } from '@/features/courses/SubjectCoursesPage'
 import { CatalogPage } from '@/features/ndrims/CatalogPage'
 import { HomePage } from '@/features/ndrims/HomePage'
+import { ReceivePage } from '@/features/ndrims/ReceivePage'
 import { QuizPage } from '@/features/problems/QuizPage'
 
 // 새 화면은 여기에 경로를 한 줄 추가한다
@@ -20,6 +21,7 @@ const router = createBrowserRouter([
     children: [
       { path: '/', element: <HomePage /> },
       { path: '/find', element: <CatalogPage /> },
+      { path: '/ndrims', element: <ReceivePage /> },
       { path: '/subjects/:subjectId', element: <SubjectCoursesPage /> },
       { path: '/courses/:courseId', element: <CoursePage /> },
       { path: '/courses/:courseId/chapters/:chapterId/quiz', element: <QuizPage /> },

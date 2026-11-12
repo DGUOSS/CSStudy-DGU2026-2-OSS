@@ -37,6 +37,8 @@ export function ImportPanel({ compact = false }: { compact?: boolean }) {
       if (!NDRIMS_ORIGINS.includes(e.origin)) return
       const d = e.data as NdrimsPayload
       if (d?.type !== MESSAGE_TYPE) return
+      // 받았다고 알려 준다. 답이 없으면 엔드림스 창은 새 탭으로 보낸다
+      ;(e.source as Window | null)?.postMessage({ type: MESSAGE_TYPE + '-ack' }, e.origin)
       save.mutate(d)
     }
     window.addEventListener('message', onMessage)
