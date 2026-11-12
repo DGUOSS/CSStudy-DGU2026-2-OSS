@@ -850,6 +850,65 @@
         }
       }
     },
+    "/api/v1/problems/{problem_id}": {
+      "get": {
+        "tags": [
+          "problems"
+        ],
+        "summary": "Get Problem",
+        "description": "특정 문제를 직접 체험할 때도 정답 없이 문제만 반환한다.",
+        "operationId": "get_problem_api_v1_problems__problem_id__get",
+        "parameters": [
+          {
+            "name": "problem_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Problem Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/problems/{problem_id}/attempts": {
       "post": {
         "tags": [
@@ -1887,6 +1946,116 @@
                     "$ref": "#/components/schemas/ProbeReviewOut"
                   },
                   "title": "Response List Probes Api V1 Admin Misconception Probes Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create Probe",
+        "operationId": "create_probe_api_v1_admin_misconception_probes_post",
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProbeCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProbeReviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/misconception-probes/candidates": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Probe Candidates",
+        "operationId": "list_probe_candidates_api_v1_admin_misconception_probes_candidates_get",
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProbeCandidateOut"
+                  },
+                  "title": "Response List Probe Candidates Api V1 Admin Misconception Probes Candidates Get"
                 }
               }
             }
@@ -3584,11 +3753,188 @@
         ],
         "title": "MySubjectOut"
       },
+      "ProbeCandidateOut": {
+        "properties": {
+          "problem_id": {
+            "type": "integer",
+            "title": "Problem Id"
+          },
+          "course_name": {
+            "type": "string",
+            "title": "Course Name"
+          },
+          "professor_name": {
+            "type": "string",
+            "title": "Professor Name"
+          },
+          "chapter_title": {
+            "type": "string",
+            "title": "Chapter Title"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "choices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Choices"
+          },
+          "answer_index": {
+            "type": "integer",
+            "title": "Answer Index"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          },
+          "source_material_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Material Id"
+          },
+          "source_material_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Material Title"
+          },
+          "source_page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Page"
+          },
+          "existing_wrong_choice_indices": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Existing Wrong Choice Indices"
+          }
+        },
+        "type": "object",
+        "required": [
+          "problem_id",
+          "course_name",
+          "professor_name",
+          "chapter_title",
+          "question",
+          "choices",
+          "answer_index",
+          "evidence",
+          "source_material_id",
+          "source_material_title",
+          "source_page",
+          "existing_wrong_choice_indices"
+        ],
+        "title": "ProbeCandidateOut"
+      },
+      "ProbeCreate": {
+        "properties": {
+          "hypothesis": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Hypothesis"
+          },
+          "question": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Question"
+          },
+          "choices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 2,
+            "title": "Choices"
+          },
+          "answer_index": {
+            "type": "integer",
+            "title": "Answer Index"
+          },
+          "explanation": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Explanation"
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Evidence"
+          },
+          "source_material_id": {
+            "type": "integer",
+            "title": "Source Material Id"
+          },
+          "source_page": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Source Page"
+          },
+          "problem_id": {
+            "type": "integer",
+            "title": "Problem Id"
+          },
+          "wrong_choice_index": {
+            "type": "integer",
+            "title": "Wrong Choice Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "hypothesis",
+          "question",
+          "choices",
+          "answer_index",
+          "explanation",
+          "evidence",
+          "source_material_id",
+          "source_page",
+          "problem_id",
+          "wrong_choice_index"
+        ],
+        "title": "ProbeCreate"
+      },
       "ProbeReviewOut": {
         "properties": {
           "id": {
             "type": "integer",
             "title": "Id"
+          },
+          "problem_id": {
+            "type": "integer",
+            "title": "Problem Id"
+          },
+          "chapter_id": {
+            "type": "integer",
+            "title": "Chapter Id"
           },
           "course_id": {
             "type": "integer",
@@ -3730,6 +4076,8 @@
         "type": "object",
         "required": [
           "id",
+          "problem_id",
+          "chapter_id",
           "course_id",
           "course_name",
           "professor_name",

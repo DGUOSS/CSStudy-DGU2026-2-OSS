@@ -29,6 +29,8 @@ pnpm dev                       # http://localhost:5173
 ```
 교안 PDF는 git에 올리지 않는다. 있으면 `data/raw/basic-programming-kang/`에 넣고 시드를 실행해야 문제 해설에 교안 쪽수가 붙는다.
 
+오개념 반례 실험실을 운영 DB와 분리해 체험하려면 [로컬 데모 안내](docs/DEMO.md)를 따른다.
+
 ## 확인
 ```bash
 cd backend && uv run pytest -q && uv run ruff check .

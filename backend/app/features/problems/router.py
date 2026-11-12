@@ -243,6 +243,25 @@ def next_problems(
     ]
 
 
+@router.get("/problems/{problem_id}")
+def get_problem(problem_id: int, session: SessionDep, user: CurrentUser) -> ProblemOut:
+    """특정 문제를 직접 체험할 때도 정답 없이 문제만 반환한다."""
+    problem = session.get(Problem, problem_id)
+    if problem is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "문제가 없습니다")
+    chapter = session.get(Chapter, problem.chapter_id)
+    require_course_access(session, user, get_course_or_404(session, chapter.course_id))
+    concepts = _concepts_of(session, [problem.id])[problem.id]
+    return ProblemOut(
+        id=problem.id,
+        chapter_id=problem.chapter_id,
+        question=problem.question,
+        choices=problem.choices,
+        concepts=[ConceptRef(id=concept.id, name=concept.name) for concept in concepts],
+        origin=problem.origin,
+    )
+
+
 @router.post("/problems/{problem_id}/attempts")
 def submit_attempt(
     problem_id: int, body: AttemptIn, session: SessionDep, user: CurrentUser

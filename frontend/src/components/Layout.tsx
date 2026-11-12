@@ -8,7 +8,7 @@ export function Layout() {
   const { user, loading, logout } = useAuth()
   const location = useLocation()
   if (loading) return <p className="p-8 text-center text-muted-foreground">불러오는 중…</p>
-  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />
+  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname + location.search + location.hash }} />
 
   return (
     <div className="min-h-svh">

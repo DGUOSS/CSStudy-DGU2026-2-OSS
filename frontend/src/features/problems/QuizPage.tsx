@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronLeft, RotateCcw, X } from 'lucide-react'
 import { useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useParams, useSearchParams } from 'react-router'
 import { api, ApiError, type Schemas, unwrap } from '@/api/client'
 import { Empty, ErrorText, Loading } from '@/components/States'
 import { Badge } from '@/components/ui/badge'
@@ -18,17 +18,26 @@ type ProbeResult = Schemas['MisconceptionProbeAnswerResult']
 export function QuizPage() {
   const courseId = Number(useParams().courseId)
   const chapterId = Number(useParams().chapterId)
+  const [searchParams] = useSearchParams()
+  const focusProblemId = Number(searchParams.get('problemId') ?? 0)
   const qc = useQueryClient()
   const [round, setRound] = useState(0)
 
   const problems = useQuery({
-    queryKey: ['quiz', chapterId, round],
-    queryFn: () =>
-      unwrap(
+    queryKey: ['quiz', chapterId, round, focusProblemId],
+    queryFn: async () => {
+      if (focusProblemId) {
+        const problem = await unwrap(api.GET('/api/v1/problems/{problem_id}', {
+          params: { path: { problem_id: focusProblemId } },
+        }))
+        return [problem]
+      }
+      return unwrap(
         api.GET('/api/v1/chapters/{chapter_id}/problems', {
           params: { path: { chapter_id: chapterId }, query: { count: COUNT } },
         }),
-      ),
+      )
+    },
     staleTime: Infinity,
     refetchOnWindowFocus: false,
   })
@@ -73,7 +82,7 @@ export function QuizPage() {
           <CardContent className="flex flex-wrap gap-2">
             <Button onClick={restart}>
               <RotateCcw />
-              이어서 더 풀기
+              {focusProblemId ? '같은 문제 다시 풀기' : '이어서 더 풀기'}
             </Button>
             <Link
               to={`/courses/${courseId}?tab=mastery`}

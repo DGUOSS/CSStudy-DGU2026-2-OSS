@@ -9,6 +9,8 @@ def test_problem_hides_answer_and_prefers_unseen_concepts(
     ch = course_with_problems["chapter"].id
     problems = client.get(f"/api/v1/chapters/{ch}/problems?count=2").json()
     assert all("answer_index" not in p for p in problems)
+    direct = client.get(f"/api/v1/problems/{problems[0]['id']}")
+    assert direct.status_code == 200 and "answer_index" not in direct.json()
     # 두 문제만으로 개념 A, B가 모두 나와야 한다
     names = {c["name"] for p in problems for c in p["concepts"]}
     assert names == {"A", "B"}

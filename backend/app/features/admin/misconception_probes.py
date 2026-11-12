@@ -6,6 +6,7 @@ from typing import Literal
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from app.core.db import SessionDep
@@ -17,6 +18,8 @@ router = APIRouter(prefix="/admin/misconception-probes", tags=["admin"])
 
 class ProbeReviewOut(BaseModel):
     id: int
+    problem_id: int
+    chapter_id: int
     course_id: int
     course_name: str
     professor_name: str
@@ -56,6 +59,26 @@ class ProbeReviewUpdate(BaseModel):
     source_page: int = Field(ge=1)
 
 
+class ProbeCreate(ProbeReviewUpdate):
+    problem_id: int
+    wrong_choice_index: int
+
+
+class ProbeCandidateOut(BaseModel):
+    problem_id: int
+    course_name: str
+    professor_name: str
+    chapter_title: str
+    question: str
+    choices: list[str]
+    answer_index: int
+    evidence: str | None
+    source_material_id: int | None
+    source_material_title: str | None
+    source_page: int | None
+    existing_wrong_choice_indices: list[int]
+
+
 def _context(session: SessionDep, probe: MisconceptionProbe):
     problem = session.get(Problem, probe.problem_id)
     chapter = session.get(Chapter, problem.chapter_id) if problem else None
@@ -80,6 +103,8 @@ def _out(session: SessionDep, probe: MisconceptionProbe) -> ProbeReviewOut:
     ).all()
     return ProbeReviewOut(
         id=probe.id,
+        problem_id=problem.id,
+        chapter_id=problem.chapter_id,
         course_id=course.id,
         course_name=subject.name if subject else "알 수 없는 과목",
         professor_name=professor.name if professor else "알 수 없는 교수",
@@ -157,6 +182,58 @@ def _validate(session: SessionDep, probe: MisconceptionProbe) -> None:
 def list_probes(session: SessionDep, _: AdminUser) -> list[ProbeReviewOut]:
     probes = session.exec(select(MisconceptionProbe).order_by(MisconceptionProbe.id)).all()
     return [_out(session, probe) for probe in probes]
+
+
+@router.get("/candidates")
+def list_probe_candidates(session: SessionDep, _: AdminUser) -> list[ProbeCandidateOut]:
+    rows = session.exec(
+        select(Problem, Chapter, Subject, Professor, Material)
+        .join(Chapter, Chapter.id == Problem.chapter_id)
+        .join(Course, Course.id == Chapter.course_id)
+        .join(Subject, Subject.id == Course.subject_id)
+        .join(Professor, Professor.id == Course.professor_id)
+        .join(Material, Material.id == Problem.source_material_id, isouter=True)
+        .order_by(Problem.id)
+    ).all()
+    existing: dict[int, list[int]] = {}
+    for problem_id, wrong_choice_index in session.exec(
+        select(MisconceptionProbe.problem_id, MisconceptionProbe.wrong_choice_index)
+    ).all():
+        existing.setdefault(problem_id, []).append(wrong_choice_index)
+    return [
+        ProbeCandidateOut(
+            problem_id=problem.id,
+            course_name=subject.name,
+            professor_name=professor.name,
+            chapter_title=chapter.title,
+            question=problem.question,
+            choices=problem.choices,
+            answer_index=problem.answer_index,
+            evidence=problem.evidence,
+            source_material_id=problem.source_material_id,
+            source_material_title=material.title if material else None,
+            source_page=problem.source_page,
+            existing_wrong_choice_indices=existing.get(problem.id, []),
+        )
+        for problem, chapter, subject, professor, material in rows
+    ]
+
+
+@router.post("", status_code=status.HTTP_201_CREATED)
+def create_probe(body: ProbeCreate, session: SessionDep, _: AdminUser) -> ProbeReviewOut:
+    if session.get(Problem, body.problem_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "원본 문제를 찾을 수 없습니다.")
+    probe = MisconceptionProbe(**body.model_dump())
+    _validate(session, probe)
+    session.add(probe)
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "해당 오답의 확인 문제가 이미 있습니다."
+        ) from None
+    return _out(session, probe)
 
 
 @router.put("/{probe_id}")
