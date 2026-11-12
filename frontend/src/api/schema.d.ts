@@ -288,6 +288,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/courses/{course_id}/misconception-results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Misconception Results */
+        get: operations["list_misconception_results_api_v1_courses__course_id__misconception_results_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/courses/{course_id}/mastery": {
         parameters: {
             query?: never;
@@ -1112,6 +1129,25 @@ export interface components {
             /** Page Count */
             page_count: number;
         };
+        /** SavedMisconceptionResult */
+        SavedMisconceptionResult: {
+            /** Id */
+            id: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Problem Question */
+            problem_question: string;
+            /** Initial Choice */
+            initial_choice: string;
+            /** Probe Question */
+            probe_question: string;
+            /** Probe Choice */
+            probe_choice: string;
+            result: components["schemas"]["MisconceptionProbeAnswerResult"];
+        };
         /** SelectionIn */
         SelectionIn: {
             /** Material Ids */
@@ -1841,6 +1877,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MisconceptionProbeAnswerResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_misconception_results_api_v1_courses__course_id__misconception_results_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedMisconceptionResult"][];
                 };
             };
             /** @description Validation Error */

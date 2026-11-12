@@ -986,6 +986,68 @@
         }
       }
     },
+    "/api/v1/courses/{course_id}/misconception-results": {
+      "get": {
+        "tags": [
+          "problems"
+        ],
+        "summary": "List Misconception Results",
+        "operationId": "list_misconception_results_api_v1_courses__course_id__misconception_results_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SavedMisconceptionResult"
+                  },
+                  "title": "Response List Misconception Results Api V1 Courses  Course Id  Misconception Results Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/courses/{course_id}/mastery": {
       "get": {
         "tags": [
@@ -3830,6 +3892,49 @@
           "page_count"
         ],
         "title": "ReviewMaterialOut"
+      },
+      "SavedMisconceptionResult": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "problem_question": {
+            "type": "string",
+            "title": "Problem Question"
+          },
+          "initial_choice": {
+            "type": "string",
+            "title": "Initial Choice"
+          },
+          "probe_question": {
+            "type": "string",
+            "title": "Probe Question"
+          },
+          "probe_choice": {
+            "type": "string",
+            "title": "Probe Choice"
+          },
+          "result": {
+            "$ref": "#/components/schemas/MisconceptionProbeAnswerResult"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "created_at",
+          "problem_question",
+          "initial_choice",
+          "probe_question",
+          "probe_choice",
+          "result"
+        ],
+        "title": "SavedMisconceptionResult"
       },
       "SelectionIn": {
         "properties": {

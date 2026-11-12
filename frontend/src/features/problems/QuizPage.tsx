@@ -120,6 +120,7 @@ function ProblemCard({
 }) {
   const [chosen, setChosen] = useState<number | null>(null)
   const [probeChosen, setProbeChosen] = useState<number | null>(null)
+  const qc = useQueryClient()
   const submit = useMutation({
     mutationFn: (chosen_index: number) =>
       unwrap(
@@ -139,6 +140,7 @@ function ProblemCard({
           body: { chosen_index },
         }),
       ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['misconception-results'] }),
   })
   const probeResult = probeSubmit.data
   const probeUnavailable = probeSubmit.error instanceof ApiError && probeSubmit.error.status === 404

@@ -1,6 +1,7 @@
 """챕터 목록, 문제 출제, 채점."""
 
 import re
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel
@@ -17,6 +18,7 @@ from app.models import (
     Concept,
     Material,
     MisconceptionProbe,
+    MisconceptionProbeAnswer,
     Problem,
     ProblemConcept,
 )
@@ -90,6 +92,16 @@ class MisconceptionProbeAnswerResult(BaseModel):
     source: SourceOut
     title: str
     detail: str
+
+
+class SavedMisconceptionResult(BaseModel):
+    id: int
+    created_at: datetime
+    problem_question: str
+    initial_choice: str
+    probe_question: str
+    probe_choice: str
+    result: MisconceptionProbeAnswerResult
 
 
 def _approved_probe(
@@ -297,6 +309,16 @@ def submit_misconception_probe(
     if not chapter:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "문제가 없습니다")
     require_course_access(session, user, get_course_or_404(session, chapter.course_id))
+    saved = session.exec(
+        select(MisconceptionProbeAnswer).where(
+            MisconceptionProbeAnswer.attempt_id == attempt.id,
+            MisconceptionProbeAnswer.user_id == user.id,
+        )
+    ).first()
+    if saved:
+        if saved.chosen_index != body.chosen_index:
+            raise HTTPException(status.HTTP_409_CONFLICT, "이미 다른 답으로 제출한 확인 문제입니다")
+        return MisconceptionProbeAnswerResult.model_validate(saved.result_snapshot["result"])
     probe = _approved_probe(session, problem, attempt.chosen_index, chapter.course_id)
     if attempt.correct or not probe:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "승인된 확인 문제가 없습니다")
@@ -304,7 +326,7 @@ def submit_misconception_probe(
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "보기 번호가 잘못됐습니다")
     material = session.get(Material, probe.source_material_id)
     correct = body.chosen_index == probe.answer_index
-    return MisconceptionProbeAnswerResult(
+    result = MisconceptionProbeAnswerResult(
         correct=correct,
         answer_index=probe.answer_index,
         hypothesis=probe.hypothesis,
@@ -320,3 +342,49 @@ def submit_misconception_probe(
             else "두 상황에서 같은 규칙을 적용하지 못했습니다. 오개념 가능성이 있으니 교안 근거를 복습하고 다른 문제에서도 확인해 보세요."
         ),
     )
+    session.add(
+        MisconceptionProbeAnswer(
+            user_id=user.id,
+            attempt_id=attempt.id,
+            probe_id=probe.id,
+            chosen_index=body.chosen_index,
+            correct=correct,
+            result_snapshot={
+                "problem_question": problem.question,
+                "initial_choice": problem.choices[attempt.chosen_index],
+                "probe_question": probe.question,
+                "probe_choice": probe.choices[body.chosen_index],
+                "result": result.model_dump(mode="json"),
+            },
+        )
+    )
+    session.commit()
+    return result
+
+
+@router.get("/courses/{course_id}/misconception-results")
+def list_misconception_results(
+    course_id: int, session: SessionDep, user: CurrentUser
+) -> list[SavedMisconceptionResult]:
+    require_course_access(session, user, get_course_or_404(session, course_id))
+    rows = session.exec(
+        select(MisconceptionProbeAnswer)
+        .join(Attempt, Attempt.id == MisconceptionProbeAnswer.attempt_id)
+        .join(Problem, Problem.id == Attempt.problem_id)
+        .join(Chapter, Chapter.id == Problem.chapter_id)
+        .where(MisconceptionProbeAnswer.user_id == user.id, Chapter.course_id == course_id)
+        .order_by(MisconceptionProbeAnswer.id.desc())
+        .limit(20)
+    ).all()
+    return [
+        SavedMisconceptionResult(
+            id=row.id,
+            created_at=row.created_at,
+            problem_question=row.result_snapshot["problem_question"],
+            initial_choice=row.result_snapshot["initial_choice"],
+            probe_question=row.result_snapshot["probe_question"],
+            probe_choice=row.result_snapshot["probe_choice"],
+            result=MisconceptionProbeAnswerResult.model_validate(row.result_snapshot["result"]),
+        )
+        for row in rows
+    ]

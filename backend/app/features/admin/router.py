@@ -30,6 +30,7 @@ from app.models import (
     Material,
     MaterialVote,
     MisconceptionProbe,
+    MisconceptionProbeAnswer,
     Problem,
     ProblemConcept,
     Professor,
@@ -214,15 +215,24 @@ def _purge_course(session, course: Course) -> None:
     )
     p_ids = [p.id for p in problems]
     if p_ids:
+        attempts = session.exec(select(Attempt).where(Attempt.problem_id.in_(p_ids))).all()  # type: ignore[attr-defined]
+        attempt_ids = [attempt.id for attempt in attempts]
+        if attempt_ids:
+            _delete_all(
+                session,
+                session.exec(
+                    select(MisconceptionProbeAnswer).where(
+                        MisconceptionProbeAnswer.attempt_id.in_(attempt_ids)
+                    )
+                ).all(),  # type: ignore[attr-defined]
+            )
         _delete_all(
             session,
             session.exec(
                 select(MisconceptionProbe).where(MisconceptionProbe.problem_id.in_(p_ids))
             ).all(),  # type: ignore[attr-defined]
         )
-        _delete_all(
-            session, session.exec(select(Attempt).where(Attempt.problem_id.in_(p_ids))).all()
-        )  # type: ignore[attr-defined]
+        _delete_all(session, attempts)
         _delete_all(
             session,
             session.exec(select(ProblemConcept).where(ProblemConcept.problem_id.in_(p_ids))).all(),  # type: ignore[attr-defined]

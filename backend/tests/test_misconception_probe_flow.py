@@ -1,4 +1,7 @@
-from app.models import Material, MisconceptionProbe
+from sqlmodel import select
+
+from app.models import Attempt, Material, MisconceptionProbe, MisconceptionProbeAnswer
+from tests.conftest import make_admin
 
 
 def _probe(session, course_with_problems):
@@ -81,11 +84,31 @@ def test_probe_answer_is_private_and_does_not_change_mastery(
     assert (
         client.get(f"/api/v1/courses/{course_with_problems['course'].id}/mastery").json() == before
     )
-
-    from sqlmodel import select
-
-    from app.models import Attempt
-
+    assert client.post(url, json={"chosen_index": 0}).json() == answer
+    assert client.post(url, json={"chosen_index": 1}).status_code == 409
     assert len(session.exec(select(Attempt)).all()) == 1
+    saved = session.exec(select(MisconceptionProbeAnswer)).one()
+    assert saved.attempt_id == first["attempt_id"]
+    assert saved.chosen_index == 0 and saved.correct is True
+    history_url = f"/api/v1/courses/{course_with_problems['course'].id}/misconception-results"
+    history = client.get(history_url).json()
+    assert len(history) == 1
+    assert history[0]["result"] == answer
+    assert history[0]["probe_choice"] == "주소"
+    assert history[0]["initial_choice"] == "1"
+
+    probe.question = "관리자가 바꾼 확인 문제"
+    session.add(probe)
+    session.commit()
+    assert client.get(history_url).json()[0]["probe_question"] == "포인터에는 무엇이 저장되나요?"
+
     login(email="other@dgu.ac.kr", name="다른 학생")
     assert client.post(url, json={"chosen_index": 0}).status_code == 404
+    enroll(course_with_problems["course"].subject_id)
+    assert client.get(history_url).json() == []
+    make_admin(session, "other@dgu.ac.kr")
+    assert (
+        client.delete(f"/api/v1/admin/courses/{course_with_problems['course'].id}").status_code
+        == 204
+    )
+    assert session.exec(select(MisconceptionProbeAnswer)).all() == []

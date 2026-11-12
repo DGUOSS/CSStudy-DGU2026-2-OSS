@@ -2,6 +2,7 @@ import { Empty, ErrorText, Loading } from '@/components/States'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { pct, useMastery } from './queries'
+import { MisconceptionHistory } from './MisconceptionHistory'
 
 export function MasteryTab({ courseId }: { courseId: number }) {
   const mastery = useMastery(courseId)
@@ -34,6 +35,7 @@ export function MasteryTab({ courseId }: { courseId: number }) {
           </CardContent>
         </Card>
       ))}
+      <MisconceptionHistory courseId={courseId} />
     </div>
   )
 }

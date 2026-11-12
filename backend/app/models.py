@@ -182,6 +182,20 @@ class Attempt(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_now)
 
 
+class MisconceptionProbeAnswer(SQLModel, table=True):
+    """첫 풀이에 연결된 확인 문제 답과 당시의 진단 결과."""
+
+    __tablename__ = "misconception_probe_answers"
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    attempt_id: int = Field(foreign_key="attempts.id", unique=True)
+    probe_id: int = Field(foreign_key="misconception_probes.id")
+    chosen_index: int
+    correct: bool
+    result_snapshot: dict = Field(sa_column=Column(JSON, nullable=False))
+    created_at: datetime = Field(default_factory=_now)
+
+
 class UserSubject(SQLModel, table=True):
     """내 과목: 수강했거나 수강 중인 과목. 지금은 사용자가 직접 고르고, 나중에 엔드림스에서 가져온다."""
 
