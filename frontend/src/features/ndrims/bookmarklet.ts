@@ -33,13 +33,14 @@ export type NdrimsPayload = {
 
 // 엔드림스 창 안에서 실행되는 코드. 바깥 변수는 쓰지 않는다(문자열로 바뀌어 들어간다).
 function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
-  const w = window as unknown as { __dguStudy?: { show: () => void } }
+  const w = window as unknown as { __dguStudy?: { show: () => void; run: () => void } }
   if (!HOSTS.some((h) => location.origin === h)) {
     alert('엔드림스(ndrims.dongguk.edu) 창에서 눌러 주세요.')
     return
   }
   if (w.__dguStudy) {
     w.__dguStudy.show()
+    w.__dguStudy.run() // 다시 누르면 다시 가져온다
     return
   }
   type Row = Record<string, unknown>
@@ -135,6 +136,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
     }
     return res
   }
+  const log: string[] = [] // 진단: 칸 이름과 건수만 (값은 넣지 않음)
   const box = document.createElement('div')
   box.style.cssText =
     'position:fixed;top:12px;right:12px;z-index:2147483647;width:300px;padding:14px;border-radius:12px;' +
@@ -148,7 +150,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
     const n = Object.keys(rec).length
     const m = Object.keys(cat).length
     box.innerHTML =
-      '<b style="color:#c8102e">동국스터디 가져오기</b>' +
+      '<b style="color:#c8102e">동국스터디 가져오기</b> <span style="font-size:11px;color:#999">v3</span>' +
       '<div style="margin:6px 0">수강 기록 <b>' +
       n +
       '</b>건' +
@@ -156,8 +158,13 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
       ' 모음</div>' +
       '<div style="font-size:12px;color:#666">누르면 바로 가져옵니다. 안 되면 수강신청 &gt; 수강신청내역확인, 성적 &gt; 전체성적조회 화면을 열어도 모입니다.</div>' +
       '<div data-m style="font-size:12px;color:#c8102e;margin-top:6px"></div>' +
+      (log.length
+        ? '<pre data-l style="max-height:180px;overflow:auto;font-size:11px;background:#f5f5f5;padding:6px;border-radius:6px;white-space:pre-wrap;word-break:break-all;margin:6px 0 0"></pre>'
+        : '') +
       '<div style="display:flex;gap:6px;margin-top:8px"><button data-s style="flex:1;padding:6px;border:0;border-radius:8px;background:#c8102e;color:#fff;cursor:pointer">동국스터디로 보내기</button>' +
       '<button data-x style="padding:6px 10px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer">닫기</button></div>'
+    const l = box.querySelector('[data-l]') as HTMLElement | null
+    if (l) l.textContent = log.join('\n')
     ;(box.querySelector('[data-x]') as HTMLElement).onclick = () => (box.style.display = 'none')
     ;(box.querySelector('[data-s]') as HTMLElement).onclick = send
   }
@@ -201,9 +208,31 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
     })
     const text = await res.text()
+    const name = path.split('/').slice(-2).join('/')
+    let j: Json
+    try {
+      j = JSON.parse(text) as Json
+    } catch {
+      log.push(`${name} ${res.status} JSON 아님`)
+      throw new Error(/LoginAccs/.test(name) ? 'login' : 'step')
+    }
+    log.push(`${name} ${res.status} ${shape(j)}`)
     take(path, text)
-    return JSON.parse(text) as Json
+    return j
   }
+  // 응답 모양: 데이터셋 이름[행 수], 객체{칸 이름}. 오류 문구만 값을 보인다
+  const shape = (j: Json): string =>
+    Object.entries(j)
+      .map(([k, v]) =>
+        Array.isArray(v)
+          ? `${k}[${v.length}]`
+          : v && typeof v === 'object'
+            ? `${k}{${Object.keys(v as Json).join(',')}}`
+            : /msg|err/i.test(k)
+              ? `${k}="${String(v).slice(0, 80)}"`
+              : k,
+      )
+      .join(' ')
   const rowsOf = (j: Json) =>
     Object.values(j).flatMap((v) => (Array.isArray(v) ? (v as Json[]) : [])) as Json[]
   async function auto() {
@@ -217,7 +246,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
       '@d1#MOBILE_YN': 'N',
     })
     const u = (top.dmUserInfo || {}) as Json
-    const run = {
+    const ids = {
       _runningLoginIdenNo: String(u.LOGIN_IDEN_NO || ''),
       _runningMainOpenKey: String(u.MAIN_OPEN_KEY || ''),
     }
@@ -232,7 +261,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
         const left = rowsOf(
           await post('/unis/main/view/menu/doListUserMenuListLeft.do', {
             _runningNana: nana,
-            ...run,
+            ...ids,
             '@d1#MENU_NO': no,
             '@d1#MOBILE_YN': 'N',
           }),
@@ -240,6 +269,10 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
         menus.push(...left)
         m = hit(left)
       }
+      log.push(
+        `메뉴 ${menus.length}개, ${pgm} ${m ? '찾음' : '없음'}` +
+          (menus[0] ? ` (칸: ${Object.keys(menus[0]).join(',')})` : ''),
+      )
       return m ? String(m.NANA || '') : ''
     }
     // 학번: 사용자 정보 중 10자리 숫자
@@ -248,6 +281,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
       .map(([, v]) => String(v ?? ''))
       .find((v) => /^\d{10}$/.test(v))
     const stdNo = ten || (prompt('학번(10자리)을 입력해 주세요. 엔드림스 조회에만 씁니다.') ?? '').trim()
+    log.push(`학번 ${ten ? '사용자 정보에서 찾음' : '직접 입력'}`)
     if (!/^\d{10}$/.test(stdNo)) throw new Error('std')
     const before = Object.keys(rec).length
     // 지난 학기들: 전체성적조회
@@ -255,7 +289,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
     if (recNana)
       await post('/ed/edd/rec/EddRec050/doList.do', {
         _runningNana: recNana,
-        ...run,
+        ...ids,
         '@d1#STD_NO': stdNo,
         '@d1#LOCALE': 'ko',
       })
@@ -268,7 +302,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
       const sem = mo >= 2 && mo <= 7 ? 'CM160.10' : 'CM160.20'
       await post('/ed/edc/regi/EdcRegi170/doList.do', {
         _runningNana: regiNana,
-        ...run,
+        ...ids,
         '@d1#OPEN_ORGN_CLSF_CD': 'CM015.110',
         '@d1#OPEN_YY': yy,
         '@d1#OPEN_SEM_CD': sem,
@@ -276,19 +310,27 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
         '@d1#AUTH_CTL2_CD': '',
       })
     }
+    log.push(`모은 수강 기록 ${Object.keys(rec).length - before}건`)
     if (Object.keys(rec).length === before) throw new Error('empty')
     send()
   }
 
-  w.__dguStudy = { show: () => (box.style.display = 'block') }
+  const run = () => {
+    log.length = 0
+    auto().catch(fail)
+  }
+  w.__dguStudy = { show: () => (box.style.display = 'block'), run }
   render()
-  auto().catch((e: Error) =>
+  run()
+  function fail(e: Error) {
+    log.push(`멈춤: ${e.message}`)
+    render()
     msg(
       e.message === 'login'
         ? '엔드림스에 먼저 로그인한 뒤 다시 눌러 주세요.'
-        : '바로 가져오지 못했습니다. 수강신청내역확인·전체성적조회 화면을 열면 모입니다.',
-    ),
-  )
+        : '바로 가져오지 못했습니다. 아래 진단을 캡처해 알려 주세요. 수강신청내역확인·전체성적조회 화면을 열면 모입니다.',
+    )
+  }
 }
 
 /** 즐겨찾기 줄에 끌어다 놓을 javascript: 주소 */
