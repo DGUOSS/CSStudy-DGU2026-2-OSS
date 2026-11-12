@@ -81,21 +81,30 @@ export function ImportPanel({ compact = false }: { compact?: boolean }) {
             동국스터디로 보내기
           </a>
         </Step>
-        <Step n={2} title="엔드림스를 엽니다">
+        <Step n={2} title="엔드림스를 열고 직접 로그인합니다">
           <Button size="sm" onClick={() => window.open(NDRIMS_URL, 'ndrims')}>
             <ExternalLink />
             엔드림스 열기
           </Button>
         </Step>
-        <Step n={3} title="뜬 창에서 직접 로그인하고, 즐겨찾기 '동국스터디로 보내기'를 누릅니다">
-          <p className="text-muted-foreground">오른쪽 위에 동국스터디 상자가 나타납니다.</p>
-        </Step>
-        <Step n={4} title="두 화면을 열고 상자의 [동국스터디로 보내기]를 누릅니다">
-          <ul className="list-disc pl-5 text-muted-foreground">
-            <li>수강신청 → 수강신청내역확인 (이번 학기)</li>
-            <li>성적 → 전체성적조회 (지난 학기들)</li>
-            {isAdmin && <li>관리자: 수업/강의평가 → 종합강의시간표조회 (이번 학기 개설 목록)</li>}
-          </ul>
+        <Step n={3} title="로그인한 창에서 즐겨찾기 '동국스터디로 보내기'를 누릅니다">
+          <p className="text-muted-foreground">
+            첫 화면에서 눌러도 됩니다. 이번 학기 수강신청 내역과 지난 학기 성적표의 과목 목록을 바로
+            가져와 이 창으로 보냅니다.
+          </p>
+          <details className="text-muted-foreground">
+            <summary className="cursor-pointer text-xs">바로 가져오지 못했다고 나오면</summary>
+            <ul className="mt-1 list-disc pl-5">
+              <li>수강신청 → 수강신청내역확인, 성적 → 전체성적조회 화면을 열면 상자에 모입니다.</li>
+              <li>그다음 상자의 [동국스터디로 보내기]를 누릅니다.</li>
+            </ul>
+          </details>
+          {isAdmin && (
+            <p className="text-muted-foreground">
+              관리자: 수업/강의평가 → 종합강의시간표조회를 열고 상자의 [보내기]를 누르면 개설
+              목록이 저장됩니다.
+            </p>
+          )}
         </Step>
       </ol>
       {save.isPending && <p className="text-sm">가져오는 중…</p>}
