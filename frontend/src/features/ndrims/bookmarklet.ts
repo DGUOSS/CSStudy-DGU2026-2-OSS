@@ -33,10 +33,16 @@ export type NdrimsPayload = {
 
 // 엔드림스 창 안에서 실행되는 코드. 바깥 변수는 쓰지 않는다(문자열로 바뀌어 들어간다).
 function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
-  const w = window as unknown as { __dguStudy?: { show: () => void; run: () => void } }
+  const w = window as unknown as { __dguStudy?: { show: () => void; run: () => void; v?: number; box?: HTMLElement } }
   if (!HOSTS.some((h) => location.origin === h)) {
     alert('엔드림스(ndrims.dongguk.edu) 창에서 눌러 주세요.')
     return
+  }
+  const VER = 5
+  // 예전 버전 상자가 남아 있으면 치우고 새로 시작한다(새로고침 없이 새 버튼이 동작하도록)
+  if (w.__dguStudy && w.__dguStudy.v !== VER) {
+    w.__dguStudy.box?.remove()
+    w.__dguStudy = undefined
   }
   if (w.__dguStudy) {
     w.__dguStudy.show()
@@ -156,7 +162,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
     const n = Object.keys(rec).length
     const m = Object.keys(cat).length
     box.innerHTML =
-      '<b style="color:#c8102e">동국스터디 가져오기</b> <span style="font-size:11px;color:#999">v4</span>' +
+      '<b style="color:#c8102e">동국스터디 가져오기</b> <span style="font-size:11px;color:#999">v' + VER + '</span>' +
       '<div style="margin:6px 0">수강 기록 <b>' +
       n +
       '</b>건' +
@@ -354,7 +360,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
       .catch(fail)
       .finally(() => (busy = false))
   }
-  w.__dguStudy = { show: () => (box.style.display = 'block'), run }
+  w.__dguStudy = { show: () => (box.style.display = 'block'), run, v: VER, box }
   render()
   run()
   function fail(e: Error) {
