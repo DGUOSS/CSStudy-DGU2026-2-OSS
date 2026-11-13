@@ -99,6 +99,9 @@ export function ImportPanel({ compact = false }: { compact?: boolean }) {
       <ErrorText error={save.error} />
       {r && (
         <div className="rounded-lg border bg-muted/40 p-3 text-sm">
+          {r.catalogError && (
+            <p className="text-destructive">개설 목록은 저장하지 못했습니다: {r.catalogError.message}</p>
+          )}
           {r.catalog && (
             <p>
               개설 목록 {r.catalog.terms.join(', ')}: 새로 {r.catalog.added}건, 갱신{' '}

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Send } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { PdfPicker } from '@/components/PdfPicker'
 import { ErrorText } from '@/components/States'
 import { Button } from '@/components/ui/button'
@@ -26,12 +26,15 @@ export function RequestWithFiles({
   const [open, setOpen] = useState(false)
   const [files, setFiles] = useState<File[]>([])
   const [note, setNote] = useState('')
+  // 요청은 만들어졌는데 교안 올리기가 실패한 경우, 다시 누르면 교안만 다시 올린다
+  const made = useRef<number | null>(null)
   const send = useMutation({
     mutationFn: async () => {
-      const id = await create(note)
-      if (files.length) await uploadRequestFiles(id, files)
+      made.current ??= await create(note)
+      if (files.length) await uploadRequestFiles(made.current, files)
     },
     onSuccess: () => {
+      made.current = null
       setOpen(false)
       setFiles([])
       setNote('')

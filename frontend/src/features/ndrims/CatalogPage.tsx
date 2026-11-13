@@ -46,6 +46,9 @@ export function CatalogPage() {
       setQuery({ year, sem_cd, colg, dpt, cpdiv, q: q.trim(), prof: prof.trim(), offset })
   }
 
+  // 이전/다음은 보고 있는 검색 조건 그대로 쪽만 넘긴다(입력 중인 값은 [조회]를 눌러야 반영)
+  const page = (offset: number) => query && setQuery({ ...query, offset })
+
   if (terms.isPending) return <Loading />
   return (
     <div className="flex flex-col gap-6">
@@ -162,7 +165,7 @@ export function CatalogPage() {
                 size="sm"
                 variant="outline"
                 disabled={!query?.offset}
-                onClick={() => submit(undefined, Math.max(0, (query?.offset ?? 0) - PAGE))}
+                onClick={() => page(Math.max(0, (query?.offset ?? 0) - PAGE))}
               >
                 이전
               </Button>
@@ -174,7 +177,7 @@ export function CatalogPage() {
                 size="sm"
                 variant="outline"
                 disabled={(query?.offset ?? 0) + PAGE >= result.data.total}
-                onClick={() => submit(undefined, (query?.offset ?? 0) + PAGE)}
+                onClick={() => page((query?.offset ?? 0) + PAGE)}
               >
                 다음
               </Button>

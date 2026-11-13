@@ -14,18 +14,26 @@ export function useImportNdrims(isAdmin: boolean) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (p: NdrimsPayload) => {
-      const catalog =
+      // 둘은 따로 저장한다. 개설 목록이 실패해도 내 수강 기록은 저장되게
+      const [catalog, mine] = await Promise.allSettled([
         isAdmin && p.catalog.length
-          ? await unwrap(
+          ? unwrap(
               api.POST('/api/v1/admin/catalog/import', {
                 body: { rows: p.catalog as Schemas['OfferingIn'][] },
               }),
             )
-          : null
-      const mine = p.records.length
-        ? await unwrap(api.POST('/api/v1/me/ndrims/import', { body: { records: p.records } }))
-        : null
-      return { catalog, mine }
+          : Promise.resolve(null),
+        p.records.length
+          ? unwrap(api.POST('/api/v1/me/ndrims/import', { body: { records: p.records } }))
+          : Promise.resolve(null),
+      ])
+      if (mine.status === 'rejected') throw mine.reason
+      if (catalog.status === 'rejected' && !mine.value) throw catalog.reason
+      return {
+        catalog: catalog.status === 'fulfilled' ? catalog.value : null,
+        catalogError: catalog.status === 'rejected' ? (catalog.reason as Error) : null,
+        mine: mine.value,
+      }
     },
     onSuccess: () => qc.invalidateQueries(),
   })

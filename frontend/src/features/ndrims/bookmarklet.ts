@@ -39,7 +39,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
     alert('엔드림스(ndrims.dongguk.edu) 창에서 눌러 주세요.')
     return
   }
-  const VER = 6
+  const VER = 7
   // 예전 버전 상자가 남아 있으면 치우고 새로 시작한다(새로고침 없이 새 버튼이 동작하도록)
   if (w.__dguStudy && w.__dguStudy.v !== VER) {
     w.__dguStudy.box?.remove()
@@ -86,7 +86,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
         )
     } else if (/EdcLesn010\/doList/.test(url)) {
       for (const x of rows) {
-        if (!x.SBJ_NO || !x.OPEN_YY) continue
+        if (!x.SBJ_NO || !x.OPEN_YY || !x.OPEN_SEM_CD || !x.SBJ_NM) continue
         const k = [x.OPEN_YY, x.OPEN_SEM_CD, x.SBJ_NO, x.DVCLS].join('|')
         if (cat[k] && x.MAIN_PROF_YN !== 'Y') continue // 공동 강의는 대표 교수만
         cat[k] = {
@@ -236,10 +236,15 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
       return
     }
     // 2) 창 연결이 끊겼으면 우리 사이트를 새 탭으로 열고 주소 # 뒤에 담아 보낸다(# 뒤는 서버로 가지 않는다)
-    const tab = window.open(
-      SITE + '/ndrims#' + encodeURIComponent(JSON.stringify(payload)),
-      'dgu-study-import',
-    )
+    // 주소 길이 제한: 개설 목록(관리자)이 크면 수강 기록만 보낸다
+    let hash = encodeURIComponent(JSON.stringify(payload))
+    const big = hash.length > 1500000
+    if (big) hash = encodeURIComponent(JSON.stringify({ ...payload, catalog: [] }))
+    const tab = window.open(SITE + '/ndrims#' + hash, 'dgu-study-import')
+    if (tab && big) {
+      msg('수강 기록만 보냈습니다. 개설 목록은 너무 커서 동국스터디의 [엔드림스 열기]로 연 창에서 다시 보내 주세요.')
+      return
+    }
     msg(
       tab
         ? '새 탭으로 보냈습니다. 동국스터디 탭을 확인하세요.'
