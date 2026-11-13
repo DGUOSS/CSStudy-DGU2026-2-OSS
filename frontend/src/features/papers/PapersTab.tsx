@@ -142,7 +142,9 @@ function CreatePaper({ courseId, onDone }: { courseId: number; onDone: () => voi
                     )}
                   >
                     {c.title}
-                    <span className={cn('ml-1 text-xs', on ? 'opacity-80' : 'text-muted-foreground')}>
+                    <span
+                      className={cn('ml-1 text-xs', on ? 'opacity-80' : 'text-muted-foreground')}
+                    >
                       객{c.problem_count}
                       {c.essay_count > 0 && ` · 서${c.essay_count}`}
                     </span>
@@ -215,10 +217,7 @@ function CreatePaper({ courseId, onDone }: { courseId: number; onDone: () => voi
 
         <ErrorText error={create.error} />
         <div className="flex items-center gap-2">
-          <Button
-            type="submit"
-            disabled={!picked.length || mcq + essay === 0 || create.isPending}
-          >
+          <Button type="submit" disabled={!picked.length || mcq + essay === 0 || create.isPending}>
             {create.isPending ? '만드는 중…' : '만들기'}
           </Button>
           <Button type="button" variant="ghost" onClick={onDone}>
@@ -257,7 +256,12 @@ function CountField({
         )}
       </Label>
       <div className="flex items-center gap-1">
-        <Button type="button" size="sm" variant="outline" onClick={() => onChange(Math.max(0, value - 1))}>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => onChange(Math.max(0, value - 1))}
+        >
           −
         </Button>
         <Input

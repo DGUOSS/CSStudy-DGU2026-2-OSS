@@ -1,4 +1,20 @@
-import { Camera, Check, ChevronLeft, Clock, Maximize2, Minimize2, Pause, Pencil, Play, Printer, RotateCcw, Square, Trophy, X } from 'lucide-react'
+import {
+  Camera,
+  Check,
+  ChevronLeft,
+  Clock,
+  Download,
+  Maximize2,
+  Minimize2,
+  Pause,
+  Pencil,
+  Play,
+  Printer,
+  RotateCcw,
+  Square,
+  Trophy,
+  X,
+} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import type { Schemas } from '@/api/client'
@@ -20,10 +36,12 @@ import {
   useRestart,
   useResume,
   useScan,
+  useSheet,
   useStartTake,
   useSubmit,
   useTakeResult,
 } from './queries'
+import { downloadSheetPngs } from './sheetImage'
 
 /** 종이 시험: 인쇄 → [시험 시작] → 타이머 → 답안지 사진 → 인식 결과 확인 → 채점 → 등수 */
 export function PaperPage() {
@@ -68,15 +86,24 @@ export function PaperPage() {
       ) : (
         <Card className="flex flex-col gap-4 p-5">
           <ol className="list-decimal pl-5 text-sm text-muted-foreground">
-            <li>시험지를 인쇄합니다(마지막 장이 답안지).</li>
-            <li>준비되면 [시험 시작]을 누르고 종이에 풉니다. 답은 답안지 동그라미를 칠합니다.</li>
-            <li>끝나면 답안지를 사진으로 찍어 올리고, 인식된 답을 확인해 제출합니다.</li>
+            <li>
+              시험지를 인쇄합니다(마지막 장이 답안지). 인쇄가 안 되면 답안지 이미지를 받아
+              그림판이나 태블릿에서 표시해도 됩니다.
+            </li>
+            <li>
+              준비되면 [시험 시작]을 누릅니다. 문제는 시작한 뒤 이 화면에서도 볼 수 있습니다. 답은
+              답안지 동그라미에 칠하고, 서술형은 답 칸에 씁니다.
+            </li>
+            <li>
+              끝나면 답안지를 사진(또는 이미지 파일)으로 올리고, 인식된 답을 확인해 제출합니다.
+            </li>
           </ol>
           <div className="flex flex-wrap gap-2">
             <Link to={`/papers/${p.id}/print`} className={buttonVariants({ variant: 'outline' })}>
               <Printer />
-              인쇄하기
+              문제지·답안지 인쇄 / PDF
             </Link>
+            <SheetDownload paperId={p.id} />
             <Button onClick={() => start.mutate()} disabled={start.isPending}>
               <Clock />
               시험 시작
@@ -202,7 +229,12 @@ function Running({
       >
         {over ? `+${mmss(-left)}` : mmss(left)}
       </div>
-      <div className={cn('h-2 w-full max-w-md overflow-hidden rounded-full bg-muted', big && 'h-3 max-w-3xl')}>
+      <div
+        className={cn(
+          'h-2 w-full max-w-md overflow-hidden rounded-full bg-muted',
+          big && 'h-3 max-w-3xl',
+        )}
+      >
         <div
           className={cn(
             'h-full transition-[width]',
@@ -224,7 +256,11 @@ function Running({
       </div>
       <div className="flex flex-wrap justify-center gap-2">
         {take.paused ? (
-          <Button size={big ? 'lg' : 'default'} disabled={busy} onClick={() => resume.mutate(take.id)}>
+          <Button
+            size={big ? 'lg' : 'default'}
+            disabled={busy}
+            onClick={() => resume.mutate(take.id)}
+          >
             <Play />
             계속 풀기
           </Button>
@@ -241,6 +277,18 @@ function Running({
             </Button>
           )
         )}
+        <Button
+          variant="outline"
+          size={big ? 'lg' : 'default'}
+          disabled={busy}
+          onClick={() =>
+            confirm('시간을 처음으로 되돌려 다시 시작할까요? 지금 응시는 기록되지 않습니다.') &&
+            restart.mutate(take.id)
+          }
+        >
+          <RotateCcw />
+          처음부터 다시
+        </Button>
         <Button
           variant="outline"
           size={big ? 'lg' : 'default'}
@@ -288,18 +336,6 @@ function Running({
             disabled={busy}
             className="cursor-pointer text-muted-foreground hover:underline"
             onClick={() =>
-              confirm('처음부터 다시 시작할까요? 지금 응시는 기록되지 않습니다.') &&
-              restart.mutate(take.id)
-            }
-          >
-            <RotateCcw className="mr-1 inline size-3" />
-            처음부터 다시
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            className="cursor-pointer text-muted-foreground hover:underline"
-            onClick={() =>
               confirm('시험을 그만둘까요? 이 응시는 기록·등수에 들어가지 않습니다.') &&
               abandon.mutate(take.id)
             }
@@ -310,6 +346,7 @@ function Running({
         </div>
       )}
       <ErrorText error={pause.error ?? resume.error ?? restart.error ?? abandon.error} />
+      {!big && !submitting && <Questions paper={paper} />}
       {submitting && (
         <ScanReview
           paper={paper}
@@ -323,6 +360,63 @@ function Running({
 }
 
 const GRACE = 10
+const CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧']
+
+/** 시험 중 화면에서 보는 문제(인쇄를 못 했을 때). 정답은 없다. */
+function Questions({ paper }: { paper: Paper }) {
+  const [open, setOpen] = useState(true)
+  return (
+    <Card className="flex flex-col gap-3 p-5">
+      <div className="flex items-center justify-between">
+        <div className="font-semibold">
+          문제{' '}
+          <span className="font-normal text-muted-foreground">({paper.problems.length}문항)</span>
+        </div>
+        <Button size="sm" variant="ghost" onClick={() => setOpen(!open)}>
+          {open ? '접기' : '펼치기'}
+        </Button>
+      </div>
+      {open && (
+        <ol className="flex flex-col gap-4 text-sm leading-relaxed">
+          {paper.problems.map((q) => (
+            <li key={q.id}>
+              <div className="whitespace-pre-wrap">
+                <b>{q.no}.</b> {q.question}{' '}
+                <span className="text-xs text-muted-foreground">
+                  ({q.points}점{q.qtype !== 'mcq' && ' · 서술형, 답안지 칸에 쓰세요'})
+                </span>
+              </div>
+              {q.qtype === 'mcq' && (
+                <div className="mt-1 grid gap-0.5 pl-4">
+                  {q.choices.map((c, i) => (
+                    <div key={i} className="whitespace-pre-wrap">
+                      {CIRCLED[i]} {c}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+    </Card>
+  )
+}
+
+function SheetDownload({ paperId }: { paperId: number }) {
+  const sheet = useSheet(paperId)
+  return (
+    <Button
+      variant="outline"
+      disabled={!sheet.data}
+      title="인쇄할 수 없을 때: 그림판·태블릿에서 칠하고 쓴 뒤 그대로 올리거나 화면을 찍어 올리세요"
+      onClick={() => sheet.data && downloadSheetPngs(sheet.data.pages, paperId)}
+    >
+      <Download />
+      답안지 이미지 받기
+    </Button>
+  )
+}
 
 type Review = { mcq: Schemas['ScanMcq'][]; essays: Schemas['ScanEssay'][]; missing: number[] }
 

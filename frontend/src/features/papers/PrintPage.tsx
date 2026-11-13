@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router'
 import { ErrorText, Loading } from '@/components/States'
 import { Button } from '@/components/ui/button'
 import { usePaper, useSheet } from './queries'
+import { downloadSheetPngs } from './sheetImage'
 
 const CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧']
 
@@ -42,15 +43,11 @@ export function PrintPage() {
         </Link>
         <div className="flex items-center gap-3">
           <span className="text-xs text-muted-foreground">
-            인쇄 설정에서 용지 A4, 배율 100%(기본), 여백 없음으로 맞추세요.
+            문제지 다음에 답안지가 이어집니다. 용지 A4·배율 100%·여백 없음. 프린터가 없으면 대상에서 'PDF로 저장'.
           </span>
           <Button
             variant="outline"
-            onClick={() =>
-              sheet.data!.pages.forEach((svg, i) =>
-                downloadPng(svg, `답안지_${paperId}_${i + 1}쪽.png`),
-              )
-            }
+            onClick={() => downloadSheetPngs(sheet.data!.pages, paperId)}
             title="인쇄할 수 없을 때: 그림판·태블릿에서 칠하고 쓴 뒤 그대로 올리거나 화면을 찍어 올리세요"
           >
             <Download />
@@ -100,29 +97,4 @@ export function PrintPage() {
       ))}
     </div>
   )
-}
-
-/** 답안지 SVG를 A4 200dpi PNG로 받는다(인쇄 대신 그림판·태블릿에서 칠할 때) */
-function downloadPng(svg: string, filename: string) {
-  const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }))
-  const img = new Image()
-  img.onload = () => {
-    const canvas = document.createElement('canvas')
-    canvas.width = 1654
-    canvas.height = 2339
-    const ctx = canvas.getContext('2d')!
-    ctx.fillStyle = '#fff'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-    URL.revokeObjectURL(url)
-    canvas.toBlob((blob) => {
-      if (!blob) return
-      const a = document.createElement('a')
-      a.href = URL.createObjectURL(blob)
-      a.download = filename
-      a.click()
-      setTimeout(() => URL.revokeObjectURL(a.href), 1000)
-    }, 'image/png')
-  }
-  img.src = url
 }
