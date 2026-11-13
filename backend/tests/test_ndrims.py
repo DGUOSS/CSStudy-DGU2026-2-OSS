@@ -195,7 +195,9 @@ def test_current_record_with_professor_from_bookmarklet(client, login, course_wi
         json={"records": [dict(base, dvcls="02", emp_nm="김교수", emp_no="E2")]},
     ).json()
     assert r["courses"] == []
-    assert [(w["sbj_nm"], w["professor_name"]) for w in r["waiting"]] == [("기초프로그래밍", "김교수")]
+    assert [(w["sbj_nm"], w["professor_name"]) for w in r["waiting"]] == [
+        ("기초프로그래밍", "김교수")
+    ]
     assert client.get(f"/api/v1/courses/{course.id}").status_code == 403
     # 교수 정보가 없는 기록은 어느 강좌에도 붙지 않는다
     _as(client, login, "f@dgu.ac.kr")
@@ -208,13 +210,18 @@ def test_public_course_open_to_everyone(client, login, session, course_with_prob
     course = course_with_problems["course"]
     _as(client, login, "g@dgu.ac.kr")
     assert client.get(f"/api/v1/courses/{course.id}").status_code == 403
-    assert client.patch(f"/api/v1/admin/courses/{course.id}", json={"is_public": True}).status_code == 403
+    assert (
+        client.patch(f"/api/v1/admin/courses/{course.id}", json={"is_public": True}).status_code
+        == 403
+    )
     _as(client, login, "admin@dgu.ac.kr", admin=True, session=session)
     r = client.patch(f"/api/v1/admin/courses/{course.id}", json={"is_public": True})
     assert r.status_code == 200 and r.json()["is_public"] is True
     _as(client, login, "g@dgu.ac.kr")
     assert client.get(f"/api/v1/courses/{course.id}").status_code == 200
-    assert [p["course_id"] for p in client.get("/api/v1/me/courses").json()["public"]] == [course.id]
+    assert [p["course_id"] for p in client.get("/api/v1/me/courses").json()["public"]] == [
+        course.id
+    ]
     _as(client, login, "admin@dgu.ac.kr")
     client.patch(f"/api/v1/admin/courses/{course.id}", json={"is_public": False})
     _as(client, login, "g@dgu.ac.kr")
