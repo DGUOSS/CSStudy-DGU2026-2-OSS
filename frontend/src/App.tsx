@@ -8,9 +8,9 @@ import { MyRequestsPage } from '@/features/course_requests/MyRequestsPage'
 import { RequestCoursePage } from '@/features/course_requests/RequestCoursePage'
 import { CoursePage } from '@/features/courses/CoursePage'
 import { SubjectCoursesPage } from '@/features/courses/SubjectCoursesPage'
-import { CatalogPage } from '@/features/ndrims/CatalogPage'
-import { HomePage } from '@/features/ndrims/HomePage'
-import { ReceivePage } from '@/features/ndrims/ReceivePage'
+import { CatalogPage } from '@/features/catalog/CatalogPage'
+import { HomePage } from '@/features/enrollments/HomePage'
+import { ReceivePage } from '@/features/enrollments/ReceivePage'
 import { QuizPage } from '@/features/problems/QuizPage'
 
 // 새 화면은 여기에 경로를 한 줄 추가한다

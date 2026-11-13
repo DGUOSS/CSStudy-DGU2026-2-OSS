@@ -1,7 +1,7 @@
 import { ChevronLeft } from 'lucide-react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { Empty, ErrorText, Loading } from '@/components/States'
-import { isForbidden } from '@/features/ndrims/queries'
+import { isForbidden } from '@/features/enrollments/queries'
 import { cn } from '@/lib/utils'
 import { MasteryTab } from '@/features/mastery/MasteryTab'
 import { MaterialsTab } from '@/features/materials/MaterialsTab'

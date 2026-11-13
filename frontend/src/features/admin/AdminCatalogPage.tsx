@@ -1,7 +1,7 @@
 import { Empty, Loading } from '@/components/States'
 import { Card } from '@/components/ui/card'
-import { ImportPanel } from '@/features/ndrims/ImportPanel'
-import { useTerms } from '@/features/ndrims/queries'
+import { ImportPanel } from '@/features/enrollments/ImportPanel'
+import { useTerms } from '@/features/catalog/queries'
 import { AdminNav } from './AdminNav'
 
 /** 관리자: 엔드림스 종합강의시간표(개설 목록) 가져오기. 강좌는 만들지 않고 찾기·요청·교수 확정에 쓴다. */

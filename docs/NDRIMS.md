@@ -29,7 +29,7 @@
 
 ## 사이트에서의 흐름 (구현)
 - 학생: 첫 화면 → 즐겨찾기 버튼 끌어다 놓기 → 엔드림스 열기 → 직접 로그인 → 아무 화면에서 즐겨찾기 누르기 → 끝
-  - 버튼 코드: `frontend/src/features/ndrims/bookmarklet.ts`. 로그인한 창 안에서 엔드림스 화면과 같은 순서로 직접 요청한다: `doUserLoginAccs`(NANA) → `doListUserMenuListTop`(dmUserInfo: LOGIN_IDEN_NO, MAIN_OPEN_KEY, 학번) → `doListUserMenuListLeft`(화면별 NANA, PGM_URL로 찾음) → `EddRec050`(지난 학기), `EdcRegi170`(이번 학기). 성적 칸은 버린다. 2026-11-12 실제 엔드림스에서 이 순서로 받아지는 것을 확인했다.
+  - 버튼 코드: `frontend/src/features/enrollments/bookmarklet.ts`. 로그인한 창 안에서 엔드림스 화면과 같은 순서로 직접 요청한다: `doUserLoginAccs`(NANA) → `doListUserMenuListTop`(dmUserInfo: LOGIN_IDEN_NO, MAIN_OPEN_KEY, 학번) → `doListUserMenuListLeft`(화면별 NANA, PGM_URL로 찾음) → `EddRec050`(지난 학기), `EdcRegi170`(이번 학기). 성적 칸은 버린다. 2026-11-12 실제 엔드림스에서 이 순서로 받아지는 것을 확인했다.
   - 상자에 단계별 진단(칸 이름·건수만)을 보인다. 바로 못 받으면 화면을 열어 모으는 방식으로 넘어간다.
   - 보내기: 우리 사이트가 연 창이면 `postMessage` 후 받았다는 답(ack)을 기다린다. 답이 없거나 창 연결이 끊겼으면 우리 사이트 `/ndrims#<기록>`을 새 탭으로 연다(# 뒤는 서버로 가지 않음) → `POST /me/ndrims/import`
 - 관리자: 종합강의시간표조회를 같은 방법으로 보내면 `POST /admin/catalog/import`로 개설 목록이 저장된다.
