@@ -135,8 +135,9 @@ def sheet_svgs(lay: Layout, title: str, paper_id: int, info: str) -> list[str]:
             '<rect x="40" y="35" width="60" height="8" fill="none" stroke="#000" stroke-width="0.3"/>'
         )
         parts.append(
-            '<text x="30" y="51" font-size="3" fill="#444">검은 펜이나 사인펜으로 동그라미를 꽉 채워 칠하세요. '
-            "고칠 때는 지우개로 깨끗이 지우세요. 네 귀퉁이 검은 네모가 모두 나오게 찍어 주세요.</text>"
+            '<text x="30" y="49" font-size="3" fill="#444">검은 펜이나 사인펜으로 동그라미를 꽉 채워 칠하세요. '
+            "고칠 때는 지우개로 깨끗이 지우세요.</text>"
+            '<text x="30" y="53.5" font-size="3" fill="#444">사진은 네 귀퉁이 검은 네모가 모두 나오게 찍어 주세요.</text>'
         )
         for s in (m for m in lay.mcq if m.page == p):
             y = s.bubbles[0][1]

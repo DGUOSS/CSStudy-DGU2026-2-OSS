@@ -138,6 +138,21 @@ class ResultOut(BaseModel):
     items: list[ResultItem]
 
 
+class MyTake(BaseModel):
+    take_id: int
+    score: int
+    total_points: int
+    elapsed_sec: int
+    late: bool
+    essay_pending: bool
+    submitted_at: datetime
+
+
+class MineOut(BaseModel):
+    open_take: TakeOut | None  # 시작했지만 아직 제출하지 않은 응시(새로고침해도 이어 가기)
+    submitted: list[MyTake]
+
+
 class RankEntry(BaseModel):
     rank: int
     label: str
@@ -308,6 +323,34 @@ def start_take(paper_id: int, session: SessionDep, user: CurrentUser) -> TakeOut
         session.commit()
         session.refresh(take)
     return _take_out(take, paper)
+
+
+@router.get("/papers/{paper_id}/mine")
+def my_takes(paper_id: int, session: SessionDep, user: CurrentUser) -> MineOut:
+    paper = _paper_or_404(session, user, paper_id)
+    takes = session.exec(
+        select(PaperTake)
+        .where(PaperTake.paper_id == paper.id, PaperTake.user_id == user.id)
+        .order_by(PaperTake.started_at.desc())  # type: ignore[union-attr]
+    ).all()
+    open_take = next((t for t in takes if t.status == "started"), None)
+    has_essay = any(p.qtype != "mcq" for p in _problems(session, paper))
+    return MineOut(
+        open_take=_take_out(open_take, paper) if open_take else None,
+        submitted=[
+            MyTake(
+                take_id=t.id,
+                score=_score(t),
+                total_points=t.total_points,
+                elapsed_sec=t.elapsed_sec or 0,
+                late=t.late,
+                essay_pending=has_essay and t.essay_score is None,
+                submitted_at=t.submitted_at,
+            )
+            for t in takes
+            if t.status == "submitted"
+        ],
+    )
 
 
 @router.get("/takes/{take_id}")

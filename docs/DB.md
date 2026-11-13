@@ -25,12 +25,16 @@ users ─< exam_selections >─ materials     문제 풀기 전에 고른 족보
 | course_requests | requester_id, subject_name, subject_code, professor_name, semester, note, material_title/filename/pages(JSON, 승인 전까지만), status(pending/approved/rejected), reject_reason, reviewed_by, reviewed_at, course_id |
 | chapters | course_id, order, title, material_id |
 | concepts | chapter_id, name |
-| problems | chapter_id, question, choices(JSON), answer_index(0부터), explanation, evidence, source_material_id, source_page, origin(sample/llm/exam) |
+| problems | chapter_id, question, choices(JSON), answer_index(0부터, 서술형은 -1), explanation, evidence, source_material_id, source_page, origin(sample/llm/exam), qtype(mcq/essay), model_answer, rubric(JSON '항목 — n점'), points |
 | problem_concepts | problem_id, concept_id |
 | attempts | user_id, problem_id, chosen_index, correct, created_at |
-| user_subjects | (user_id, subject_id) 기본키, status(current/taken), semester, source(manual/ndrims) |
 | material_votes | (user_id, material_id) 기본키, value(1/-1) |
 | exam_selections | (user_id, material_id) 기본키, course_id |
+| enrollments | user_id, year, sem_cd, sbj_no, sbj_nm, dvcls, emp_nm, emp_no, course_id(없으면 아직 안 열린 수업), source |
+| catalog_offerings | 엔드림스 종합강의시간표 한 줄: (year, sem_cd, sbj_no, dvcls) 고유, emp_no, emp_nm, 대학·학과·이수구분·시간·평가 비율 등 |
+| papers | 종이 시험지: course_id, created_by, title, problem_ids(JSON, 순서), time_limit_min, source(bank/generated) |
+| paper_takes | 한 번 응시: paper_id, user_id, started_at, submitted_at, elapsed_sec, late, answers(JSON), mcq_score, essay_score(NULL=채점 대기), total_points, status(started/submitted) |
+| paper_essay_images | 서술형 답 칸 사진(JPEG): take_id, problem_id. 전체 답안지 사진은 저장하지 않음 |
 
 ## 테이블을 바꿀 때
 1. `git pull`로 main을 먼저 받는다 (두 사람이 동시에 바꾸면 변경 이력이 갈라진다).
