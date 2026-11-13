@@ -39,7 +39,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
     alert('엔드림스(ndrims.dongguk.edu) 창에서 눌러 주세요.')
     return
   }
-  const VER = 7
+  const VER = 8
   // 예전 버전 상자가 남아 있으면 치우고 새로 시작한다(새로고침 없이 새 버튼이 동작하도록)
   if (w.__dguStudy && w.__dguStudy.v !== VER) {
     w.__dguStudy.box?.remove()
@@ -197,13 +197,8 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
       ' 모음</div>' +
       '<div style="font-size:12px;color:#666">누르면 바로 가져옵니다. 안 되면 수강신청 &gt; 수강신청내역확인, 성적 &gt; 전체성적조회 화면을 열어도 모입니다.</div>' +
       '<div data-m style="font-size:12px;color:#c8102e;margin-top:6px"></div>' +
-      (log.length
-        ? '<pre data-l style="max-height:180px;overflow:auto;font-size:11px;background:#f5f5f5;padding:6px;border-radius:6px;white-space:pre-wrap;word-break:break-all;margin:6px 0 0"></pre>'
-        : '') +
       '<div style="display:flex;gap:6px;margin-top:8px"><button data-s style="flex:1;padding:6px;border:0;border-radius:8px;background:#c8102e;color:#fff;cursor:pointer">동국스터디로 보내기</button>' +
       '<button data-x style="padding:6px 10px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer">닫기</button></div>'
-    const l = box.querySelector('[data-l]') as HTMLElement | null
-    if (l) l.textContent = log.join('\n')
     ;(box.querySelector('[data-x]') as HTMLElement).onclick = () => (box.style.display = 'none')
     ;(box.querySelector('[data-s]') as HTMLElement).onclick = send
   }
@@ -425,11 +420,13 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
   run()
   function fail(e: Error) {
     log.push(`멈춤: ${e.message}`)
+    // 진단은 화면에 보이지 않고 개발자 도구(F12) 콘솔에만 남긴다. 칸 이름·건수만 있고 값은 없다
+    console.info('[동국스터디 진단]\n' + log.join('\n'))
     render()
     msg(
       e.message === 'login'
         ? '엔드림스에 먼저 로그인한 뒤 다시 눌러 주세요.'
-        : '바로 가져오지 못했습니다. 아래 진단을 캡처해 알려 주세요. 수강신청내역확인·전체성적조회 화면을 열면 모입니다.',
+        : '바로 가져오지 못했습니다. 수강신청 > 수강신청내역확인, 성적 > 전체성적조회 화면을 열면 모입니다.',
     )
   }
 }
