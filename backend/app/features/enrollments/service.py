@@ -6,6 +6,7 @@
 """
 
 import re
+from datetime import date
 
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
@@ -39,13 +40,17 @@ def norm_code(code: str | None) -> str:
     return re.sub(r"-\d{1,3}$", "", s)
 
 
-def current_term(session: Session) -> tuple[str, str] | None:
-    """이번 학기: 가져온 개설 목록 중 가장 최근 학기. 없으면 수강 기록 중 가장 최근 학기."""
-    for model in (CatalogOffering, Enrollment):
-        rows = session.exec(select(model.year, model.sem_cd).distinct()).all()  # type: ignore[attr-defined]
-        if rows:
-            return max(rows, key=lambda r: _term_key(r[0], r[1]))
-    return None
+def _today() -> date:
+    return date.today()
+
+
+def current_term(session: Session | None = None) -> tuple[str, str]:
+    """이번 학기: 날짜로 정한다(2~7월 1학기, 8~1월 2학기).
+    개설 목록에서 고르면 다음 학기 목록이나 공통학기 행을 미리 가져왔을 때 바뀌어 버린다."""
+    d = _today()
+    if d.month == 1:
+        return (str(d.year - 1), "CM160.20")
+    return (str(d.year), "CM160.10" if 2 <= d.month <= 7 else "CM160.20")
 
 
 def find_subject(session: Session, code: str, name: str | None = None) -> Subject | None:
@@ -103,10 +108,16 @@ def resolve(session: Session, e: Enrollment) -> int | None:
     return course.id if course else None
 
 
-def relink_unlinked(session: Session) -> int:
-    """강좌가 아직 없던 수강 기록을 다시 맞춰 본다(강좌가 열리거나 개설 목록을 가져온 뒤)."""
+def relink_unlinked(session: Session, codes: set[str] | None = None) -> int:
+    """강좌가 아직 없던 수강 기록을 다시 맞춰 본다(강좌가 열리거나 개설 목록을 가져온 뒤).
+    codes를 주면 그 학수번호의 기록만 본다(전체를 훑지 않도록)."""
+    q = select(Enrollment).where(Enrollment.course_id.is_(None))  # type: ignore[union-attr]
+    if codes is not None:
+        if not codes:
+            return 0
+        q = q.where(Enrollment.sbj_no.in_(codes))  # type: ignore[attr-defined]
     n = 0
-    for e in session.exec(select(Enrollment).where(Enrollment.course_id.is_(None))).all():  # type: ignore[union-attr]
+    for e in session.exec(q).all():
         cid = resolve(session, e)
         if cid:
             e.course_id = cid
@@ -137,13 +148,18 @@ def ensure_course_by_keys(
     course = find_course(session, subject, emp_no, emp_nm)
     if course is not None:
         prof = session.get(Professor, course.professor_id)
-        if prof and emp_no and not prof.emp_no:
+        taken = emp_no and session.exec(select(Professor).where(Professor.emp_no == emp_no)).first()
+        if prof and emp_no and not prof.emp_no and not taken:  # 교원번호는 한 교수에게만
             prof.emp_no = emp_no
             session.add(prof)
         return course, False
     professor = None
     if emp_no:
         professor = session.exec(select(Professor).where(Professor.emp_no == emp_no)).first()
+    else:  # 교원번호를 모르면 같은 이름의 '교원번호 없는' 교수를 쓴다(이름만 같은 교수를 늘리지 않게)
+        professor = session.exec(
+            select(Professor).where(Professor.name == emp_nm.strip(), Professor.emp_no.is_(None))  # type: ignore[union-attr]
+        ).first()
     if professor is None:
         professor = Professor(name=emp_nm.strip(), emp_no=emp_no or None)
         session.add(professor)
@@ -152,6 +168,16 @@ def ensure_course_by_keys(
     session.add(course)
     session.flush()
     return course, True
+
+
+def relink_course(session: Session, course: Course) -> None:
+    """강좌를 만들거나 교수를 바꾼 뒤: 이 강좌에 붙어 있던 기록을 떼고, 맞는 기록을 다시 붙인다."""
+    for e in session.exec(select(Enrollment).where(Enrollment.course_id == course.id)).all():
+        e.course_id = None
+        session.add(e)
+    session.flush()
+    subject = session.get(Subject, course.subject_id)
+    relink_unlinked(session, {subject.code} if subject and subject.code else None)
 
 
 def _unique_subject_name(session: Session, name: str, code: str) -> str:

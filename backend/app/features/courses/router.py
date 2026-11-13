@@ -6,7 +6,7 @@ from sqlmodel import func, select
 
 from app.core.db import SessionDep
 from app.core.security import AdminUser, CurrentUser
-from app.features.enrollments.service import can_enter, require_course_access
+from app.features.enrollments.service import can_enter, relink_course, require_course_access
 from app.models import Chapter, Course, Material, Problem, Professor, Subject
 
 router = APIRouter(tags=["courses"])
@@ -179,6 +179,8 @@ def create_course(body: CourseIn, session: SessionDep, user: AdminUser) -> Cours
         created_by=user.id,
     )
     session.add(course)
+    session.flush()
+    relink_course(session, course)  # 이 강좌를 기다리던 수강 기록을 잇는다
     session.commit()
     session.refresh(course)
     return _course_out(session, course)

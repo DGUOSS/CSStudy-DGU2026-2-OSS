@@ -333,7 +333,8 @@ def approve_request(
         session.add(x)
     r.subject_name, r.professor_name = subject_name, professor_name
     session.flush()
-    relink_unlinked(session)  # 이 강좌를 기다리던 수강 기록을 잇는다
+    code = (session.get(Subject, course.subject_id) or Subject(name="")).code
+    relink_unlinked(session, {code} if code else None)  # 이 강좌를 기다리던 수강 기록을 잇는다
     session.commit()
     session.refresh(r)
     return _out(session, r)

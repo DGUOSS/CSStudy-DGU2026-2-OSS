@@ -141,7 +141,7 @@ def import_catalog(body: CatalogImportIn, session: SessionDep, _: AdminUser) -> 
         session.add(o)
     session.flush()
     linked = _link_professors(session, body.rows)
-    records = relink_unlinked(session)
+    records = relink_unlinked(session, {norm_code(r.sbj_no) for r in body.rows})
     session.commit()
     return CatalogImportOut(
         terms=[term_label(y, s) for y, s in terms],
@@ -155,9 +155,11 @@ def import_catalog(body: CatalogImportIn, session: SessionDep, _: AdminUser) -> 
 def _link_professors(session, rows: list[OfferingIn]) -> int:
     """이름만 있던 교수(수강 기록으로 만든 강좌)에게 개설 목록의 교원번호를 채운다."""
     n = 0
+    seen: set[str] = set()
     for r in rows:
-        if not (r.emp_no and r.emp_nm):
+        if not (r.emp_no and r.emp_nm) or r.emp_no in seen:  # 같은 교수의 여러 분반은 한 번만
             continue
+        seen.add(r.emp_no)
         if session.exec(select(Professor).where(Professor.emp_no == r.emp_no)).first():
             continue
         subject = find_subject(session, r.sbj_no, r.sbj_nm)

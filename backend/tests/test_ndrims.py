@@ -1,6 +1,17 @@
 """엔드림스 수강 기록 가져오기, 개설 목록, 강좌 열기 요청 흐름."""
 
+from datetime import date
+
+import pytest
+
 from tests.conftest import make_admin, make_pdf
+
+
+@pytest.fixture(autouse=True)
+def _fixed_today(monkeypatch):
+    """이번 학기는 날짜로 정하므로 2026 2학기로 고정한다."""
+    monkeypatch.setattr("app.features.enrollments.service._today", lambda: date(2026, 11, 13))
+
 
 CUR, PAST = "CM160.20", "CM160.10"
 CATALOG = [
@@ -226,3 +237,40 @@ def test_public_course_open_to_everyone(client, login, session, course_with_prob
     client.patch(f"/api/v1/admin/courses/{course.id}", json={"is_public": False})
     _as(client, login, "g@dgu.ac.kr")
     assert client.get(f"/api/v1/courses/{course.id}").status_code == 403
+
+
+def test_admin_created_course_links_waiting_records(client, login, session):
+    """관리자가 강좌를 직접 만들면 기다리던 기록이 바로 이어진다. 교수를 바꾸면 예전 기록은 떨어진다."""
+    _as(client, login, "h@dgu.ac.kr")
+    rec = dict(
+        year="2025", sem_cd=PAST, sbj_no="CSC9001", sbj_nm="시험과목", dvcls="01", emp_nm="박교수"
+    )
+    client.post("/api/v1/me/ndrims/import", json={"records": [rec]})
+    _as(client, login, "admin@dgu.ac.kr", admin=True, session=session)
+    made = client.post(
+        "/api/v1/admin/courses",
+        data={"subject_name": "시험과목", "subject_code": "CSC9001", "professor_name": "박교수"},
+    ).json()["course"]
+    _as(client, login, "h@dgu.ac.kr")
+    assert client.get(f"/api/v1/courses/{made['id']}").status_code == 200
+    _as(client, login, "admin@dgu.ac.kr")
+    client.patch(f"/api/v1/admin/courses/{made['id']}", json={"professor_name": "최교수"})
+    _as(client, login, "h@dgu.ac.kr")
+    assert client.get(f"/api/v1/courses/{made['id']}").status_code == 403
+
+
+def test_emp_no_already_used_does_not_crash(client, login, session):
+    """이름만 있는 교수에게 교원번호를 채울 때, 그 번호를 이미 다른 교수가 쓰면 그대로 둔다(500 아님)."""
+    from app.features.enrollments.service import ensure_course_by_keys
+
+    a, _ = ensure_course_by_keys(
+        session, sbj_no="AAA1", sbj_nm="가", emp_no=None, emp_nm="김철수", created_by=None
+    )
+    ensure_course_by_keys(
+        session, sbj_no="BBB1", sbj_nm="나", emp_no="E77", emp_nm="김철수", created_by=None
+    )
+    c, created = ensure_course_by_keys(
+        session, sbj_no="AAA1", sbj_nm="가", emp_no="E77", emp_nm="김철수", created_by=None
+    )
+    session.commit()
+    assert c.id == a.id and created is False

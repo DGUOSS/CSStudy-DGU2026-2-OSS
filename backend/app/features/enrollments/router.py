@@ -139,7 +139,7 @@ def _my_courses(session, user) -> MyCoursesOut:
         )
     out_wait.sort(key=lambda x: (x.status != "current", x.sbj_nm))
     return MyCoursesOut(
-        current_term=term_label(*cur) if cur else None,
+        current_term=term_label(*cur),
         record_count=len(rows),
         imported_at=max((e.created_at for e in rows), default=None),
         courses=courses,
