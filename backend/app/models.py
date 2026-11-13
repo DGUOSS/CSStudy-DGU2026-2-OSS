@@ -10,11 +10,12 @@
       개설 목록(CatalogOffering)                 (엔드림스 종합강의시간표. 강좌를 만들지 않는 참고용)
       사용자 ─< 족보 평가(MaterialVote) >─ 자료(족보)
       사용자 ─< 족보 선택(ExamSelection) >─ 자료(족보)   (문제 생성 때 참고할 족보)
+      강좌 ─< 시험지(Paper) ─< 응시(PaperTake) ─< 서술형 답 칸 이미지(PaperEssayImage)
 """
 
 from datetime import UTC, datetime
 
-from sqlalchemy import JSON, Column, Text, UniqueConstraint, false
+from sqlalchemy import JSON, Column, LargeBinary, Text, UniqueConstraint, false
 from sqlmodel import Field, SQLModel
 
 
@@ -152,6 +153,12 @@ class Problem(SQLModel, table=True):
     source_page: int | None = None
     origin: str = Field(default="sample", max_length=20)  # sample | llm | exam
     created_at: datetime = Field(default_factory=_now)
+    # 문제 유형. 지금 문제 은행은 객관식(mcq)뿐이고, 문제 생성(question-ai)이 서술형을 넣을 수 있게 칸을 둔다.
+    # 서술형(essay)은 choices=[], answer_index=-1 이고 model_answer·rubric으로 채점한다.
+    qtype: str = Field(default="mcq", max_length=10, sa_column_kwargs={"server_default": "mcq"})
+    model_answer: str | None = Field(default=None, sa_column=Column(Text))
+    rubric: list[str] | None = Field(default=None, sa_column=Column(JSON))  # "항목 — n점"
+    points: int = Field(default=1, sa_column_kwargs={"server_default": "1"})
 
 
 class ProblemConcept(SQLModel, table=True):
@@ -238,3 +245,45 @@ class ExamSelection(SQLModel, table=True):
     material_id: int = Field(foreign_key="materials.id", primary_key=True)
     course_id: int = Field(foreign_key="courses.id", index=True)
     created_at: datetime = Field(default_factory=_now)
+
+
+class Paper(SQLModel, table=True):
+    """인쇄해서 보는 시험지. 문제 순서를 고정해 같은 시험지를 본 사람끼리 등수를 매긴다."""
+
+    __tablename__ = "papers"
+    id: int | None = Field(default=None, primary_key=True)
+    course_id: int = Field(foreign_key="courses.id", index=True)
+    created_by: int = Field(foreign_key="users.id")
+    title: str = Field(max_length=100)
+    problem_ids: list[int] = Field(sa_column=Column(JSON, nullable=False))
+    time_limit_min: int
+    source: str = Field(default="bank", max_length=20)  # bank | generated(문제 생성 연결 후)
+    created_at: datetime = Field(default_factory=_now)
+
+
+class PaperTake(SQLModel, table=True):
+    """한 사람의 한 번 응시. [시험 시작] 때 만들고, 답안지 사진을 확인해 제출하면 채점한다."""
+
+    __tablename__ = "paper_takes"
+    id: int | None = Field(default=None, primary_key=True)
+    paper_id: int = Field(foreign_key="papers.id", index=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    started_at: datetime = Field(default_factory=_now)
+    submitted_at: datetime | None = None
+    elapsed_sec: int | None = None
+    late: bool = Field(default=False)  # 제한 시간 + 여유 시간을 넘겨 제출
+    answers: list[int | None] | None = Field(default=None, sa_column=Column(JSON))
+    mcq_score: int | None = None
+    essay_score: int | None = None  # None = 서술형 채점 대기(또는 서술형 없음)
+    total_points: int = 0
+    status: str = Field(default="started", max_length=20)  # started | submitted
+
+
+class PaperEssayImage(SQLModel, table=True):
+    """답안지 사진에서 잘라 낸 서술형 답 칸. 전체 사진은 저장하지 않는다."""
+
+    __tablename__ = "paper_essay_images"
+    id: int | None = Field(default=None, primary_key=True)
+    take_id: int = Field(foreign_key="paper_takes.id", index=True)
+    problem_id: int = Field(foreign_key="problems.id")
+    image: bytes = Field(sa_column=Column(LargeBinary, nullable=False))  # JPEG
