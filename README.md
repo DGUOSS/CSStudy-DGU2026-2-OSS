@@ -8,6 +8,8 @@
 
 이 브랜치(`feat/misconception-probes`)는 `main`에 병합하기 전 팀원 검토용이다.
 
+기능의 목적과 체험 흐름은 [팀원용 소개서](docs/TEAM_MISCONCEPTION_LAB.md)에 정리했다.
+
 - [기능 브랜치 웹 미리보기](https://dgu-study-git-feat-misconception-probes-kachipuchipas-projects.vercel.app/lab/misconception): 고정 예시를 체험할 수 있는 별도 주소다. 현재 Vercel 로그인이 필요하다.
 - 기존 문제 풀이에 연결된 오개념 확인 기능은 [로컬 데모 안내](docs/DEMO.md)에 따라 체험한다. 브랜치 웹 미리보기의 API는 아직 운영 백엔드로 연결되어 있으므로, 온라인에서는 통합 기능을 시험하지 않는다.
 - 아래 `dgu-study.vercel.app`은 `main`의 **운영 사이트**이며 이 브랜치의 체험 주소가 아니다.
