@@ -1,0 +1,457 @@
+import { Camera, Check, ChevronLeft, Clock, Pencil, Printer, Trophy, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router'
+import type { Schemas } from '@/api/client'
+import { Empty, ErrorText, Loading } from '@/components/States'
+import { Badge } from '@/components/ui/badge'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Evidence } from '@/features/problems/Evidence'
+import { cn } from '@/lib/utils'
+import {
+  mmss,
+  type Paper,
+  type Take,
+  useMine,
+  usePaper,
+  useRanking,
+  useScan,
+  useStartTake,
+  useSubmit,
+  useTakeResult,
+} from './queries'
+
+/** 종이 시험: 인쇄 → [시험 시작] → 타이머 → 답안지 사진 → 인식 결과 확인 → 채점 → 등수 */
+export function PaperPage() {
+  const paperId = Number(useParams().paperId)
+  const paper = usePaper(paperId)
+  const mine = useMine(paperId)
+  const start = useStartTake(paperId)
+  const [viewTake, setViewTake] = useState<number | null>(null)
+
+  if (paper.isPending || mine.isPending) return <Loading />
+  if (!paper.data || !mine.data) return <ErrorText error={paper.error ?? mine.error} />
+  const p = paper.data
+  const open = mine.data.open_take
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <Link
+          to={`/courses/${p.course_id}?tab=papers`}
+          className="mb-2 inline-flex items-center text-sm text-muted-foreground"
+        >
+          <ChevronLeft className="size-4" />
+          시험 목록
+        </Link>
+        <h1 className="text-2xl font-bold">{p.title}</h1>
+        <p className="text-sm text-muted-foreground">
+          시험지 #{p.id} · {p.problems.length}문항 · {p.total_points}점 · 제한 시간{' '}
+          {p.time_limit_min}분
+        </p>
+      </div>
+
+      {open ? (
+        <Running paper={p} take={open} onDone={(id) => setViewTake(id)} />
+      ) : viewTake ? (
+        <ResultView takeId={viewTake} onBack={() => setViewTake(null)} />
+      ) : (
+        <Card className="flex flex-col gap-4 p-5">
+          <ol className="list-decimal pl-5 text-sm text-muted-foreground">
+            <li>시험지를 인쇄합니다(마지막 장이 답안지).</li>
+            <li>준비되면 [시험 시작]을 누르고 종이에 풉니다. 답은 답안지 동그라미를 칠합니다.</li>
+            <li>끝나면 답안지를 사진으로 찍어 올리고, 인식된 답을 확인해 제출합니다.</li>
+          </ol>
+          <div className="flex flex-wrap gap-2">
+            <Link to={`/papers/${p.id}/print`} className={buttonVariants({ variant: 'outline' })}>
+              <Printer />
+              인쇄하기
+            </Link>
+            <Button onClick={() => start.mutate()} disabled={start.isPending}>
+              <Clock />
+              시험 시작
+            </Button>
+          </div>
+          <ErrorText error={start.error} />
+        </Card>
+      )}
+
+      {!open && mine.data.submitted.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <h2 className="text-lg font-semibold">내 응시</h2>
+          {mine.data.submitted.map((t, i) => (
+            <button
+              key={t.take_id}
+              type="button"
+              onClick={() => setViewTake(t.take_id)}
+              className="flex cursor-pointer items-center justify-between rounded-lg border bg-card px-4 py-2 text-left text-sm hover:bg-accent"
+            >
+              <span>
+                {i === mine.data.submitted.length - 1
+                  ? '첫 응시'
+                  : `${mine.data.submitted.length - i}번째`}{' '}
+                · {new Date(t.submitted_at).toLocaleString()}
+              </span>
+              <span>
+                <b>
+                  {t.score}/{t.total_points}
+                </b>
+                {t.essay_pending && ' (서술형 채점 대기)'} · {mmss(t.elapsed_sec)}
+                {t.late && ' · 시간 초과'}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <Ranking paperId={p.id} />
+    </div>
+  )
+}
+
+function Running({
+  paper,
+  take,
+  onDone,
+}: {
+  paper: Paper
+  take: Take
+  onDone: (takeId: number) => void
+}) {
+  const [now, setNow] = useState(() => Date.now())
+  const [submitting, setSubmitting] = useState(false)
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [])
+  const left = (new Date(take.deadline).getTime() - now) / 1000
+  const over = left <= 0
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Card className={cn('flex flex-col items-center gap-2 p-6', over && 'border-destructive')}>
+        <div className="text-sm text-muted-foreground">
+          {over ? '시간이 끝났습니다' : '남은 시간'}
+        </div>
+        <div
+          className={cn('font-mono text-6xl font-bold tabular-nums', over && 'text-destructive')}
+        >
+          {mmss(over ? 0 : left)}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {over
+            ? '펜을 내려놓고 답안지를 찍어 제출하세요. 10분이 넘으면 시간 초과로 표시됩니다.'
+            : '종이에 푸세요. 다 풀었으면 바로 제출해도 됩니다(걸린 시간이 등수에 들어갑니다).'}
+        </div>
+        {!submitting && (
+          <Button className="mt-2" onClick={() => setSubmitting(true)}>
+            <Camera />
+            답안지 제출하기
+          </Button>
+        )}
+      </Card>
+      {submitting && <ScanReview paper={paper} take={take} onDone={onDone} />}
+    </div>
+  )
+}
+
+type Review = { mcq: Schemas['ScanMcq'][]; essays: Schemas['ScanEssay'][]; missing: number[] }
+
+function ScanReview({
+  paper,
+  take,
+  onDone,
+}: {
+  paper: Paper
+  take: Take
+  onDone: (takeId: number) => void
+}) {
+  const scan = useScan(take.id)
+  const submit = useSubmit(take.id, paper.id)
+  const [review, setReview] = useState<Review | null>(null)
+  const byId = new Map(paper.problems.map((q) => [q.id, q]))
+
+  const onFiles = (files: FileList | null) => {
+    if (!files?.length) return
+    scan.mutate(Array.from(files), {
+      onSuccess: (r) => setReview({ mcq: r.mcq, essays: r.essays, missing: r.missing_pages }),
+    })
+  }
+  const manual = () =>
+    setReview({
+      mcq: paper.problems
+        .filter((q) => q.qtype === 'mcq')
+        .map((q) => ({ no: q.no, problem_id: q.id, chosen: null, status: 'blank' })),
+      essays: paper.problems
+        .filter((q) => q.qtype !== 'mcq')
+        .map((q) => ({ no: q.no, problem_id: q.id, image: null })),
+      missing: [],
+    })
+  const pick = (no: number, chosen: number | null) =>
+    review &&
+    setReview({
+      ...review,
+      mcq: review.mcq.map((m) =>
+        m.no === no ? { ...m, chosen, status: chosen == null ? 'blank' : 'ok' } : m,
+      ),
+    })
+  const send = () =>
+    review &&
+    submit.mutate(
+      {
+        answers: review.mcq.map((m) => ({ problem_id: m.problem_id, chosen: m.chosen })),
+        essays: review.essays.map((e) => ({ problem_id: e.problem_id, image: e.image })),
+      },
+      { onSuccess: (r) => onDone(r.take_id) },
+    )
+  const needCheck = review?.mcq.filter((m) => m.status !== 'ok').length ?? 0
+
+  return (
+    <Card className="flex flex-col gap-4 p-5">
+      <div>
+        <div className="font-semibold">답안지 사진</div>
+        <p className="text-sm text-muted-foreground">
+          네 귀퉁이의 검은 네모가 모두 나오게, 밝은 곳에서 위에서 찍어 주세요. 답안지가 여러 장이면
+          장마다 한 장씩 함께 올립니다.
+        </p>
+      </div>
+      <label
+        className={cn(
+          'flex cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed px-4 py-6 text-sm hover:border-primary',
+          scan.isPending && 'pointer-events-none opacity-60',
+        )}
+      >
+        <Camera className="size-6 text-primary" />
+        <span className="font-medium">
+          {scan.isPending ? '읽는 중…' : review ? '다시 찍기' : '답안지 찍기 / 사진 고르기'}
+        </span>
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            onFiles(e.target.files)
+            e.target.value = ''
+          }}
+        />
+      </label>
+      <ErrorText error={scan.error} />
+      {!review && (
+        <button
+          type="button"
+          onClick={manual}
+          className="self-start text-xs text-muted-foreground hover:underline"
+        >
+          <Pencil className="mr-1 inline size-3" />
+          사진 인식이 안 되면 직접 입력하기
+        </button>
+      )}
+
+      {review && (
+        <>
+          {review.missing.length > 0 && (
+            <p className="rounded-md bg-amber-100 px-3 py-2 text-sm text-amber-900">
+              답안지 {review.missing.join(', ')}쪽 사진이 없습니다. 그 쪽 문항은 직접 고르거나 다시
+              찍어 주세요.
+            </p>
+          )}
+          <p className="text-sm">
+            인식한 답을 확인하세요.{' '}
+            {needCheck > 0 && (
+              <span className="text-amber-700">
+                노란 칸 {needCheck}개는 비었거나 두 개 이상 칠해졌습니다.
+              </span>
+            )}
+          </p>
+          <div className="grid gap-1.5 sm:grid-cols-2">
+            {review.mcq.map((m) => {
+              const n = byId.get(m.problem_id)?.choices.length ?? 5
+              return (
+                <div
+                  key={m.no}
+                  className={cn(
+                    'flex items-center gap-2 rounded-md border px-2 py-1',
+                    m.status !== 'ok' && 'border-amber-400 bg-amber-50',
+                  )}
+                >
+                  <span className="w-7 text-right text-sm font-semibold">{m.no}</span>
+                  {Array.from({ length: n }, (_, j) => (
+                    <button
+                      key={j}
+                      type="button"
+                      onClick={() => pick(m.no, m.chosen === j ? null : j)}
+                      className={cn(
+                        'size-7 cursor-pointer rounded-full border text-xs',
+                        m.chosen === j
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'bg-card',
+                      )}
+                    >
+                      {j + 1}
+                    </button>
+                  ))}
+                  {m.status === 'multiple' && <span className="text-xs text-amber-700">중복</span>}
+                  {m.status === 'blank' && <span className="text-xs text-amber-700">빈칸</span>}
+                  {m.status === 'missing' && (
+                    <span className="text-xs text-amber-700">사진 없음</span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+          {review.essays.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <div className="text-sm font-medium">서술형 답 (채점은 나중에)</div>
+              {review.essays.map((e) => (
+                <div key={e.no} className="flex flex-col gap-1">
+                  <span className="text-sm font-semibold">{e.no}번</span>
+                  {e.image ? (
+                    <img
+                      src={`data:image/jpeg;base64,${e.image}`}
+                      alt={`${e.no}번 답`}
+                      className="rounded border"
+                    />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">사진에서 찾지 못함</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          <ErrorText error={submit.error} />
+          <Button onClick={send} disabled={submit.isPending}>
+            <Check />
+            {submit.isPending ? '채점하는 중…' : '이대로 제출하고 채점하기'}
+          </Button>
+        </>
+      )}
+    </Card>
+  )
+}
+
+function ResultView({ takeId, onBack }: { takeId: number; onBack: () => void }) {
+  const result = useTakeResult(takeId)
+  if (result.isPending) return <Loading />
+  if (!result.data) return <ErrorText error={result.error} />
+  const r = result.data
+  const wrong = r.items.filter((i) => i.correct === false).length
+  return (
+    <div className="flex flex-col gap-4">
+      <Card className="flex flex-wrap items-center gap-6 p-5">
+        <div>
+          <div className="text-sm text-muted-foreground">점수</div>
+          <div className="text-4xl font-bold">
+            {r.score}
+            <span className="text-lg text-muted-foreground">/{r.total_points}</span>
+          </div>
+        </div>
+        <div className="text-sm">
+          <div>
+            걸린 시간 {mmss(r.elapsed_sec)}
+            {r.late && (
+              <Badge variant="outline" className="ml-2 border-destructive text-destructive">
+                시간 초과
+              </Badge>
+            )}
+          </div>
+          <div>틀린 문제 {wrong}개</div>
+          {r.essay_pending && (
+            <div className="text-amber-700">서술형은 채점 대기 중입니다(점수에 아직 안 들어감)</div>
+          )}
+        </div>
+        <Button variant="outline" size="sm" className="ml-auto" onClick={onBack}>
+          돌아가기
+        </Button>
+      </Card>
+      <div className="flex flex-col gap-3">
+        {r.items.map((i) => (
+          <Card
+            key={i.no}
+            className={cn(
+              'flex flex-col gap-2 p-4 text-sm',
+              i.correct === false && 'border-destructive/40',
+            )}
+          >
+            <div className="flex items-start gap-2">
+              {i.correct === true ? (
+                <Check className="size-5 shrink-0 text-success" />
+              ) : i.correct === false ? (
+                <X className="size-5 shrink-0 text-destructive" />
+              ) : (
+                <Clock className="size-5 shrink-0 text-muted-foreground" />
+              )}
+              <div className="whitespace-pre-wrap">
+                <b>{i.no}.</b> {i.question}
+              </div>
+            </div>
+            {i.qtype === 'mcq' ? (
+              <div className="pl-7 text-muted-foreground">
+                내 답 {i.chosen == null ? '없음' : `${i.chosen + 1}번`} · 정답 {i.answer_index + 1}
+                번 ({i.choices[i.answer_index]})
+              </div>
+            ) : (
+              <div className="pl-7 text-muted-foreground">
+                서술형 · {i.score == null ? '채점 대기' : `${i.score}/${i.points}점`}
+                {i.model_answer && (
+                  <div className="mt-1 whitespace-pre-wrap">모범답안: {i.model_answer}</div>
+                )}
+              </div>
+            )}
+            {i.correct !== true && (
+              <div className="ml-7 flex flex-col gap-2 rounded-lg bg-muted p-3">
+                <p className="whitespace-pre-wrap">{i.explanation}</p>
+                <Evidence evidence={i.evidence} source={i.source} />
+              </div>
+            )}
+          </Card>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function Ranking({ paperId }: { paperId: number }) {
+  const ranking = useRanking(paperId)
+  if (ranking.isPending) return null
+  const entries = ranking.data?.entries ?? []
+  return (
+    <div className="flex flex-col gap-2">
+      <h2 className="flex items-center gap-2 text-lg font-semibold">
+        <Trophy className="size-5 text-primary" />이 시험지 등수
+      </h2>
+      <p className="text-xs text-muted-foreground">
+        사람마다 첫 응시만, 점수 높은 순 → 걸린 시간 짧은 순입니다. 다른 사람은 익명입니다.
+        {ranking.data?.essay_pending && ' 서술형 채점 대기가 있어 지금은 객관식 점수 기준입니다.'}
+      </p>
+      {entries.length === 0 ? (
+        <Empty>아직 응시한 사람이 없습니다.</Empty>
+      ) : (
+        <div className="overflow-hidden rounded-xl border bg-card">
+          <table className="w-full text-sm">
+            <tbody className="divide-y">
+              {entries.map((e) => (
+                <tr
+                  key={`${e.rank}-${e.label}`}
+                  className={cn(e.me && 'bg-primary/5 font-semibold')}
+                >
+                  <td className="w-14 px-4 py-2 text-right">{e.rank}등</td>
+                  <td className="px-4 py-2">{e.label}</td>
+                  <td className="px-4 py-2 text-right">
+                    {e.score}/{e.total_points}
+                  </td>
+                  <td className="px-4 py-2 text-right text-muted-foreground">
+                    {mmss(e.elapsed_sec)}
+                    {e.late && ' · 시간 초과'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <ErrorText error={ranking.error} />
+    </div>
+  )
+}

@@ -2591,6 +2591,682 @@
           }
         }
       }
+    },
+    "/api/v1/courses/{course_id}/papers": {
+      "post": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Create Paper",
+        "operationId": "create_paper_api_v1_courses__course_id__papers_post",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaperIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaperOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "List Papers",
+        "operationId": "list_papers_api_v1_courses__course_id__papers_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PaperSummary"
+                  },
+                  "title": "Response List Papers Api V1 Courses  Course Id  Papers Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/papers/{paper_id}": {
+      "get": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Get Paper",
+        "description": "시험지 문제(정답 없음). 인쇄 화면에서 쓴다.",
+        "operationId": "get_paper_api_v1_papers__paper_id__get",
+        "parameters": [
+          {
+            "name": "paper_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Paper Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaperOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/papers/{paper_id}/sheet": {
+      "get": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Get Sheet",
+        "description": "인쇄용 답안지(쪽별 SVG).",
+        "operationId": "get_sheet_api_v1_papers__paper_id__sheet_get",
+        "parameters": [
+          {
+            "name": "paper_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Paper Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SheetOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/papers/{paper_id}/takes": {
+      "post": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Start Take",
+        "description": "[시험 시작]. 시작 시각은 서버가 기록한다. 끝나지 않은 응시가 있으면 그것을 이어 간다.",
+        "operationId": "start_take_api_v1_papers__paper_id__takes_post",
+        "parameters": [
+          {
+            "name": "paper_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Paper Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/papers/{paper_id}/mine": {
+      "get": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "My Takes",
+        "operationId": "my_takes_api_v1_papers__paper_id__mine_get",
+        "parameters": [
+          {
+            "name": "paper_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Paper Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MineOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/takes/{take_id}": {
+      "get": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Get Take",
+        "operationId": "get_take_api_v1_takes__take_id__get",
+        "parameters": [
+          {
+            "name": "take_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Take Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/takes/{take_id}/scan": {
+      "post": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Scan Sheet",
+        "description": "답안지 사진(쪽마다 한 장)을 읽어 결과만 돌려준다. 사진은 저장하지 않는다.",
+        "operationId": "scan_sheet_api_v1_takes__take_id__scan_post",
+        "parameters": [
+          {
+            "name": "take_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Take Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_scan_sheet_api_v1_takes__take_id__scan_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/takes/{take_id}/submit": {
+      "post": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Submit Take",
+        "description": "확인한 답을 제출해 채점한다. 객관식은 풀이 기록(Attempt)으로도 남겨 숙련도에 반영한다.",
+        "operationId": "submit_take_api_v1_takes__take_id__submit_post",
+        "parameters": [
+          {
+            "name": "take_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Take Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/takes/{take_id}/result": {
+      "get": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Get Result",
+        "operationId": "get_result_api_v1_takes__take_id__result_get",
+        "parameters": [
+          {
+            "name": "take_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Take Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/papers/{paper_id}/ranking": {
+      "get": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Ranking",
+        "description": "같은 시험지를 본 사람끼리. 사람마다 첫 응시만, 점수 높은 순 → 걸린 시간 짧은 순. 다른 사람은 익명.",
+        "operationId": "ranking_api_v1_papers__paper_id__ranking_get",
+        "parameters": [
+          {
+            "name": "paper_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Paper Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RankingOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2619,6 +3295,30 @@
           "uploads"
         ],
         "title": "AdminCourseCreated"
+      },
+      "AnswerIn": {
+        "properties": {
+          "problem_id": {
+            "type": "integer",
+            "title": "Problem Id"
+          },
+          "chosen": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chosen"
+          }
+        },
+        "type": "object",
+        "required": [
+          "problem_id"
+        ],
+        "title": "AnswerIn"
       },
       "ApproveIn": {
         "properties": {
@@ -2874,6 +3574,23 @@
           "professor_name"
         ],
         "title": "Body_create_request_api_v1_course_requests_post"
+      },
+      "Body_scan_sheet_api_v1_takes__take_id__scan_post": {
+        "properties": {
+          "files": {
+            "items": {
+              "type": "string",
+              "contentMediaType": "application/octet-stream"
+            },
+            "type": "array",
+            "title": "Files"
+          }
+        },
+        "type": "object",
+        "required": [
+          "files"
+        ],
+        "title": "Body_scan_sheet_api_v1_takes__take_id__scan_post"
       },
       "Body_upload_material_api_v1_courses__course_id__materials_post": {
         "properties": {
@@ -3411,6 +4128,30 @@
         "type": "object",
         "title": "CourseUpdate"
       },
+      "EssayIn": {
+        "properties": {
+          "problem_id": {
+            "type": "integer",
+            "title": "Problem Id"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image"
+          }
+        },
+        "type": "object",
+        "required": [
+          "problem_id"
+        ],
+        "title": "EssayIn"
+      },
       "ExamOut": {
         "properties": {
           "id": {
@@ -3797,6 +4538,33 @@
         "type": "object",
         "title": "MaterialUpdate"
       },
+      "MineOut": {
+        "properties": {
+          "open_take": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TakeOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "submitted": {
+            "items": {
+              "$ref": "#/components/schemas/MyTake"
+            },
+            "type": "array",
+            "title": "Submitted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "open_take",
+          "submitted"
+        ],
+        "title": "MineOut"
+      },
       "MyCourseOut": {
         "properties": {
           "course_id": {
@@ -3906,6 +4674,50 @@
           "waiting"
         ],
         "title": "MyCoursesOut"
+      },
+      "MyTake": {
+        "properties": {
+          "take_id": {
+            "type": "integer",
+            "title": "Take Id"
+          },
+          "score": {
+            "type": "integer",
+            "title": "Score"
+          },
+          "total_points": {
+            "type": "integer",
+            "title": "Total Points"
+          },
+          "elapsed_sec": {
+            "type": "integer",
+            "title": "Elapsed Sec"
+          },
+          "late": {
+            "type": "boolean",
+            "title": "Late"
+          },
+          "essay_pending": {
+            "type": "boolean",
+            "title": "Essay Pending"
+          },
+          "submitted_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Submitted At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "take_id",
+          "score",
+          "total_points",
+          "elapsed_sec",
+          "late",
+          "essay_pending",
+          "submitted_at"
+        ],
+        "title": "MyTake"
       },
       "NoteIn": {
         "properties": {
@@ -4288,6 +5100,204 @@
         ],
         "title": "OfferingIn"
       },
+      "PaperIn": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "chapter_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Chapter Ids"
+          },
+          "count": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Count"
+          },
+          "time_limit_min": {
+            "type": "integer",
+            "maximum": 300.0,
+            "minimum": 5.0,
+            "title": "Time Limit Min"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "chapter_ids",
+          "count",
+          "time_limit_min"
+        ],
+        "title": "PaperIn"
+      },
+      "PaperOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "course_id": {
+            "type": "integer",
+            "title": "Course Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "time_limit_min": {
+            "type": "integer",
+            "title": "Time Limit Min"
+          },
+          "total_points": {
+            "type": "integer",
+            "title": "Total Points"
+          },
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/PaperProblemOut"
+            },
+            "type": "array",
+            "title": "Problems"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "course_id",
+          "title",
+          "time_limit_min",
+          "total_points",
+          "problems"
+        ],
+        "title": "PaperOut"
+      },
+      "PaperProblemOut": {
+        "properties": {
+          "no": {
+            "type": "integer",
+            "title": "No"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "qtype": {
+            "type": "string",
+            "title": "Qtype"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "choices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Choices"
+          },
+          "points": {
+            "type": "integer",
+            "title": "Points"
+          }
+        },
+        "type": "object",
+        "required": [
+          "no",
+          "id",
+          "qtype",
+          "question",
+          "choices",
+          "points"
+        ],
+        "title": "PaperProblemOut"
+      },
+      "PaperSummary": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "n_questions": {
+            "type": "integer",
+            "title": "N Questions"
+          },
+          "n_essay": {
+            "type": "integer",
+            "title": "N Essay"
+          },
+          "time_limit_min": {
+            "type": "integer",
+            "title": "Time Limit Min"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by_me": {
+            "type": "boolean",
+            "title": "Created By Me"
+          },
+          "takers": {
+            "type": "integer",
+            "title": "Takers"
+          },
+          "my_best": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "My Best"
+          },
+          "total_points": {
+            "type": "integer",
+            "title": "Total Points"
+          },
+          "my_open_take_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "My Open Take Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "n_questions",
+          "n_essay",
+          "time_limit_min",
+          "created_at",
+          "created_by_me",
+          "takers",
+          "my_best",
+          "total_points",
+          "my_open_take_id"
+        ],
+        "title": "PaperSummary"
+      },
       "ProblemOut": {
         "properties": {
           "id": {
@@ -4355,6 +5365,70 @@
           "professor_name"
         ],
         "title": "PublicCourseOut"
+      },
+      "RankEntry": {
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "title": "Rank"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "me": {
+            "type": "boolean",
+            "title": "Me"
+          },
+          "score": {
+            "type": "integer",
+            "title": "Score"
+          },
+          "total_points": {
+            "type": "integer",
+            "title": "Total Points"
+          },
+          "elapsed_sec": {
+            "type": "integer",
+            "title": "Elapsed Sec"
+          },
+          "late": {
+            "type": "boolean",
+            "title": "Late"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rank",
+          "label",
+          "me",
+          "score",
+          "total_points",
+          "elapsed_sec",
+          "late"
+        ],
+        "title": "RankEntry"
+      },
+      "RankingOut": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/RankEntry"
+            },
+            "type": "array",
+            "title": "Entries"
+          },
+          "essay_pending": {
+            "type": "boolean",
+            "title": "Essay Pending"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entries",
+          "essay_pending"
+        ],
+        "title": "RankingOut"
       },
       "RecordIn": {
         "properties": {
@@ -4551,6 +5625,276 @@
         ],
         "title": "RequestIn"
       },
+      "ResultItem": {
+        "properties": {
+          "no": {
+            "type": "integer",
+            "title": "No"
+          },
+          "problem_id": {
+            "type": "integer",
+            "title": "Problem Id"
+          },
+          "qtype": {
+            "type": "string",
+            "title": "Qtype"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "choices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Choices"
+          },
+          "points": {
+            "type": "integer",
+            "title": "Points"
+          },
+          "chosen": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chosen"
+          },
+          "answer_index": {
+            "type": "integer",
+            "title": "Answer Index"
+          },
+          "correct": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correct"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "model_answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Answer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "no",
+          "problem_id",
+          "qtype",
+          "question",
+          "choices",
+          "points",
+          "chosen",
+          "answer_index",
+          "correct",
+          "score",
+          "explanation",
+          "evidence",
+          "source",
+          "model_answer"
+        ],
+        "title": "ResultItem"
+      },
+      "ResultOut": {
+        "properties": {
+          "take_id": {
+            "type": "integer",
+            "title": "Take Id"
+          },
+          "paper_id": {
+            "type": "integer",
+            "title": "Paper Id"
+          },
+          "score": {
+            "type": "integer",
+            "title": "Score"
+          },
+          "total_points": {
+            "type": "integer",
+            "title": "Total Points"
+          },
+          "essay_pending": {
+            "type": "boolean",
+            "title": "Essay Pending"
+          },
+          "elapsed_sec": {
+            "type": "integer",
+            "title": "Elapsed Sec"
+          },
+          "late": {
+            "type": "boolean",
+            "title": "Late"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ResultItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "take_id",
+          "paper_id",
+          "score",
+          "total_points",
+          "essay_pending",
+          "elapsed_sec",
+          "late",
+          "items"
+        ],
+        "title": "ResultOut"
+      },
+      "ScanEssay": {
+        "properties": {
+          "no": {
+            "type": "integer",
+            "title": "No"
+          },
+          "problem_id": {
+            "type": "integer",
+            "title": "Problem Id"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image"
+          }
+        },
+        "type": "object",
+        "required": [
+          "no",
+          "problem_id",
+          "image"
+        ],
+        "title": "ScanEssay"
+      },
+      "ScanMcq": {
+        "properties": {
+          "no": {
+            "type": "integer",
+            "title": "No"
+          },
+          "problem_id": {
+            "type": "integer",
+            "title": "Problem Id"
+          },
+          "chosen": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chosen"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "no",
+          "problem_id",
+          "chosen",
+          "status"
+        ],
+        "title": "ScanMcq"
+      },
+      "ScanOut": {
+        "properties": {
+          "mcq": {
+            "items": {
+              "$ref": "#/components/schemas/ScanMcq"
+            },
+            "type": "array",
+            "title": "Mcq"
+          },
+          "essays": {
+            "items": {
+              "$ref": "#/components/schemas/ScanEssay"
+            },
+            "type": "array",
+            "title": "Essays"
+          },
+          "missing_pages": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Missing Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mcq",
+          "essays",
+          "missing_pages"
+        ],
+        "title": "ScanOut"
+      },
       "SearchOut": {
         "properties": {
           "total": {
@@ -4587,6 +5931,22 @@
           "material_ids"
         ],
         "title": "SelectionIn"
+      },
+      "SheetOut": {
+        "properties": {
+          "pages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pages"
+        ],
+        "title": "SheetOut"
       },
       "SignupIn": {
         "properties": {
@@ -4738,6 +6098,65 @@
         },
         "type": "object",
         "title": "SubjectUpdate"
+      },
+      "SubmitIn": {
+        "properties": {
+          "answers": {
+            "items": {
+              "$ref": "#/components/schemas/AnswerIn"
+            },
+            "type": "array",
+            "title": "Answers"
+          },
+          "essays": {
+            "items": {
+              "$ref": "#/components/schemas/EssayIn"
+            },
+            "type": "array",
+            "title": "Essays",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "answers"
+        ],
+        "title": "SubmitIn"
+      },
+      "TakeOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "paper_id": {
+            "type": "integer",
+            "title": "Paper Id"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Deadline"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "paper_id",
+          "started_at",
+          "deadline",
+          "status"
+        ],
+        "title": "TakeOut"
       },
       "TermOut": {
         "properties": {
