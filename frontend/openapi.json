@@ -3106,16 +3106,31 @@
       "CourseAdminUpdate": {
         "properties": {
           "professor_name": {
-            "type": "string",
-            "maxLength": 50,
-            "minLength": 1,
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Professor Name"
+          },
+          "is_public": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Public"
           }
         },
         "type": "object",
-        "required": [
-          "professor_name"
-        ],
         "title": "CourseAdminUpdate"
       },
       "CourseIn": {
@@ -3190,6 +3205,11 @@
             "type": "boolean",
             "title": "Accessible",
             "default": true
+          },
+          "is_public": {
+            "type": "boolean",
+            "title": "Is Public",
+            "default": false
           }
         },
         "type": "object",
@@ -3559,6 +3579,14 @@
             "type": "array",
             "title": "Waiting"
           },
+          "public": {
+            "items": {
+              "$ref": "#/components/schemas/PublicCourseOut"
+            },
+            "type": "array",
+            "title": "Public",
+            "default": []
+          },
           "received": {
             "type": "integer",
             "title": "Received"
@@ -3584,7 +3612,8 @@
         "properties": {
           "email": {
             "type": "string",
-            "format": "email",
+            "maxLength": 254,
+            "minLength": 1,
             "title": "Email"
           },
           "password": {
@@ -3858,6 +3887,14 @@
             },
             "type": "array",
             "title": "Waiting"
+          },
+          "public": {
+            "items": {
+              "$ref": "#/components/schemas/PublicCourseOut"
+            },
+            "type": "array",
+            "title": "Public",
+            "default": []
           }
         },
         "type": "object",
@@ -4296,6 +4333,29 @@
         "title": "ProblemOut",
         "description": "풀이 화면용. 정답은 넣지 않는다."
       },
+      "PublicCourseOut": {
+        "properties": {
+          "course_id": {
+            "type": "integer",
+            "title": "Course Id"
+          },
+          "subject_name": {
+            "type": "string",
+            "title": "Subject Name"
+          },
+          "professor_name": {
+            "type": "string",
+            "title": "Professor Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "course_id",
+          "subject_name",
+          "professor_name"
+        ],
+        "title": "PublicCourseOut"
+      },
       "RecordIn": {
         "properties": {
           "year": {
@@ -4404,6 +4464,14 @@
             },
             "type": "array",
             "title": "Waiting"
+          },
+          "public": {
+            "items": {
+              "$ref": "#/components/schemas/PublicCourseOut"
+            },
+            "type": "array",
+            "title": "Public",
+            "default": []
           },
           "request_id": {
             "type": "integer",
