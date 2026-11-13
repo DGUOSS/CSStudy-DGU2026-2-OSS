@@ -3020,7 +3020,7 @@
           "papers"
         ],
         "summary": "Abandon Take",
-        "description": "그만두기. 이 응시는 기록·등수에 들어가지 않는다.",
+        "description": "처음부터 다시(그만두기): 이 응시는 버리고 시작 전 상태로. 기록·등수에 들어가지 않는다.",
         "operationId": "abandon_take_api_v1_takes__take_id__abandon_post",
         "parameters": [
           {
@@ -3051,65 +3051,6 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TakeOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/takes/{take_id}/restart": {
-      "post": {
-        "tags": [
-          "papers"
-        ],
-        "summary": "Restart Take",
-        "description": "처음부터 다시: 지금 응시는 그만두고 새로 시작한다.",
-        "operationId": "restart_take_api_v1_takes__take_id__restart_post",
-        "parameters": [
-          {
-            "name": "take_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Take Id"
-            }
-          },
-          {
-            "name": "access_token",
-            "in": "cookie",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Access Token"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
             "description": "Successful Response",
             "content": {
               "application/json": {

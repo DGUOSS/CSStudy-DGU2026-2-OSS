@@ -381,7 +381,7 @@ def resume_take(take_id: int, session: SessionDep, user: CurrentUser) -> TakeOut
 
 @router.post("/takes/{take_id}/abandon")
 def abandon_take(take_id: int, session: SessionDep, user: CurrentUser) -> TakeOut:
-    """그만두기. 이 응시는 기록·등수에 들어가지 않는다."""
+    """처음부터 다시(그만두기): 이 응시는 버리고 시작 전 상태로. 기록·등수에 들어가지 않는다."""
     take, paper = _open_take(take_id, session, user)
     take.status = "abandoned"
     take.paused_at = None
@@ -389,20 +389,6 @@ def abandon_take(take_id: int, session: SessionDep, user: CurrentUser) -> TakeOu
     session.commit()
     session.refresh(take)
     return _take_out(take, paper)
-
-
-@router.post("/takes/{take_id}/restart", status_code=status.HTTP_201_CREATED)
-def restart_take(take_id: int, session: SessionDep, user: CurrentUser) -> TakeOut:
-    """처음부터 다시: 지금 응시는 그만두고 새로 시작한다."""
-    take, paper = _open_take(take_id, session, user)
-    take.status = "abandoned"
-    take.paused_at = None
-    session.add(take)
-    fresh = PaperTake(paper_id=paper.id, user_id=user.id)
-    session.add(fresh)
-    session.commit()
-    session.refresh(fresh)
-    return _take_out(fresh, paper)
 
 
 @router.get("/papers/{paper_id}/mine")

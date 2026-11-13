@@ -232,14 +232,14 @@ def test_pause_restart_abandon(client, login, session, public_course):
         and 9 * 60 <= r["spent_sec"] <= 11 * 60
         and r["remaining_sec"] > 18 * 60
     )
-    # 처음부터 다시: 새 응시, 예전 것은 그만둔 것으로
-    fresh = client.post(f"/api/v1/takes/{t['id']}/restart").json()
-    assert fresh["id"] != t["id"] and fresh["spent_sec"] < 5
+    # 처음부터 다시: 이번 응시를 버리고 시작 전으로. 다시 [시험 시작]하면 새 응시
+    client.post(f"/api/v1/takes/{t['id']}/abandon")
     assert client.post(f"/api/v1/takes/{t['id']}/pause").status_code == 409
-    # 그만두기: 등수·내 응시에 안 들어감
-    client.post(f"/api/v1/takes/{fresh['id']}/abandon")
     mine = client.get(f"/api/v1/papers/{paper['id']}/mine").json()
     assert mine["open_take"] is None and mine["submitted"] == []
+    fresh = client.post(f"/api/v1/papers/{paper['id']}/takes").json()
+    assert fresh["id"] != t["id"] and fresh["spent_sec"] < 5
+    client.post(f"/api/v1/takes/{fresh['id']}/abandon")
     # 정지를 쓴 응시는 등수표에 표시
     t2 = client.post(f"/api/v1/papers/{paper['id']}/takes").json()
     client.post(f"/api/v1/takes/{t2['id']}/pause")

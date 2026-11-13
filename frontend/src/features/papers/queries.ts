@@ -116,7 +116,7 @@ export function useSubmit(takeId: number, paperId: number) {
   })
 }
 
-function useTakeAction(paperId: number, action: 'pause' | 'resume' | 'abandon' | 'restart') {
+function useTakeAction(paperId: number, action: 'pause' | 'resume' | 'abandon') {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (takeId: number) =>
@@ -132,7 +132,6 @@ function useTakeAction(paperId: number, action: 'pause' | 'resume' | 'abandon' |
 export const usePause = (paperId: number) => useTakeAction(paperId, 'pause')
 export const useResume = (paperId: number) => useTakeAction(paperId, 'resume')
 export const useAbandon = (paperId: number) => useTakeAction(paperId, 'abandon')
-export const useRestart = (paperId: number) => useTakeAction(paperId, 'restart')
 
 export const mmss = (sec: number) => {
   const s = Math.max(0, Math.floor(sec))

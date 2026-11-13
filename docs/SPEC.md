@@ -95,7 +95,7 @@
 | POST·GET | /courses/{id}/papers | 수강 | 종이 시험지 만들기(챕터, 객관식·서술형 문항 수, 제한 시간. 챕터를 돌아가며 골고루) / 목록 |
 | GET | /papers/{id}, /papers/{id}/sheet | 수강 | 문제(정답 없음), 인쇄용 답안지(쪽별 SVG, 네 귀퉁이 ArUco 표시) |
 | POST | /papers/{id}/takes | 수강 | [시험 시작]. 시작 시각은 서버가 기록, 열린 응시가 있으면 이어 감 |
-| POST | /takes/{id}/pause, /resume, /restart, /abandon | 본인 | 일시정지(멈춘 동안 시간 안 흐름, 등수표에 표시)·계속·처음부터 다시·그만두기(기록 안 됨) |
+| POST | /takes/{id}/pause, /resume, /abandon | 본인 | 일시정지(멈춘 동안 시간 안 흐름, 등수표에 표시)·계속·처음부터 다시(이번 응시를 버리고 시작 전으로, 기록 안 됨) |
 | GET | /papers/{id}/mine, /papers/{id}/ranking | 수강 | 내 응시 / 같은 시험지 등수(첫 응시, 점수→시간, 익명) |
 | POST | /takes/{id}/scan | 본인 | 답안지 사진 인식(OpenCV). 결과만 돌려주고 사진은 저장하지 않음 |
 | POST | /takes/{id}/submit, GET /takes/{id}/result | 본인 | 확인한 답 제출·채점(객관식은 풀이 기록으로 남겨 숙련도 반영, 서술형은 채점 대기) / 결과 |

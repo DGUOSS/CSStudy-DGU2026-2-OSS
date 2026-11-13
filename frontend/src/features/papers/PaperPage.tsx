@@ -11,7 +11,6 @@ import {
   Play,
   Printer,
   RotateCcw,
-  Square,
   Trophy,
   X,
 } from 'lucide-react'
@@ -33,7 +32,6 @@ import {
   usePause,
   usePaper,
   useRanking,
-  useRestart,
   useResume,
   useScan,
   useSheet,
@@ -159,12 +157,11 @@ function Running({
 }) {
   const pause = usePause(paper.id)
   const resume = useResume(paper.id)
-  const restart = useRestart(paper.id)
   const abandon = useAbandon(paper.id)
   const [now, setNow] = useState(() => Date.now())
   const [submitting, setSubmitting] = useState(false)
   const [big, setBig] = useState(false)
-  const busy = pause.isPending || resume.isPending || restart.isPending || abandon.isPending
+  const busy = pause.isPending || resume.isPending || abandon.isPending
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 250)
@@ -281,10 +278,15 @@ function Running({
           variant="outline"
           size={big ? 'lg' : 'default'}
           disabled={busy}
-          onClick={() =>
-            confirm('시간을 처음으로 되돌려 다시 시작할까요? 지금 응시는 기록되지 않습니다.') &&
-            restart.mutate(take.id)
-          }
+          onClick={() => {
+            if (!confirm('처음부터 다시 할까요? 이번 응시는 기록되지 않고, [시험 시작]을 누르면 새로 시작합니다.'))
+              return
+            if (big) {
+              setBig(false)
+              if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
+            }
+            abandon.mutate(take.id)
+          }}
         >
           <RotateCcw />
           처음부터 다시
@@ -329,23 +331,7 @@ function Running({
       ) : (
         <Card className={cn('p-6', over && 'border-destructive')}>{timer}</Card>
       )}
-      {!big && (
-        <div className="flex flex-wrap justify-end gap-3 text-xs">
-          <button
-            type="button"
-            disabled={busy}
-            className="cursor-pointer text-muted-foreground hover:underline"
-            onClick={() =>
-              confirm('시험을 그만둘까요? 이 응시는 기록·등수에 들어가지 않습니다.') &&
-              abandon.mutate(take.id)
-            }
-          >
-            <Square className="mr-1 inline size-3" />
-            그만두기
-          </button>
-        </div>
-      )}
-      <ErrorText error={pause.error ?? resume.error ?? restart.error ?? abandon.error} />
+      <ErrorText error={pause.error ?? resume.error ?? abandon.error} />
       {!big && !submitting && <Questions paper={paper} />}
       {submitting && (
         <ScanReview

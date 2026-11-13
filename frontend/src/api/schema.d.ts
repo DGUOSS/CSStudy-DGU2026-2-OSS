@@ -805,29 +805,9 @@ export interface paths {
         put?: never;
         /**
          * Abandon Take
-         * @description 그만두기. 이 응시는 기록·등수에 들어가지 않는다.
+         * @description 처음부터 다시(그만두기): 이 응시는 버리고 시작 전 상태로. 기록·등수에 들어가지 않는다.
          */
         post: operations["abandon_take_api_v1_takes__take_id__abandon_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/takes/{take_id}/restart": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Restart Take
-         * @description 처음부터 다시: 지금 응시는 그만두고 새로 시작한다.
-         */
-        post: operations["restart_take_api_v1_takes__take_id__restart_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3705,39 +3685,6 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TakeOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    restart_take_api_v1_takes__take_id__restart_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                take_id: number;
-            };
-            cookie?: {
-                access_token?: string | null;
-            };
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            201: {
                 headers: {
                     [name: string]: unknown;
                 };
