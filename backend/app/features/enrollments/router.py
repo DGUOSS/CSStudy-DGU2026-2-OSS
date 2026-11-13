@@ -62,12 +62,19 @@ class WaitingOut(BaseModel):
     request_count: int
 
 
+class PublicCourseOut(BaseModel):
+    course_id: int
+    subject_name: str
+    professor_name: str
+
+
 class MyCoursesOut(BaseModel):
     current_term: str | None
     record_count: int
     imported_at: datetime | None
     courses: list[MyCourseOut]
     waiting: list[WaitingOut]
+    public: list[PublicCourseOut] = []  # 공용 강좌(누구나 들어감). 내 강좌에 이미 있으면 뺀다
 
 
 class ImportOut(MyCoursesOut):
@@ -137,7 +144,23 @@ def _my_courses(session, user) -> MyCoursesOut:
         imported_at=max((e.created_at for e in rows), default=None),
         courses=courses,
         waiting=out_wait,
+        public=_public_courses(session, {c.course_id for c in courses}),
     )
+
+
+def _public_courses(session, exclude: set[int]) -> list[PublicCourseOut]:
+    rows = session.exec(
+        select(Course, Subject, Professor)
+        .join(Subject, Subject.id == Course.subject_id)
+        .join(Professor, Professor.id == Course.professor_id)
+        .where(Course.is_public == True)  # noqa: E712
+        .order_by(Subject.name)
+    ).all()
+    return [
+        PublicCourseOut(course_id=c.id, subject_name=s.name, professor_name=p.name)
+        for c, s, p in rows
+        if c.id not in exclude
+    ]
 
 
 @router.get("/me/courses")

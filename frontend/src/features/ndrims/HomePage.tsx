@@ -9,7 +9,7 @@ import { RequestWithFiles } from '@/features/course_requests/RequestWithFiles'
 import { Card } from '@/components/ui/card'
 import { useAuth } from '@/features/auth/useAuth'
 import { ImportPanel } from './ImportPanel'
-import { useMyCourses } from './queries'
+import { type MyCourses, useMyCourses } from './queries'
 
 /** 첫 화면: 수강 기록이 없으면 가져오기 안내, 있으면 내 강좌 */
 export function HomePage() {
@@ -30,6 +30,7 @@ export function HomePage() {
             엔드림스 수강 기록을 가져오면 들었거나 듣고 있는 강좌가 자동으로 등록됩니다.
           </p>
         </div>
+        <PublicCourses list={d.public} />
         <ImportPanel />
         {user?.role === 'admin' && (
           <Link to="/admin/courses" className="text-sm text-primary hover:underline">
@@ -75,6 +76,8 @@ export function HomePage() {
           ))}
         </Section>
       )}
+
+      <PublicCourses list={d.public} />
 
       {d.waiting.length > 0 && (
         <div className="flex flex-col gap-3">
@@ -133,6 +136,32 @@ export function HomePage() {
           </ul>
         </div>
       )}
+    </div>
+  )
+}
+
+/** 공용 강좌: 수강 기록 없이 누구나 들어가는 강좌(관리자가 지정) */
+function PublicCourses({ list }: { list: MyCourses['public'] }) {
+  if (!list?.length) return null
+  return (
+    <div className="flex flex-col gap-3">
+      <div>
+        <h2 className="text-lg font-semibold">공용 강좌</h2>
+        <p className="text-sm text-muted-foreground">수강 기록이 없어도 누구나 들어갈 수 있습니다.</p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {list.map((c) => (
+          <Link key={c.course_id} to={`/courses/${c.course_id}`}>
+            <Card className="flex items-center justify-between p-5 transition-colors hover:bg-accent">
+              <div>
+                <div className="font-semibold">{c.subject_name}</div>
+                <div className="text-sm text-muted-foreground">{c.professor_name} 교수님 · 공용</div>
+              </div>
+              <ChevronRight className="size-5 text-muted-foreground" />
+            </Card>
+          </Link>
+        ))}
+      </div>
     </div>
   )
 }

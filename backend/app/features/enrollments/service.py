@@ -162,7 +162,7 @@ def _unique_subject_name(session: Session, name: str, code: str) -> str:
 
 
 def can_enter(session: Session, user: User, course: Course) -> bool:
-    if user.role == "admin":
+    if user.role == "admin" or course.is_public:
         return True
     return (
         session.exec(

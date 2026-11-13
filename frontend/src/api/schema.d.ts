@@ -846,7 +846,9 @@ export interface components {
         /** CourseAdminUpdate */
         CourseAdminUpdate: {
             /** Professor Name */
-            professor_name: string;
+            professor_name?: string | null;
+            /** Is Public */
+            is_public?: boolean | null;
         };
         /** CourseIn */
         CourseIn: {
@@ -890,6 +892,11 @@ export interface components {
              * @default true
              */
             accessible?: boolean;
+            /**
+             * Is Public
+             * @default false
+             */
+            is_public?: boolean;
         };
         /** CourseRequestOut */
         CourseRequestOut: {
@@ -999,6 +1006,11 @@ export interface components {
             courses: components["schemas"]["MyCourseOut"][];
             /** Waiting */
             waiting: components["schemas"]["WaitingOut"][];
+            /**
+             * Public
+             * @default []
+             */
+            public?: components["schemas"]["PublicCourseOut"][];
             /** Received */
             received: number;
             /** Added */
@@ -1006,10 +1018,7 @@ export interface components {
         };
         /** LoginIn */
         LoginIn: {
-            /**
-             * Email
-             * Format: email
-             */
+            /** Email */
             email: string;
             /** Password */
             password: string;
@@ -1099,6 +1108,11 @@ export interface components {
             courses: components["schemas"]["MyCourseOut"][];
             /** Waiting */
             waiting: components["schemas"]["WaitingOut"][];
+            /**
+             * Public
+             * @default []
+             */
+            public?: components["schemas"]["PublicCourseOut"][];
         };
         /** NoteIn */
         NoteIn: {
@@ -1214,6 +1228,15 @@ export interface components {
             /** Origin */
             origin: string;
         };
+        /** PublicCourseOut */
+        PublicCourseOut: {
+            /** Course Id */
+            course_id: number;
+            /** Subject Name */
+            subject_name: string;
+            /** Professor Name */
+            professor_name: string;
+        };
         /**
          * RecordIn
          * @description 엔드림스 수강신청내역(OPEN_YY·OPEN_SEM_CD…) 또는 전체성적조회(YY·SEM_CD…·EMP_NM) 한 줄.
@@ -1249,6 +1272,11 @@ export interface components {
             courses: components["schemas"]["MyCourseOut"][];
             /** Waiting */
             waiting: components["schemas"]["WaitingOut"][];
+            /**
+             * Public
+             * @default []
+             */
+            public?: components["schemas"]["PublicCourseOut"][];
             /** Request Id */
             request_id: number;
         };

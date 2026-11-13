@@ -14,7 +14,7 @@
 
 from datetime import UTC, datetime
 
-from sqlalchemy import JSON, Column, Text, UniqueConstraint
+from sqlalchemy import JSON, Column, Text, UniqueConstraint, false
 from sqlmodel import Field, SQLModel
 
 
@@ -62,6 +62,8 @@ class Course(SQLModel, table=True):
     exam_info: str = Field(default="", sa_column=Column(Text, nullable=False, default=""))
     created_by: int | None = Field(default=None, foreign_key="users.id")
     created_at: datetime = Field(default_factory=_now)
+    # 공용 강좌: 수강 기록이 없어도 누구나 들어간다(팀 시험·공개 자료용). 관리자가 켠다
+    is_public: bool = Field(default=False, sa_column_kwargs={"server_default": false()})
 
 
 class CourseRequest(SQLModel, table=True):

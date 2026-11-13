@@ -265,7 +265,7 @@ def search(
             if r.subject_code == o.sbj_no
             and (r.professor_emp_no == o.emp_no if o.emp_no else r.professor_name == o.emp_nm)
         ]
-        mine = any(
+        mine = bool(course and course.is_public) or any(
             (course and e.course_id == course.id)
             or (
                 e.sbj_no == o.sbj_no

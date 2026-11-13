@@ -34,7 +34,8 @@ class CourseOut(BaseModel):
     exam_info: str
     material_count: int
     problem_count: int
-    accessible: bool = True  # 이 사용자가 들어갈 수 있는가(수강 기록이 있는가)
+    accessible: bool = True  # 이 사용자가 들어갈 수 있는가(수강 기록이 있거나 공용 강좌)
+    is_public: bool = False
 
 
 class CourseIn(BaseModel):
@@ -68,6 +69,7 @@ def _course_out(session: SessionDep, course: Course) -> CourseOut:
         professor_id=professor.id,
         professor_name=professor.name,
         info=course.info,
+        is_public=course.is_public,
         exam_info=course.exam_info,
         material_count=material_count,
         problem_count=problem_count,

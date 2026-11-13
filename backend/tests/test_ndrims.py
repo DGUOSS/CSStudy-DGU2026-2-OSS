@@ -201,3 +201,21 @@ def test_current_record_with_professor_from_bookmarklet(client, login, course_wi
     _as(client, login, "f@dgu.ac.kr")
     r = client.post("/api/v1/me/ndrims/import", json={"records": [dict(base, dvcls="01")]}).json()
     assert r["courses"] == [] and r["waiting"][0]["professor_name"] is None
+
+
+def test_public_course_open_to_everyone(client, login, session, course_with_problems):
+    """공용 강좌는 수강 기록이 없어도 들어간다. 관리자만 켜고 끈다."""
+    course = course_with_problems["course"]
+    _as(client, login, "g@dgu.ac.kr")
+    assert client.get(f"/api/v1/courses/{course.id}").status_code == 403
+    assert client.patch(f"/api/v1/admin/courses/{course.id}", json={"is_public": True}).status_code == 403
+    _as(client, login, "admin@dgu.ac.kr", admin=True, session=session)
+    r = client.patch(f"/api/v1/admin/courses/{course.id}", json={"is_public": True})
+    assert r.status_code == 200 and r.json()["is_public"] is True
+    _as(client, login, "g@dgu.ac.kr")
+    assert client.get(f"/api/v1/courses/{course.id}").status_code == 200
+    assert [p["course_id"] for p in client.get("/api/v1/me/courses").json()["public"]] == [course.id]
+    _as(client, login, "admin@dgu.ac.kr")
+    client.patch(f"/api/v1/admin/courses/{course.id}", json={"is_public": False})
+    _as(client, login, "g@dgu.ac.kr")
+    assert client.get(f"/api/v1/courses/{course.id}").status_code == 403

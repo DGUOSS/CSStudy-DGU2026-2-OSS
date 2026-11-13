@@ -51,7 +51,9 @@ def signup(body: SignupIn, session: SessionDep, response: Response) -> UserOut:
 def login(body: LoginIn, session: SessionDep, response: Response) -> UserOut:
     user = session.exec(select(User).where(User.email == body.email.strip().lower())).first()
     if user is None or not verify_password(body.password, user.password_hash):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "아이디(이메일) 또는 비밀번호가 틀렸습니다")
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED, "아이디(이메일) 또는 비밀번호가 틀렸습니다"
+        )
     set_login_cookie(response, user.id)
     return UserOut.model_validate(user, from_attributes=True)
 

@@ -53,7 +53,8 @@ class SubjectUpdate(BaseModel):
 
 
 class CourseAdminUpdate(BaseModel):
-    professor_name: str = Field(min_length=1, max_length=50)
+    professor_name: str | None = Field(default=None, min_length=1, max_length=50)
+    is_public: bool | None = None
 
 
 class MaterialUpdate(BaseModel):
@@ -161,20 +162,25 @@ def admin_update_course(
     course = session.get(Course, course_id)
     if course is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "강좌가 없습니다")
-    name = body.professor_name.strip()
-    professor = session.exec(select(Professor).where(Professor.name == name)).first()
-    if professor is None:
-        professor = Professor(name=name)
-        session.add(professor)
-        session.flush()
-    dup = session.exec(
-        select(Course).where(
-            Course.subject_id == course.subject_id, Course.professor_id == professor.id
-        )
-    ).first()
-    if dup and dup.id != course.id:
-        raise HTTPException(status.HTTP_409_CONFLICT, "같은 과목에 그 교수님 강좌가 이미 있습니다")
-    course.professor_id = professor.id
+    if body.professor_name is not None:
+        name = body.professor_name.strip()
+        professor = session.exec(select(Professor).where(Professor.name == name)).first()
+        if professor is None:
+            professor = Professor(name=name)
+            session.add(professor)
+            session.flush()
+        dup = session.exec(
+            select(Course).where(
+                Course.subject_id == course.subject_id, Course.professor_id == professor.id
+            )
+        ).first()
+        if dup and dup.id != course.id:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT, "같은 과목에 그 교수님 강좌가 이미 있습니다"
+            )
+        course.professor_id = professor.id
+    if body.is_public is not None:
+        course.is_public = body.is_public
     session.add(course)
     session.commit()
     return _course_out(session, course)

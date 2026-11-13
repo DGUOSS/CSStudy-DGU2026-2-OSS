@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronDown, ChevronRight, FileText, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, FileText, Globe, Pencil, Plus, Trash2 } from 'lucide-react'
 import { type FormEvent, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { api, type Schemas, unwrap } from '@/api/client'
@@ -298,6 +298,19 @@ function CourseRow({ course }: { course: Schemas['CourseOut'] }) {
       refresh()
     },
   })
+  const togglePublic = useMutation({
+    mutationFn: () =>
+      unwrap(
+        api.PATCH('/api/v1/admin/courses/{course_id}', {
+          params: { path: { course_id: course.id } },
+          body: { is_public: !course.is_public },
+        }),
+      ),
+    onSuccess: () => {
+      refresh()
+      qc.invalidateQueries({ queryKey: ['me', 'courses'] })
+    },
+  })
   const remove = useMutation({
     mutationFn: () =>
       unwrap(
@@ -328,7 +341,18 @@ function CourseRow({ course }: { course: Schemas['CourseOut'] }) {
             </Link>
             <Badge variant="secondary">자료 {course.material_count}</Badge>
             <Badge variant="secondary">문제 {course.problem_count}</Badge>
+            {course.is_public && <Badge>공용</Badge>}
             <div className="ml-auto flex gap-1">
+              <Button
+                size="sm"
+                variant={course.is_public ? 'secondary' : 'ghost'}
+                disabled={togglePublic.isPending}
+                title="공용 강좌는 수강 기록이 없어도 누구나 들어갑니다(팀 시험용)"
+                onClick={() => togglePublic.mutate()}
+              >
+                <Globe />
+                {course.is_public ? '공용 끄기' : '공용으로'}
+              </Button>
               <Button
                 size="sm"
                 variant={open ? 'secondary' : 'outline'}
@@ -358,7 +382,7 @@ function CourseRow({ course }: { course: Schemas['CourseOut'] }) {
           </>
         )}
       </div>
-      <ErrorText error={save.error ?? remove.error} />
+      <ErrorText error={save.error ?? togglePublic.error ?? remove.error} />
       {open && (
         <div className="mt-3 flex flex-col gap-3">
           <MaterialsAdmin courseId={course.id} />
