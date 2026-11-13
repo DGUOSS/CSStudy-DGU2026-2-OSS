@@ -1,9 +1,8 @@
-import { Bookmark, ClipboardPaste, ExternalLink } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { Bookmark, ExternalLink } from 'lucide-react'
+import { useEffect, useRef } from 'react'
 import { ErrorText } from '@/components/States'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/features/auth/useAuth'
 import {
   bookmarkletHref,
@@ -23,8 +22,6 @@ export function ImportPanel({ compact = false }: { compact?: boolean }) {
   const isAdmin = user?.role === 'admin'
   const save = useImportNdrims(isAdmin)
   const linkRef = useRef<HTMLAnchorElement>(null)
-  const [paste, setPaste] = useState('')
-  const [showPaste, setShowPaste] = useState(false)
 
   // React는 javascript: 주소를 막으므로 직접 넣는다
   useEffect(() => {
@@ -44,17 +41,6 @@ export function ImportPanel({ compact = false }: { compact?: boolean }) {
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
   }, [save])
-
-  const submitPaste = () => {
-    try {
-      const d = JSON.parse(paste) as NdrimsPayload
-      if (d?.type !== MESSAGE_TYPE) throw new Error()
-      save.mutate(d)
-      setPaste('')
-    } catch {
-      alert('엔드림스 창의 동국스터디 버튼이 복사한 내용을 그대로 붙여 넣어 주세요.')
-    }
-  }
 
   const r = save.data
   return (
@@ -127,29 +113,6 @@ export function ImportPanel({ compact = false }: { compact?: boolean }) {
           )}
         </div>
       )}
-      <div>
-        <button
-          type="button"
-          className="inline-flex cursor-pointer items-center gap-1 text-xs text-muted-foreground hover:underline"
-          onClick={() => setShowPaste(!showPaste)}
-        >
-          <ClipboardPaste className="size-3.5" />
-          엔드림스를 따로 열었다면: 복사된 내용 붙여 넣기
-        </button>
-        {showPaste && (
-          <div className="mt-2 flex flex-col gap-2">
-            <Textarea
-              value={paste}
-              onChange={(e) => setPaste(e.target.value)}
-              placeholder='{"type":"dgu-study-ndrims",...}'
-              className="h-24 font-mono text-xs"
-            />
-            <Button size="sm" variant="outline" onClick={submitPaste} disabled={!paste.trim()}>
-              가져오기
-            </Button>
-          </div>
-        )}
-      </div>
     </Card>
   )
 }
