@@ -20,7 +20,8 @@ class ChapterOut(BaseModel):
     order: int
     title: str
     concepts: list[str]
-    problem_count: int
+    problem_count: int  # 객관식(퀴즈에 나오는 것)
+    essay_count: int  # 서술형(종이 시험에만)
 
 
 class ConceptRef(BaseModel):
@@ -83,20 +84,22 @@ def list_chapters(course_id: int, session: SessionDep, user: CurrentUser) -> lis
         .order_by(Concept.id)
     ).all():
         names[chapter_id].append(name)
-    counts = dict(
-        session.exec(
-            select(Problem.chapter_id, func.count())
-            .where(Problem.chapter_id.in_(ids))
-            .group_by(Problem.chapter_id)
-        ).all()
-    )
+    counts: dict[tuple[int, bool], int] = {}
+    for chapter_id, qtype, n in session.exec(
+        select(Problem.chapter_id, Problem.qtype, func.count())
+        .where(Problem.chapter_id.in_(ids))
+        .group_by(Problem.chapter_id, Problem.qtype)
+    ).all():
+        key = (chapter_id, qtype == "mcq")
+        counts[key] = counts.get(key, 0) + n
     return [
         ChapterOut(
             id=ch.id,
             order=ch.order,
             title=ch.title,
             concepts=names[ch.id],
-            problem_count=counts.get(ch.id, 0),
+            problem_count=counts.get((ch.id, True), 0),
+            essay_count=counts.get((ch.id, False), 0),
         )
         for ch in chapters
     ]

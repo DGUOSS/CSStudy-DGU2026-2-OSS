@@ -1,5 +1,5 @@
-import { Camera, Check, ChevronLeft, Clock, Pencil, Printer, Trophy, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Camera, Check, ChevronLeft, Clock, Maximize2, Minimize2, Pause, Pencil, Play, Printer, RotateCcw, Square, Trophy, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import type { Schemas } from '@/api/client'
 import { Empty, ErrorText, Loading } from '@/components/States'
@@ -12,9 +12,13 @@ import {
   mmss,
   type Paper,
   type Take,
+  useAbandon,
   useMine,
+  usePause,
   usePaper,
   useRanking,
+  useRestart,
+  useResume,
   useScan,
   useStartTake,
   useSubmit,
@@ -52,7 +56,13 @@ export function PaperPage() {
       </div>
 
       {open ? (
-        <Running paper={p} take={open} onDone={(id) => setViewTake(id)} />
+        <Running
+          key={open.id}
+          paper={p}
+          take={open}
+          fetchedAt={mine.dataUpdatedAt}
+          onDone={(id) => setViewTake(id)}
+        />
       ) : viewTake ? (
         <ResultView takeId={viewTake} onBack={() => setViewTake(null)} />
       ) : (
@@ -112,48 +122,207 @@ export function PaperPage() {
 function Running({
   paper,
   take,
+  fetchedAt,
   onDone,
 }: {
   paper: Paper
   take: Take
+  fetchedAt: number
   onDone: (takeId: number) => void
 }) {
+  const pause = usePause(paper.id)
+  const resume = useResume(paper.id)
+  const restart = useRestart(paper.id)
+  const abandon = useAbandon(paper.id)
   const [now, setNow] = useState(() => Date.now())
   const [submitting, setSubmitting] = useState(false)
+  const [big, setBig] = useState(false)
+  const busy = pause.isPending || resume.isPending || restart.isPending || abandon.isPending
+
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000)
+    const t = setInterval(() => setNow(Date.now()), 250)
     return () => clearInterval(t)
   }, [])
-  const left = (new Date(take.deadline).getTime() - now) / 1000
+  // 서버가 알려 준 남은 시간에서, 받은 뒤 흐른 시간을 뺀다(멈춘 동안은 그대로)
+  const left = take.paused
+    ? take.remaining_sec
+    : take.remaining_sec - Math.max(0, (now - fetchedAt) / 1000)
   const over = left <= 0
+  const level = over ? 'over' : left <= 60 ? 'last' : left <= 300 ? 'warn' : 'ok'
+  const spentRatio = Math.min(1, 1 - Math.max(0, left) / take.time_limit_sec)
 
-  return (
-    <div className="flex flex-col gap-4">
-      <Card className={cn('flex flex-col items-center gap-2 p-6', over && 'border-destructive')}>
-        <div className="text-sm text-muted-foreground">
-          {over ? '시간이 끝났습니다' : '남은 시간'}
-        </div>
+  // 탭 제목에 남은 시간, 시간이 다 되면 진동 한 번
+  const overRef = useRef(over)
+  useEffect(() => {
+    const prev = document.title
+    document.title = `${take.paused ? '⏸' : '⏱'} ${mmss(Math.max(0, left))} · ${paper.title}`
+    return () => {
+      document.title = prev
+    }
+  }, [left, take.paused, paper.title])
+  useEffect(() => {
+    if (over && !overRef.current) navigator.vibrate?.([300, 150, 300])
+    overRef.current = over
+  }, [over])
+  // 푸는 동안 화면이 꺼지지 않게(지원하는 브라우저만)
+  useEffect(() => {
+    if (take.paused || over) return
+    let lock: { release: () => Promise<void> } | null = null
+    const nav = navigator as Navigator & {
+      wakeLock?: { request: (t: 'screen') => Promise<{ release: () => Promise<void> }> }
+    }
+    nav.wakeLock
+      ?.request('screen')
+      .then((l) => (lock = l))
+      .catch(() => {})
+    return () => {
+      lock?.release().catch(() => {})
+    }
+  }, [take.paused, over])
+
+  const color =
+    level === 'over' || level === 'last'
+      ? 'text-destructive'
+      : level === 'warn'
+        ? 'text-amber-600'
+        : ''
+
+  const timer = (
+    <div className={cn('flex flex-col items-center gap-2', big && 'gap-6')}>
+      <div className={cn('text-sm text-muted-foreground', big && 'text-xl')}>
+        {take.paused ? '일시정지됨' : over ? '시간이 끝났습니다' : '남은 시간'}
+      </div>
+      <div
+        className={cn(
+          'font-mono font-bold tabular-nums transition-colors',
+          big ? 'text-[22vw] leading-none' : 'text-6xl',
+          color,
+          take.paused && 'opacity-40',
+        )}
+      >
+        {over ? `+${mmss(-left)}` : mmss(left)}
+      </div>
+      <div className={cn('h-2 w-full max-w-md overflow-hidden rounded-full bg-muted', big && 'h-3 max-w-3xl')}>
         <div
-          className={cn('font-mono text-6xl font-bold tabular-nums', over && 'text-destructive')}
+          className={cn(
+            'h-full transition-[width]',
+            level === 'ok' ? 'bg-primary' : level === 'warn' ? 'bg-amber-500' : 'bg-destructive',
+          )}
+          style={{ width: `${spentRatio * 100}%` }}
+        />
+      </div>
+      <div className={cn('text-center text-xs text-muted-foreground', big && 'text-base')}>
+        {take.paused
+          ? '멈춘 동안은 시간이 흐르지 않습니다. 등수표에는 일시정지를 썼다고 표시됩니다.'
+          : over
+            ? `펜을 내려놓고 답안지를 찍어 제출하세요. ${GRACE}분이 넘으면 시간 초과로 표시됩니다.`
+            : level === 'last'
+              ? '1분 남았습니다'
+              : level === 'warn'
+                ? '5분 남았습니다'
+                : '종이에 푸세요. 다 풀었으면 바로 제출해도 됩니다(걸린 시간이 등수에 들어갑니다).'}
+      </div>
+      <div className="flex flex-wrap justify-center gap-2">
+        {take.paused ? (
+          <Button size={big ? 'lg' : 'default'} disabled={busy} onClick={() => resume.mutate(take.id)}>
+            <Play />
+            계속 풀기
+          </Button>
+        ) : (
+          !over && (
+            <Button
+              variant="outline"
+              size={big ? 'lg' : 'default'}
+              disabled={busy}
+              onClick={() => pause.mutate(take.id)}
+            >
+              <Pause />
+              일시정지
+            </Button>
+          )
+        )}
+        <Button
+          variant="outline"
+          size={big ? 'lg' : 'default'}
+          onClick={() => {
+            setBig(!big)
+            if (!big) document.documentElement.requestFullscreen?.().catch(() => {})
+            else if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
+          }}
         >
-          {mmss(over ? 0 : left)}
-        </div>
-        <div className="text-xs text-muted-foreground">
-          {over
-            ? '펜을 내려놓고 답안지를 찍어 제출하세요. 10분이 넘으면 시간 초과로 표시됩니다.'
-            : '종이에 푸세요. 다 풀었으면 바로 제출해도 됩니다(걸린 시간이 등수에 들어갑니다).'}
-        </div>
+          {big ? <Minimize2 /> : <Maximize2 />}
+          {big ? '작게 보기' : '크게 보기'}
+        </Button>
         {!submitting && (
-          <Button className="mt-2" onClick={() => setSubmitting(true)}>
+          <Button
+            size={big ? 'lg' : 'default'}
+            onClick={() => {
+              setSubmitting(true)
+              if (big) {
+                setBig(false)
+                if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
+              }
+            }}
+          >
             <Camera />
             답안지 제출하기
           </Button>
         )}
-      </Card>
-      {submitting && <ScanReview paper={paper} take={take} onDone={onDone} />}
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="flex flex-col gap-4">
+      {big ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background p-6">
+          {timer}
+        </div>
+      ) : (
+        <Card className={cn('p-6', over && 'border-destructive')}>{timer}</Card>
+      )}
+      {!big && (
+        <div className="flex flex-wrap justify-end gap-3 text-xs">
+          <button
+            type="button"
+            disabled={busy}
+            className="cursor-pointer text-muted-foreground hover:underline"
+            onClick={() =>
+              confirm('처음부터 다시 시작할까요? 지금 응시는 기록되지 않습니다.') &&
+              restart.mutate(take.id)
+            }
+          >
+            <RotateCcw className="mr-1 inline size-3" />
+            처음부터 다시
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            className="cursor-pointer text-muted-foreground hover:underline"
+            onClick={() =>
+              confirm('시험을 그만둘까요? 이 응시는 기록·등수에 들어가지 않습니다.') &&
+              abandon.mutate(take.id)
+            }
+          >
+            <Square className="mr-1 inline size-3" />
+            그만두기
+          </button>
+        </div>
+      )}
+      <ErrorText error={pause.error ?? resume.error ?? restart.error ?? abandon.error} />
+      {submitting && (
+        <ScanReview
+          paper={paper}
+          take={take}
+          onDone={onDone}
+          onCancel={() => setSubmitting(false)}
+        />
+      )}
     </div>
   )
 }
+
+const GRACE = 10
 
 type Review = { mcq: Schemas['ScanMcq'][]; essays: Schemas['ScanEssay'][]; missing: number[] }
 
@@ -161,10 +330,12 @@ function ScanReview({
   paper,
   take,
   onDone,
+  onCancel,
 }: {
   paper: Paper
   take: Take
   onDone: (takeId: number) => void
+  onCancel: () => void
 }) {
   const scan = useScan(take.id)
   const submit = useSubmit(take.id, paper.id)
@@ -209,7 +380,12 @@ function ScanReview({
   return (
     <Card className="flex flex-col gap-4 p-5">
       <div>
-        <div className="font-semibold">답안지 사진</div>
+        <div className="flex items-center justify-between">
+          <div className="font-semibold">답안지 사진</div>
+          <Button size="sm" variant="ghost" onClick={onCancel}>
+            계속 풀기
+          </Button>
+        </div>
         <p className="text-sm text-muted-foreground">
           네 귀퉁이의 검은 네모가 모두 나오게, 밝은 곳에서 위에서 찍어 주세요. 답안지가 여러 장이면
           장마다 한 장씩 함께 올립니다.
@@ -444,6 +620,7 @@ function Ranking({ paperId }: { paperId: number }) {
                   <td className="px-4 py-2 text-right text-muted-foreground">
                     {mmss(e.elapsed_sec)}
                     {e.late && ' · 시간 초과'}
+                    {e.paused && ' · 일시정지 사용'}
                   </td>
                 </tr>
               ))}

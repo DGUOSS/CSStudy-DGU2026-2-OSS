@@ -276,7 +276,11 @@ class PaperTake(SQLModel, table=True):
     mcq_score: int | None = None
     essay_score: int | None = None  # None = 서술형 채점 대기(또는 서술형 없음)
     total_points: int = 0
-    status: str = Field(default="started", max_length=20)  # started | submitted
+    status: str = Field(default="started", max_length=20)  # started | submitted | abandoned
+    # 일시정지: 멈춘 동안은 시간이 흐르지 않는다. 등수표에는 정지를 썼는지 표시한다
+    paused_at: datetime | None = None
+    paused_sec: int = Field(default=0, sa_column_kwargs={"server_default": "0"})
+    pause_count: int = Field(default=0, sa_column_kwargs={"server_default": "0"})
 
 
 class PaperEssayImage(SQLModel, table=True):

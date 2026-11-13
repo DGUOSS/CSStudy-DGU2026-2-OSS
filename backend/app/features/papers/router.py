@@ -2,7 +2,7 @@
 
 import base64
 import binascii
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
@@ -28,7 +28,9 @@ MAX_PHOTO_MB = 12
 class PaperIn(BaseModel):
     title: str = Field(min_length=1, max_length=100)
     chapter_ids: list[int] = Field(min_length=1)
-    count: int = Field(ge=1, le=100)
+    # 유형별 문항 수. 문제 생성을 붙이면 족보 출제 프로필의 비율로 채운다(source.type_counts)
+    mcq_count: int = Field(default=0, ge=0, le=100)
+    essay_count: int = Field(default=0, ge=0, le=30)
     time_limit_min: int = Field(ge=5, le=300)
 
 
@@ -72,8 +74,12 @@ class TakeOut(BaseModel):
     id: int
     paper_id: int
     started_at: datetime
-    deadline: datetime
     status: str
+    paused: bool
+    pause_count: int
+    time_limit_sec: int
+    spent_sec: float  # 정지한 시간을 뺀, 지금까지 푼 시간(서버 기준)
+    remaining_sec: float  # 음수면 시간이 지난 것
 
 
 class ScanMcq(BaseModel):
@@ -161,6 +167,7 @@ class RankEntry(BaseModel):
     total_points: int
     elapsed_sec: int
     late: bool
+    paused: bool  # 일시정지를 썼는지
 
 
 class RankingOut(BaseModel):
@@ -201,14 +208,33 @@ def _layout(problems: list[Problem]) -> omr.Layout:
     return omr.layout([(p.id, p.qtype, len(p.choices)) for p in problems])
 
 
+def _spent(take: PaperTake, now: datetime) -> float:
+    """정지한 시간을 뺀, 실제로 푼 시간(초)."""
+    end = _utc(take.paused_at) if take.paused_at else now
+    return max(0.0, (end - _utc(take.started_at)).total_seconds() - take.paused_sec)
+
+
 def _take_out(take: PaperTake, paper: Paper) -> TakeOut:
+    spent = _spent(take, datetime.now(UTC))
+    limit = paper.time_limit_min * 60
     return TakeOut(
         id=take.id,
         paper_id=paper.id,
         started_at=take.started_at,
-        deadline=_utc(take.started_at) + timedelta(minutes=paper.time_limit_min),
         status=take.status,
+        paused=take.paused_at is not None,
+        pause_count=take.pause_count,
+        time_limit_sec=limit,
+        spent_sec=round(spent, 1),
+        remaining_sec=round(limit - spent, 1),
     )
+
+
+def _open_take(take_id: int, session: Session, user: User) -> tuple[PaperTake, Paper]:
+    take, paper = _take_or_404(session, user, take_id)
+    if take.status != "started":
+        raise HTTPException(status.HTTP_409_CONFLICT, "이미 끝난 응시입니다")
+    return take, paper
 
 
 def _score(take: PaperTake) -> int:
@@ -221,7 +247,10 @@ def _score(take: PaperTake) -> int:
 @router.post("/courses/{course_id}/papers", status_code=status.HTTP_201_CREATED)
 def create_paper(course_id: int, body: PaperIn, session: SessionDep, user: CurrentUser) -> PaperOut:
     require_course_access(session, user, get_course_or_404(session, course_id))
-    picked = pick_for_paper(session, user.id, course_id, body.chapter_ids, body.count)
+    if body.mcq_count + body.essay_count == 0:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "문항 수를 정해 주세요")
+    counts = {"mcq": body.mcq_count, "essay": body.essay_count}
+    picked = pick_for_paper(session, user.id, course_id, body.chapter_ids, counts)
     if not picked:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "고른 챕터에 문제가 없습니다")
     paper = Paper(
@@ -323,6 +352,57 @@ def start_take(paper_id: int, session: SessionDep, user: CurrentUser) -> TakeOut
         session.commit()
         session.refresh(take)
     return _take_out(take, paper)
+
+
+@router.post("/takes/{take_id}/pause")
+def pause_take(take_id: int, session: SessionDep, user: CurrentUser) -> TakeOut:
+    """일시정지. 멈춘 동안은 시간이 흐르지 않는다."""
+    take, paper = _open_take(take_id, session, user)
+    if take.paused_at is None:
+        take.paused_at = datetime.now(UTC)
+        take.pause_count += 1
+        session.add(take)
+        session.commit()
+        session.refresh(take)
+    return _take_out(take, paper)
+
+
+@router.post("/takes/{take_id}/resume")
+def resume_take(take_id: int, session: SessionDep, user: CurrentUser) -> TakeOut:
+    take, paper = _open_take(take_id, session, user)
+    if take.paused_at is not None:
+        take.paused_sec += int((datetime.now(UTC) - _utc(take.paused_at)).total_seconds())
+        take.paused_at = None
+        session.add(take)
+        session.commit()
+        session.refresh(take)
+    return _take_out(take, paper)
+
+
+@router.post("/takes/{take_id}/abandon")
+def abandon_take(take_id: int, session: SessionDep, user: CurrentUser) -> TakeOut:
+    """그만두기. 이 응시는 기록·등수에 들어가지 않는다."""
+    take, paper = _open_take(take_id, session, user)
+    take.status = "abandoned"
+    take.paused_at = None
+    session.add(take)
+    session.commit()
+    session.refresh(take)
+    return _take_out(take, paper)
+
+
+@router.post("/takes/{take_id}/restart", status_code=status.HTTP_201_CREATED)
+def restart_take(take_id: int, session: SessionDep, user: CurrentUser) -> TakeOut:
+    """처음부터 다시: 지금 응시는 그만두고 새로 시작한다."""
+    take, paper = _open_take(take_id, session, user)
+    take.status = "abandoned"
+    take.paused_at = None
+    session.add(take)
+    fresh = PaperTake(paper_id=paper.id, user_id=user.id)
+    session.add(fresh)
+    session.commit()
+    session.refresh(fresh)
+    return _take_out(fresh, paper)
 
 
 @router.get("/papers/{paper_id}/mine")
@@ -446,7 +526,10 @@ def submit_take(take_id: int, body: SubmitIn, session: SessionDep, user: Current
     chosen = {a.problem_id: a.chosen for a in body.answers}
     images = {e.problem_id: e.image for e in body.essays}
     now = datetime.now(UTC)
-    spent = (now - _utc(take.started_at)).total_seconds()
+    spent = _spent(take, now)
+    if take.paused_at is not None:  # 멈춘 채로 제출하면 정지를 끝낸 것으로 본다
+        take.paused_sec += int((now - _utc(take.paused_at)).total_seconds())
+        take.paused_at = None
     answers: list[int | None] = []
     mcq_score, essay_scores = 0, {}
     for p in probs:
@@ -531,6 +614,7 @@ def ranking(paper_id: int, session: SessionDep, user: CurrentUser) -> RankingOut
                 total_points=t.total_points,
                 elapsed_sec=t.elapsed_sec or 0,
                 late=t.late,
+                paused=t.pause_count > 0,
             )
         )
     has_essay = any(p.qtype != "mcq" for p in _problems(session, paper))

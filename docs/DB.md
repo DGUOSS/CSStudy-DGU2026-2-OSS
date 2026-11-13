@@ -33,7 +33,7 @@ users ─< exam_selections >─ materials     문제 풀기 전에 고른 족보
 | enrollments | user_id, year, sem_cd, sbj_no, sbj_nm, dvcls, emp_nm, emp_no, course_id(없으면 아직 안 열린 수업), source |
 | catalog_offerings | 엔드림스 종합강의시간표 한 줄: (year, sem_cd, sbj_no, dvcls) 고유, emp_no, emp_nm, 대학·학과·이수구분·시간·평가 비율 등 |
 | papers | 종이 시험지: course_id, created_by, title, problem_ids(JSON, 순서), time_limit_min, source(bank/generated) |
-| paper_takes | 한 번 응시: paper_id, user_id, started_at, submitted_at, elapsed_sec, late, answers(JSON), mcq_score, essay_score(NULL=채점 대기), total_points, status(started/submitted) |
+| paper_takes | 한 번 응시: paper_id, user_id, started_at, submitted_at, elapsed_sec, late, answers(JSON), mcq_score, essay_score(NULL=채점 대기), total_points, status(started/submitted/abandoned), paused_at·paused_sec·pause_count(일시정지) |
 | paper_essay_images | 서술형 답 칸 사진(JPEG): take_id, problem_id. 전체 답안지 사진은 저장하지 않음 |
 
 ## 테이블을 바꿀 때

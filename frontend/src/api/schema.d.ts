@@ -757,6 +757,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/takes/{take_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pause Take
+         * @description 일시정지. 멈춘 동안은 시간이 흐르지 않는다.
+         */
+        post: operations["pause_take_api_v1_takes__take_id__pause_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/takes/{take_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume Take */
+        post: operations["resume_take_api_v1_takes__take_id__resume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/takes/{take_id}/abandon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Abandon Take
+         * @description 그만두기. 이 응시는 기록·등수에 들어가지 않는다.
+         */
+        post: operations["abandon_take_api_v1_takes__take_id__abandon_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/takes/{take_id}/restart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restart Take
+         * @description 처음부터 다시: 지금 응시는 그만두고 새로 시작한다.
+         */
+        post: operations["restart_take_api_v1_takes__take_id__restart_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/papers/{paper_id}/mine": {
         parameters: {
             query?: never;
@@ -1016,6 +1093,8 @@ export interface components {
             concepts: string[];
             /** Problem Count */
             problem_count: number;
+            /** Essay Count */
+            essay_count: number;
         };
         /** CollegeOut */
         CollegeOut: {
@@ -1450,8 +1529,16 @@ export interface components {
             title: string;
             /** Chapter Ids */
             chapter_ids: number[];
-            /** Count */
-            count: number;
+            /**
+             * Mcq Count
+             * @default 0
+             */
+            mcq_count?: number;
+            /**
+             * Essay Count
+             * @default 0
+             */
+            essay_count?: number;
             /** Time Limit Min */
             time_limit_min: number;
         };
@@ -1556,6 +1643,8 @@ export interface components {
             elapsed_sec: number;
             /** Late */
             late: boolean;
+            /** Paused */
+            paused: boolean;
         };
         /** RankingOut */
         RankingOut: {
@@ -1798,13 +1887,18 @@ export interface components {
              * Format: date-time
              */
             started_at: string;
-            /**
-             * Deadline
-             * Format: date-time
-             */
-            deadline: string;
             /** Status */
             status: string;
+            /** Paused */
+            paused: boolean;
+            /** Pause Count */
+            pause_count: number;
+            /** Time Limit Sec */
+            time_limit_sec: number;
+            /** Spent Sec */
+            spent_sec: number;
+            /** Remaining Sec */
+            remaining_sec: number;
         };
         /** TermOut */
         TermOut: {
@@ -3503,6 +3597,138 @@ export interface operations {
             header?: never;
             path: {
                 paper_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TakeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pause_take_api_v1_takes__take_id__pause_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                take_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TakeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resume_take_api_v1_takes__take_id__resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                take_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TakeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    abandon_take_api_v1_takes__take_id__abandon_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                take_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TakeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restart_take_api_v1_takes__take_id__restart_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                take_id: number;
             };
             cookie?: {
                 access_token?: string | null;

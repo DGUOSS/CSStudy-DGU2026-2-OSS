@@ -116,6 +116,24 @@ export function useSubmit(takeId: number, paperId: number) {
   })
 }
 
+function useTakeAction(paperId: number, action: 'pause' | 'resume' | 'abandon' | 'restart') {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (takeId: number) =>
+      unwrap(
+        api.POST(`/api/v1/takes/{take_id}/${action}`, { params: { path: { take_id: takeId } } }),
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['papers', paperId, 'mine'] })
+      qc.invalidateQueries({ queryKey: ['courses'] })
+    },
+  })
+}
+export const usePause = (paperId: number) => useTakeAction(paperId, 'pause')
+export const useResume = (paperId: number) => useTakeAction(paperId, 'resume')
+export const useAbandon = (paperId: number) => useTakeAction(paperId, 'abandon')
+export const useRestart = (paperId: number) => useTakeAction(paperId, 'restart')
+
 export const mmss = (sec: number) => {
   const s = Math.max(0, Math.floor(sec))
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`

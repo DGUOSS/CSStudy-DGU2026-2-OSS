@@ -2897,6 +2897,241 @@
         }
       }
     },
+    "/api/v1/takes/{take_id}/pause": {
+      "post": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Pause Take",
+        "description": "일시정지. 멈춘 동안은 시간이 흐르지 않는다.",
+        "operationId": "pause_take_api_v1_takes__take_id__pause_post",
+        "parameters": [
+          {
+            "name": "take_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Take Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/takes/{take_id}/resume": {
+      "post": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Resume Take",
+        "operationId": "resume_take_api_v1_takes__take_id__resume_post",
+        "parameters": [
+          {
+            "name": "take_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Take Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/takes/{take_id}/abandon": {
+      "post": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Abandon Take",
+        "description": "그만두기. 이 응시는 기록·등수에 들어가지 않는다.",
+        "operationId": "abandon_take_api_v1_takes__take_id__abandon_post",
+        "parameters": [
+          {
+            "name": "take_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Take Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/takes/{take_id}/restart": {
+      "post": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Restart Take",
+        "description": "처음부터 다시: 지금 응시는 그만두고 새로 시작한다.",
+        "operationId": "restart_take_api_v1_takes__take_id__restart_post",
+        "parameters": [
+          {
+            "name": "take_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Take Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/papers/{paper_id}/mine": {
       "get": {
         "tags": [
@@ -3736,6 +3971,10 @@
           "problem_count": {
             "type": "integer",
             "title": "Problem Count"
+          },
+          "essay_count": {
+            "type": "integer",
+            "title": "Essay Count"
           }
         },
         "type": "object",
@@ -3744,7 +3983,8 @@
           "order",
           "title",
           "concepts",
-          "problem_count"
+          "problem_count",
+          "essay_count"
         ],
         "title": "ChapterOut"
       },
@@ -5116,11 +5356,19 @@
             "minItems": 1,
             "title": "Chapter Ids"
           },
-          "count": {
+          "mcq_count": {
             "type": "integer",
             "maximum": 100.0,
-            "minimum": 1.0,
-            "title": "Count"
+            "minimum": 0.0,
+            "title": "Mcq Count",
+            "default": 0
+          },
+          "essay_count": {
+            "type": "integer",
+            "maximum": 30.0,
+            "minimum": 0.0,
+            "title": "Essay Count",
+            "default": 0
           },
           "time_limit_min": {
             "type": "integer",
@@ -5133,7 +5381,6 @@
         "required": [
           "title",
           "chapter_ids",
-          "count",
           "time_limit_min"
         ],
         "title": "PaperIn"
@@ -5395,6 +5642,10 @@
           "late": {
             "type": "boolean",
             "title": "Late"
+          },
+          "paused": {
+            "type": "boolean",
+            "title": "Paused"
           }
         },
         "type": "object",
@@ -5405,7 +5656,8 @@
           "score",
           "total_points",
           "elapsed_sec",
-          "late"
+          "late",
+          "paused"
         ],
         "title": "RankEntry"
       },
@@ -6138,14 +6390,29 @@
             "format": "date-time",
             "title": "Started At"
           },
-          "deadline": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Deadline"
-          },
           "status": {
             "type": "string",
             "title": "Status"
+          },
+          "paused": {
+            "type": "boolean",
+            "title": "Paused"
+          },
+          "pause_count": {
+            "type": "integer",
+            "title": "Pause Count"
+          },
+          "time_limit_sec": {
+            "type": "integer",
+            "title": "Time Limit Sec"
+          },
+          "spent_sec": {
+            "type": "number",
+            "title": "Spent Sec"
+          },
+          "remaining_sec": {
+            "type": "number",
+            "title": "Remaining Sec"
           }
         },
         "type": "object",
@@ -6153,8 +6420,12 @@
           "id",
           "paper_id",
           "started_at",
-          "deadline",
-          "status"
+          "status",
+          "paused",
+          "pause_count",
+          "time_limit_sec",
+          "spent_sec",
+          "remaining_sec"
         ],
         "title": "TakeOut"
       },
