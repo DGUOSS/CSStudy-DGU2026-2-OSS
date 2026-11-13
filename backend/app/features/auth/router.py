@@ -22,7 +22,8 @@ class SignupIn(BaseModel):
 
 
 class LoginIn(BaseModel):
-    email: EmailStr
+    # 이메일 또는 관리자 아이디(예: admin). 가입은 이메일만 되므로 아이디 계정은 DB에서만 만든다
+    email: str = Field(min_length=1, max_length=254)
     password: str
 
 
@@ -48,9 +49,9 @@ def signup(body: SignupIn, session: SessionDep, response: Response) -> UserOut:
 
 @router.post("/login")
 def login(body: LoginIn, session: SessionDep, response: Response) -> UserOut:
-    user = session.exec(select(User).where(User.email == body.email.lower())).first()
+    user = session.exec(select(User).where(User.email == body.email.strip().lower())).first()
     if user is None or not verify_password(body.password, user.password_hash):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "이메일 또는 비밀번호가 틀렸습니다")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "아이디(이메일) 또는 비밀번호가 틀렸습니다")
     set_login_cookie(response, user.id)
     return UserOut.model_validate(user, from_attributes=True)
 
