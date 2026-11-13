@@ -1,6 +1,11 @@
-"""없는 과목·강좌 추가 요청 → 관리자 승인.
+"""없는 강좌 열기 요청 → 관리자 승인.
 
-- 사용자는 과목명·교수명(·학기·메모)과 교안 PDF(선택, '교안 없음' 가능)를 내서 요청한다.
+- 요청 근거는 두 가지다(구조는 docs/NDRIMS.md).
+  - catalog: 이번 학기 개설 목록에서 고른 강좌(학수번호·교원번호가 정확하다)
+  - record: 내 수강 기록(지난 학기에만 열린 수업도 들었던 사람이 열 수 있게)
+  - (manual: 과목명·교수명을 직접 적던 예전 방식. 화면에서는 더 쓰지 않는다)
+- 강좌는 교안이 있어야 열린다. 요청자나 관리자가 교안을 붙인 뒤에 승인할 수 있다.
+- 같은 강좌를 여러 명이 요청하면 각각 남고, 하나를 승인하면 같은 강좌의 대기 요청이 함께 승인된다.
 - 이미 있는 강좌면 요청 대신 그 강좌를 알려 준다(409, 자료는 강좌 페이지에서 올린다).
 - 같은 과목·교수의 대기 중 요청이 있으면 새로 만들지 않는다(409).
 - 관리자가 승인하면 과목·교수·강좌를 만들고(있으면 그대로 쓰고), 교안이 있으면 판 관리 규칙으로 자료에 붙인다.
@@ -16,6 +21,7 @@ from sqlmodel import select
 from app.core.db import SessionDep
 from app.core.security import AdminUser, CurrentUser
 from app.features.courses.router import ensure_course
+from app.features.enrollments.service import ensure_course_by_keys, norm_code, relink_unlinked
 from app.features.materials.router import read_pdf
 from app.features.materials.versioning import add_material
 from app.models import Course, CourseRequest, Professor, Subject, User
@@ -37,6 +43,9 @@ class CourseRequestOut(BaseModel):
     material_count: int
     material_filenames: list[str]
     material_page_count: int  # 모든 파일 쪽 수 합계
+    source: str
+    professor_emp_no: str | None
+    same_pending_count: int  # 같은 강좌를 기다리는 대기 요청 수(이 요청 포함)
     status: str
     reject_reason: str | None
     course_id: int | None
@@ -71,6 +80,22 @@ def _files(r: CourseRequest) -> list[dict]:
     return files
 
 
+def _same_course(q, r: CourseRequest):
+    """같은 강좌(학수번호 + 교원번호, 교원번호가 없으면 교수명)를 가리키는 요청만 고른다."""
+    if r.subject_code:
+        q = q.where(CourseRequest.subject_code == r.subject_code)
+    else:
+        q = q.where(CourseRequest.subject_name == r.subject_name)
+    if r.professor_emp_no:
+        return q.where(CourseRequest.professor_emp_no == r.professor_emp_no)
+    return q.where(CourseRequest.professor_name == r.professor_name)
+
+
+def _pending_same(session, r: CourseRequest) -> list[CourseRequest]:
+    q = select(CourseRequest).where(CourseRequest.status == "pending")
+    return list(session.exec(_same_course(q, r)).all())
+
+
 def _out(session: SessionDep, r: CourseRequest) -> CourseRequestOut:
     requester = session.get(User, r.requester_id)
     files = _files(r)
@@ -86,6 +111,9 @@ def _out(session: SessionDep, r: CourseRequest) -> CourseRequestOut:
         material_count=len(files),
         material_filenames=[f["filename"] for f in files],
         material_page_count=sum(f.get("page_count") or len(f.get("pages", [])) for f in files),
+        source=r.source,
+        professor_emp_no=r.professor_emp_no,
+        same_pending_count=len(_pending_same(session, r)) if r.status == "pending" else 0,
         status=r.status,
         reject_reason=r.reject_reason,
         course_id=r.course_id,
@@ -169,6 +197,66 @@ async def create_request(
     return _out(session, r)
 
 
+def create_keyed_request(
+    session,
+    user: User,
+    *,
+    source: str,
+    sbj_no: str,
+    sbj_nm: str,
+    emp_no: str | None,
+    emp_nm: str | None,
+    semester: str | None,
+    note: str = "",
+) -> CourseRequest:
+    """개설 목록이나 수강 기록에서 고른 강좌의 열기 요청을 만든다(commit은 부르는 쪽에서)."""
+    if not emp_nm:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "교수 정보를 알 수 없습니다. 관리자가 이번 학기 개설 목록을 가져온 뒤 다시 요청해 주세요",
+        )
+    r = CourseRequest(
+        requester_id=user.id,
+        subject_name=sbj_nm.strip(),
+        subject_code=norm_code(sbj_no),
+        professor_name=emp_nm.strip(),
+        professor_emp_no=emp_no or None,
+        semester=semester,
+        source=source,
+        note=note.strip()[:1000],
+    )
+    if any(x.requester_id == user.id for x in _pending_same(session, r)):
+        raise HTTPException(status.HTTP_409_CONFLICT, "이미 요청한 강좌입니다")
+    session.add(r)
+    session.flush()
+    return r
+
+
+@router.post("/course-requests/{request_id}/files")
+async def attach_files(
+    request_id: int,
+    session: SessionDep,
+    user: CurrentUser,
+    files: Annotated[list[UploadFile], File()],
+) -> CourseRequestOut:
+    """대기 중인 요청에 교안 PDF를 붙인다(요청한 사람 또는 관리자). 교안이 있어야 승인할 수 있다."""
+    r = _get_request_or_404(session, request_id)
+    if user.role != "admin" and r.requester_id != user.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "내 요청에만 교안을 붙일 수 있습니다")
+    if r.status != "pending":
+        raise HTTPException(status.HTTP_409_CONFLICT, "이미 처리된 요청입니다")
+    added = list(r.material_files or [])
+    for f in files:
+        if f.filename:
+            filename, pages = await read_pdf(f)
+            added.append({"filename": filename, "page_count": len(pages), "pages": pages})
+    r.material_files = added
+    session.add(r)
+    session.commit()
+    session.refresh(r)
+    return _out(session, r)
+
+
 @router.get("/course-requests/mine")
 def my_requests(session: SessionDep, user: CurrentUser) -> list[CourseRequestOut]:
     rows = session.exec(
@@ -199,16 +287,33 @@ def approve_request(
     if r.status != "pending":
         raise HTTPException(status.HTTP_409_CONFLICT, "이미 처리된 요청입니다")
     body = body or ApproveIn()
+    siblings = [x for x in _pending_same(session, r) if x.id != r.id]
+    files = [f for x in (r, *siblings) for f in _files(x) if f.get("pages")]
+    if not files:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "교안이 있어야 강좌를 열 수 있습니다. 교안을 먼저 붙여 주세요",
+        )
     subject_name = (body.subject_name or r.subject_name).strip()
     professor_name = (body.professor_name or r.professor_name).strip()
-    course, _ = ensure_course(
-        session,
-        subject_name=subject_name,
-        subject_code=body.subject_code or r.subject_code,
-        professor_name=professor_name,
-        created_by=r.requester_id,
-    )
-    for f in _files(r):
+    if r.subject_code and r.source in ("catalog", "record"):
+        course, _ = ensure_course_by_keys(
+            session,
+            sbj_no=r.subject_code,
+            sbj_nm=subject_name,
+            emp_no=r.professor_emp_no,
+            emp_nm=professor_name,
+            created_by=r.requester_id,
+        )
+    else:
+        course, _ = ensure_course(
+            session,
+            subject_name=subject_name,
+            subject_code=body.subject_code or r.subject_code,
+            professor_name=professor_name,
+            created_by=r.requester_id,
+        )
+    for f in files:
         if f.get("pages"):
             add_material(  # 제목은 '과목명 교안 번호'로 자동, 중복·새 판은 판 관리 규칙대로
                 session,
@@ -220,11 +325,16 @@ def approve_request(
                 pages=f["pages"],
             )
             session.flush()
-    _drop_pages(r)  # 자료로 옮겼으니 요청에는 본문을 남기지 않는다
+    now = datetime.now(UTC)
+    for x in (r, *siblings):  # 같은 강좌를 기다리던 요청도 함께 승인
+        _drop_pages(x)  # 자료로 옮겼으니 요청에는 본문을 남기지 않는다
+        x.status, x.course_id = "approved", course.id
+        x.reviewed_by, x.reviewed_at = admin.id, now
+        session.add(x)
     r.subject_name, r.professor_name = subject_name, professor_name
-    r.status, r.course_id = "approved", course.id
-    r.reviewed_by, r.reviewed_at = admin.id, datetime.now(UTC)
-    session.add(r)
+    session.flush()
+    code = (session.get(Subject, course.subject_id) or Subject(name="")).code
+    relink_unlinked(session, {code} if code else None)  # 이 강좌를 기다리던 수강 기록을 잇는다
     session.commit()
     session.refresh(r)
     return _out(session, r)

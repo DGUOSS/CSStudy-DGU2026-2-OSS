@@ -14,32 +14,25 @@ def _upload(client, cid, kind, pages, name="file.pdf"):
     return client.post(f"/api/v1/courses/{cid}/materials", files=files, data={"kind": kind})
 
 
-def test_only_my_subjects_are_accessible(client, login, course_with_problems, enroll):
+def test_only_enrolled_courses_are_accessible(client, login, course_with_problems, enroll):
     course = course_with_problems["course"]
     login()
-    # 내 과목에 없으면 강좌·자료·문제에 들어갈 수 없다
-    assert client.get(f"/api/v1/subjects/{course.subject_id}/courses").status_code == 403
+    # 수강 기록이 없으면 강좌·자료·문제에 들어갈 수 없다
     assert client.get(f"/api/v1/courses/{course.id}").status_code == 403
     assert client.get(f"/api/v1/courses/{course.id}/chapters").status_code == 403
     assert client.get(f"/api/v1/courses/{course.id}/materials").status_code == 403
     ch = course_with_problems["chapter"]
     assert client.get(f"/api/v1/chapters/{ch.id}/problems").status_code == 403
-    # 과목 목록 자체는 볼 수 있다(내 과목을 고르기 위해)
-    assert client.get("/api/v1/subjects").status_code == 200
+    # 과목의 교수님 목록은 보이지만 잠겨 있다
+    lst = client.get(f"/api/v1/subjects/{course.subject_id}/courses").json()
+    assert [c["accessible"] for c in lst] == [False]
 
-    mine = enroll(course.subject_id, "taken")
+    enroll(course.subject_id, "taken")
+    assert client.get(f"/api/v1/courses/{course.id}").status_code == 200
+    mine = client.get("/api/v1/me/courses").json()
+    assert [c["course_id"] for c in mine["courses"]] == [course.id]
     # 강좌·시험 정보는 관리자만 고친다
     assert client.patch(f"/api/v1/courses/{course.id}", json={"info": "x"}).status_code == 403
-    assert mine["status"] == "taken" and mine["source"] == "manual"
-    assert client.get(f"/api/v1/courses/{course.id}").status_code == 200
-    assert len(client.get("/api/v1/me/subjects").json()) == 1
-
-    # 상태 바꾸기, 빼기
-    r = client.put(f"/api/v1/me/subjects/{course.subject_id}", json={"status": "current"})
-    assert r.json()["status"] == "current"
-    assert client.delete(f"/api/v1/me/subjects/{course.subject_id}").status_code == 204
-    assert client.get(f"/api/v1/courses/{course.id}").status_code == 403
-    assert client.put("/api/v1/me/subjects/9999", json={}).status_code == 404
 
 
 def test_admin_can_enter_any_course(client, login, session, course_with_problems):

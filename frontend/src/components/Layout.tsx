@@ -24,6 +24,9 @@ export function Layout() {
                 관리
               </Link>
             )}
+            <Link to="/find" className="text-muted-foreground hover:underline">
+              강좌 찾기
+            </Link>
             <Link to="/requests" className="text-muted-foreground hover:underline">
               내 요청
             </Link>

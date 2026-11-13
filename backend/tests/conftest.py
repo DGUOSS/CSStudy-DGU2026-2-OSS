@@ -43,13 +43,29 @@ def login(client):
 
 
 @pytest.fixture
-def enroll(client):
-    """로그인한 사용자의 내 과목에 과목을 넣는다(그 과목의 강좌에 들어갈 수 있게)."""
+def enroll(client, session):
+    """로그인한 사용자에게 그 과목 강좌들의 수강 기록을 넣는다(엔드림스에서 가져온 것처럼)."""
 
     def _enroll(subject_id: int, status: str = "current"):
-        r = client.put(f"/api/v1/me/subjects/{subject_id}", json={"status": status})
-        assert r.status_code == 200, r.text
-        return r.json()
+        from sqlmodel import select
+
+        from app.models import Enrollment
+
+        me = client.get("/api/v1/auth/me").json()
+        sem = "CM160.20" if status == "current" else "CM160.10"
+        for c in session.exec(select(Course).where(Course.subject_id == subject_id)).all():
+            session.add(
+                Enrollment(
+                    user_id=me["id"],
+                    year="2026",
+                    sem_cd=sem,
+                    sbj_no=f"TST{subject_id:04d}",
+                    sbj_nm="테스트",
+                    dvcls=f"{c.id:02d}",
+                    course_id=c.id,
+                )
+            )
+        session.commit()
 
     return _enroll
 

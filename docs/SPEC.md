@@ -11,6 +11,7 @@
                                   ├ 자료: 교안 / 족보 / 시험 정보 탭별 PDF 목록과 올리기
                                   └ 강좌 정보: 수업 방식·평가 비율 등 공용 안내(관리자만 수정). 시험 정보는 자료 탭 '시험 정보'로
 ```
+- **수강 기록**(11/12~): 엔드림스 수강 기록을 즐겨찾기 버튼으로 가져와, 기록이 있는 강좌(과목+교수)에만 들어간다. 구조·규칙은 `docs/NDRIMS.md`. **공용 강좌**(`is_public`, 관리자가 켬)는 기록이 없어도 누구나 들어간다(팀 시험·공개 자료용). 아래 '내 과목' 설명은 그 전 방식이다.
 - **내 과목**: 수강 중이거나 수강했던 과목만 들어갈 수 있다. 지금은 전체 과목 목록에서 사용자가 직접 '내 과목에 추가'를 누른다(`user_subjects.source = manual`, 수강 중/수강함은 화면에서 나누지 않는다). 엔드림스 수강 내역 가져오기는 나중에 같은 테이블에 `source = ndrims`로 넣는다.
   - 내 과목이 아닌 과목의 강좌·자료·챕터·문제·숙련도·족보 API는 403. 과목 목록(`GET /subjects`)은 고르기 위해 누구나 본다. 관리자는 모든 과목에 들어간다.
 - **족보 고르기**: 문제 풀이 탭 위에서 그 강좌의 족보(자료 종류 exam, 최신판)를 고른다. 고른 족보는 문제 생성 때 출제 스타일 예시로 넘긴다(`features/exams/router.py`의 `exam_style_examples` → `services/llm.generate_problems`). 문제 생성 연결은 아직 전이다.
@@ -75,14 +76,22 @@
 | GET | /chapters/{id}/problems?count=5 | 필요 | 다음 문제 (정답 제외) |
 | POST | /problems/{id}/attempts | 필요 | 채점, 해설, 근거, 숙련도 변화 |
 | GET | /courses/{id}/mastery | 필요 | 개념별 숙련도 |
-| POST | /course-requests | 필요 | 과목·강좌 추가 요청 (form, 교안 PDF는 선택) |
+| POST | /course-requests | 필요 | 직접 요청: 기록·강좌 찾기에 없는 강좌 (form, 교안 PDF·메모는 선택) |
 | GET | /course-requests/mine | 필요 | 내 요청과 처리 상태 |
 | GET | /admin/course-requests?status= | 관리자 | 요청 목록 |
 | POST | /admin/course-requests/{id}/approve, /reject | 관리자 | 승인(이름 수정 가능), 반려(사유 필수) |
 | POST | /admin/courses | 관리자 | 과목·교수·강좌 만들기(있으면 그대로) + 자료 PDF 여러 개 (판 관리 적용) |
 | PATCH·DELETE | /admin/subjects/{id} | 관리자 | 과목명·학수번호 수정, 삭제(딸린 강좌 전부와 '내 과목' 등록까지 함께) |
-| PATCH·DELETE | /admin/courses/{id} | 관리자 | 교수명 수정, 삭제(자료·챕터·문제·풀이 기록·족보 평가와 선택까지 함께) |
+| PATCH·DELETE | /admin/courses/{id} | 관리자 | 교수명 수정·공용 켜고 끄기(`is_public`), 삭제(자료·챕터·문제·풀이 기록·족보 평가와 선택까지 함께) |
 | PATCH·DELETE | /admin/materials/{id} | 관리자 | 제목·종류 수정, 삭제(최신판을 지우면 이전 판이 다시 최신판, 문제 근거는 남은 자료에서 다시 찾음, 챕터 연결은 이전 판으로, 족보 평가·선택은 함께 삭제) |
+
+| POST | /me/ndrims/import | 필요 | 엔드림스 수강 기록 저장(과목 찾는 칸만), 강좌와 잇기 |
+| GET | /me/courses | 필요 | 내 강좌(수강 중/수강함), 아직 열리지 않은 수업, 공용 강좌 |
+| POST | /me/enrollments/{id}/request | 필요 | 내 수강 기록의 수업 열기 요청(지난 학기 수업도, 메모 선택). 요청 번호를 돌려준다 |
+| GET | /catalog/terms, /catalog/filters, /catalog/search | 필요 | 개설 목록(엔드림스 종합강의시간표) 찾기 |
+| POST | /catalog/request | 필요 | 개설 목록의 강좌 열기 요청(메모 선택). 요청 번호를 돌려준다 |
+| POST | /course-requests/{id}/files | 요청자·관리자 | 요청에 교안 붙이기(교안이 있어야 승인) |
+| POST | /admin/catalog/import | 관리자 | 개설 목록 저장(강좌는 만들지 않음) |
 
 전체 명세는 서버 실행 후 http://localhost:8000/docs
 

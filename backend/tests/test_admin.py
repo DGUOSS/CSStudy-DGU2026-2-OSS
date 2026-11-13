@@ -59,7 +59,6 @@ def test_admin_edit_and_delete(client, login, session, course_with_problems):
     r = client.patch(f"/api/v1/admin/courses/{course.id}", json={"professor_name": "강교수"})
     assert r.json()["professor_name"] == "강교수"
     # 챕터·문제·풀이 기록·족보 평가가 있는 강좌도 통째로 지운다
-    client.put(f"/api/v1/me/subjects/{sid}", json={})
     prob = course_with_problems["problems"][0]
     client.post(f"/api/v1/problems/{prob.id}/attempts", json={"chosen_index": 0})
     ex = client.post(
@@ -73,7 +72,7 @@ def test_admin_edit_and_delete(client, login, session, course_with_problems):
     assert client.get(f"/api/v1/courses/{course.id}").status_code == 404
     # 과목도 '내 과목' 등록과 함께 지워진다
     assert client.delete(f"/api/v1/admin/subjects/{sid}").status_code == 204
-    assert client.get("/api/v1/me/subjects").json() == []
+    assert client.get(f"/api/v1/courses/{course.id}").status_code == 404
 
     # 빈 강좌는 자료와 함께 지워지고, 그다음 과목도 지울 수 있다
     r = client.post(

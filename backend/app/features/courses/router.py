@@ -6,7 +6,7 @@ from sqlmodel import func, select
 
 from app.core.db import SessionDep
 from app.core.security import AdminUser, CurrentUser
-from app.features.my_subjects.router import require_course_access, require_subject_access
+from app.features.enrollments.service import can_enter, relink_course, require_course_access
 from app.models import Chapter, Course, Material, Problem, Professor, Subject
 
 router = APIRouter(tags=["courses"])
@@ -34,6 +34,8 @@ class CourseOut(BaseModel):
     exam_info: str
     material_count: int
     problem_count: int
+    accessible: bool = True  # 이 사용자가 들어갈 수 있는가(수강 기록이 있거나 공용 강좌)
+    is_public: bool = False
 
 
 class CourseIn(BaseModel):
@@ -67,6 +69,7 @@ def _course_out(session: SessionDep, course: Course) -> CourseOut:
         professor_id=professor.id,
         professor_name=professor.name,
         info=course.info,
+        is_public=course.is_public,
         exam_info=course.exam_info,
         material_count=material_count,
         problem_count=problem_count,
@@ -141,10 +144,13 @@ def create_subject(body: SubjectIn, session: SessionDep, _: AdminUser) -> Subjec
 def list_courses(subject_id: int, session: SessionDep, user: CurrentUser) -> list[CourseOut]:
     if session.get(Subject, subject_id) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "과목이 없습니다")
-    require_subject_access(session, user, subject_id)
+    # 목록은 보여 주되, 수강 기록이 없는 교수님 강좌는 잠겨 있다고 표시한다
     courses = session.exec(select(Course).where(Course.subject_id == subject_id)).all()
-    out = [_course_out(session, c) for c in courses]
-    return sorted(out, key=lambda c: c.professor_name)
+    out = [
+        _course_out(session, c).model_copy(update={"accessible": can_enter(session, user, c)})
+        for c in courses
+    ]
+    return sorted(out, key=lambda c: (not c.accessible, c.professor_name))
 
 
 @router.post("/courses", status_code=status.HTTP_201_CREATED)
@@ -173,6 +179,8 @@ def create_course(body: CourseIn, session: SessionDep, user: AdminUser) -> Cours
         created_by=user.id,
     )
     session.add(course)
+    session.flush()
+    relink_course(session, course)  # 이 강좌를 기다리던 수강 기록을 잇는다
     session.commit()
     session.refresh(course)
     return _course_out(session, course)
