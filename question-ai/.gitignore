@@ -1,0 +1,27 @@
+# 비밀 정보 — 절대 커밋하지 않음
+.env
+
+# 재생성 가능한 산출물
+cache/
+outputs/
+data/*/index/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# 에디터 / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+
+# 강의자료·기출 원본 (저작권, 각자 보관) — 직접 만든 demo 더미만 예외
+data/*/lectures/*.pdf
+data/*/past_exams/*.pdf
+data/*/past_exams/*.png
+data/*/past_exams/*.jpg

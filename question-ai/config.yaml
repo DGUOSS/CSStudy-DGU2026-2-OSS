@@ -1,0 +1,33 @@
+# Gemini 무료 티어용 설정. 모델 이름은 AI Studio에서 사용 가능한 것으로 바꿔도 됨.
+# 교차 검증: 다른 회사 모델이 없으므로 generator와 solver를 서로 다른 Gemini 모델로 둔다.
+models:
+  analyst:   "gemini/gemini-3-flash-preview"
+  planner:   "gemini/gemini-flash-lite-latest"
+  generator: "gemini/gemini-3-flash-preview"
+  solver:    "gemini/gemini-flash-lite-latest"
+  reviewer:  "gemini/gemini-3-flash-preview"
+  # 최종 품질 평가자 (M5). 위 생성용 모델과 겹치지 않아야 함 (명세 §7, §10)
+  # gemini-2.5-flash: 신규 사용자 404 / pro 계열: 무료 할당량 0(429) → 3.5-flash 사용 (2026-11-11 확인)
+  judge:     "gemini/gemini-3.5-flash"
+
+retrieval:
+  embedding_model: "intfloat/multilingual-e5-small"   # CPU, 8GB RAM에서 동작
+  batch_size: 16                                      # 메모리 절약용 작은 배치
+  index_dir: "data/{course}/index"                    # 임베딩(.npy) + 청크 메타데이터 저장 위치
+
+experiments:
+  conditions: ["single", "multi_same", "multi_cross", "multi_no_loop"]
+  num_sets: 3                 # 조건별 생성 세트 수
+
+pipeline:
+  num_questions_override: 4   # 무료 한도 절약용. null이면 프로필의 num_questions 사용
+  max_revisions: 2
+  max_regenerations: 1
+  retrieval_top_k: 4
+  min_interval_sec:           # 회사별 호출 간 최소 간격(초). 무료 티어 분당 요청 제한 대응
+    gemini: 7
+    openai: 0
+    anthropic: 0
+  temperature:
+    generator: 0.8
+    others: 0.2

@@ -1,0 +1,24 @@
+# 설치: pip install -r requirements.txt
+# torch는 CPU 전용 빌드 (GPU 없음, 용량 절약)
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+# LLM 호출 / 스키마 / 설정
+litellm>=1.40
+pydantic>=2.6
+pyyaml>=6.0
+python-dotenv>=1.0
+
+# 수집과 검색
+pymupdf>=1.24
+numpy>=1.26
+torch>=2.2
+sentence-transformers>=3.0
+
+# 테스트
+pytest>=8.0
+
+# (선택) UI — M6에서 사용
+# streamlit>=1.35
+
+# qgen 패키지 자체 (src/qgen, editable 설치 → python -m qgen.xxx 로 실행 가능)
+-e .
