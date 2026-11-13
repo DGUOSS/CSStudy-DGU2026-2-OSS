@@ -151,7 +151,7 @@ function RequestCard({ r }: { r: CourseRequest }) {
           </Button>
           <Input
             className="sm:max-w-xs"
-            placeholder="반려 사유"
+            placeholder="반려 사유 (적으면 반려 버튼이 켜집니다)"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />
@@ -165,6 +165,11 @@ function RequestCard({ r }: { r: CourseRequest }) {
             반려
           </Button>
         </div>
+      )}
+      {pending && !r.has_material && (
+        <p className="text-xs text-muted-foreground">
+          교안이 없어 아직 승인할 수 없습니다. 교안 PDF를 붙이면 승인 버튼이 켜집니다.
+        </p>
       )}
       <ErrorText error={approve.error ?? reject.error} />
     </Card>

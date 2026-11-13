@@ -1934,13 +1934,30 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/NoteIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MyCoursesOut"
+                  "$ref": "#/components/schemas/RecordRequestOut"
                 }
               }
             }
@@ -2353,9 +2370,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Request From Catalog Api V1 Catalog Request Post"
+                  "$ref": "#/components/schemas/RequestCreatedOut"
                 }
               }
             }
@@ -3855,6 +3870,18 @@
         ],
         "title": "MyCoursesOut"
       },
+      "NoteIn": {
+        "properties": {
+          "note": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "NoteIn"
+      },
       "OfferingGroupOut": {
         "properties": {
           "year": {
@@ -4311,6 +4338,18 @@
               }
             ],
             "title": "Emp Nm"
+          },
+          "emp_no": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emp No"
           }
         },
         "type": "object",
@@ -4322,6 +4361,65 @@
         ],
         "title": "RecordIn",
         "description": "엔드림스 수강신청내역(OPEN_YY·OPEN_SEM_CD…) 또는 전체성적조회(YY·SEM_CD…·EMP_NM) 한 줄."
+      },
+      "RecordRequestOut": {
+        "properties": {
+          "current_term": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Term"
+          },
+          "record_count": {
+            "type": "integer",
+            "title": "Record Count"
+          },
+          "imported_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imported At"
+          },
+          "courses": {
+            "items": {
+              "$ref": "#/components/schemas/MyCourseOut"
+            },
+            "type": "array",
+            "title": "Courses"
+          },
+          "waiting": {
+            "items": {
+              "$ref": "#/components/schemas/WaitingOut"
+            },
+            "type": "array",
+            "title": "Waiting"
+          },
+          "request_id": {
+            "type": "integer",
+            "title": "Request Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "current_term",
+          "record_count",
+          "imported_at",
+          "courses",
+          "waiting",
+          "request_id"
+        ],
+        "title": "RecordRequestOut"
       },
       "RejectIn": {
         "properties": {
@@ -4337,6 +4435,19 @@
           "reason"
         ],
         "title": "RejectIn"
+      },
+      "RequestCreatedOut": {
+        "properties": {
+          "request_id": {
+            "type": "integer",
+            "title": "Request Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id"
+        ],
+        "title": "RequestCreatedOut"
       },
       "RequestIn": {
         "properties": {
@@ -4355,6 +4466,12 @@
           "dvcls": {
             "type": "string",
             "title": "Dvcls",
+            "default": ""
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Note",
             "default": ""
           }
         },
