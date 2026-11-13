@@ -178,13 +178,17 @@ def import_records(body: ImportIn, session: SessionDep, user: CurrentUser) -> Im
     )
 
 
+class NoteIn(BaseModel):
+    note: str = Field(default="", max_length=1000)
+
+
 class RecordRequestOut(MyCoursesOut):
     request_id: int
 
 
 @router.post("/me/enrollments/{enrollment_id}/request", status_code=status.HTTP_201_CREATED)
 def request_from_record(
-    enrollment_id: int, session: SessionDep, user: CurrentUser
+    enrollment_id: int, session: SessionDep, user: CurrentUser, body: NoteIn | None = None
 ) -> RecordRequestOut:
     """내 수강 기록의 수업을 열어 달라고 요청한다(지난 학기에만 열린 수업도 가능)."""
     e = session.get(Enrollment, enrollment_id)
@@ -201,6 +205,7 @@ def request_from_record(
         emp_no=e.emp_no,
         emp_nm=e.emp_nm,
         semester=term_label(e.year, e.sem_cd),
+        note=body.note if body else "",
     )
     session.commit()
     return RecordRequestOut(**_my_courses(session, user).model_dump(), request_id=r.id)

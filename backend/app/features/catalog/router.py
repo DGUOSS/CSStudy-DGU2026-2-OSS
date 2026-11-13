@@ -111,6 +111,7 @@ class RequestIn(BaseModel):
     sem_cd: str
     sbj_no: str
     dvcls: str = ""
+    note: str = Field(default="", max_length=1000)
 
 
 @router.post("/admin/catalog/import")
@@ -327,6 +328,7 @@ def request_from_catalog(
         emp_no=o.emp_no,
         emp_nm=o.emp_nm,
         semester=f"{o.year} {sem_label(o.sem_cd)}",
+        note=body.note,
     )
     session.commit()
     return RequestCreatedOut(request_id=r.id)

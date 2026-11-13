@@ -1,6 +1,8 @@
+import { Plus } from 'lucide-react'
 import { Link } from 'react-router'
 import { Empty, ErrorText, Loading } from '@/components/States'
 import { Badge } from '@/components/ui/badge'
+import { buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { AttachFiles } from './AttachFiles'
 import { STATUS_LABEL, useMyRequests } from './queries'
@@ -16,6 +18,10 @@ export function MyRequestsPage() {
             교안이 붙으면 관리자가 확인한 뒤 강좌를 엽니다. 교안을 가지고 있다면 붙여 주세요.
           </p>
         </div>
+        <Link to="/requests/new" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+          <Plus />
+          직접 요청
+        </Link>
       </div>
       {requests.isPending ? (
         <Loading />

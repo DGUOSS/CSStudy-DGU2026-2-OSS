@@ -180,6 +180,9 @@ export function CatalogPage() {
               </Button>
             </div>
           )}
+          <Link to="/requests/new" className="text-sm text-muted-foreground hover:underline">
+            찾는 강좌가 목록에 없나요? 직접 요청하기
+          </Link>
         </div>
       )}
     </div>
@@ -240,11 +243,17 @@ function Row({ g }: { g: OfferingGroup }) {
         ) : (
           <RequestWithFiles
             label={`열어 달라고 요청${g.request_count > 0 ? ` (${g.request_count}명)` : ''}`}
-            create={async () =>
+            create={async (note) =>
               (
                 await unwrap(
                   api.POST('/api/v1/catalog/request', {
-                    body: { year: g.year, sem_cd: g.sem_cd, sbj_no: g.sbj_no, dvcls: g.dvcls[0] ?? '' },
+                    body: {
+                      year: g.year,
+                      sem_cd: g.sem_cd,
+                      sbj_no: g.sbj_no,
+                      dvcls: g.dvcls[0] ?? '',
+                      note,
+                    },
                   }),
                 )
               ).request_id

@@ -207,6 +207,7 @@ def create_keyed_request(
     emp_no: str | None,
     emp_nm: str | None,
     semester: str | None,
+    note: str = "",
 ) -> CourseRequest:
     """개설 목록이나 수강 기록에서 고른 강좌의 열기 요청을 만든다(commit은 부르는 쪽에서)."""
     if not emp_nm:
@@ -222,6 +223,7 @@ def create_keyed_request(
         professor_emp_no=emp_no or None,
         semester=semester,
         source=source,
+        note=note.strip()[:1000],
     )
     if any(x.requester_id == user.id for x in _pending_same(session, r)):
         raise HTTPException(status.HTTP_409_CONFLICT, "이미 요청한 강좌입니다")

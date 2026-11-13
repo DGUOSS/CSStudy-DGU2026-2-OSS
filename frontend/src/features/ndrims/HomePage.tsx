@@ -104,24 +104,29 @@ export function HomePage() {
                     요청함{w.request_count > 1 && ` (${w.request_count}명)`}
                   </Badge>
                 ) : (
-                  <RequestWithFiles
-                    label={`열어 달라고 요청${w.request_count > 0 ? ` (${w.request_count}명 대기)` : ''}`}
-                    disabled={!w.professor_name}
-                    title={
-                      w.professor_name
-                        ? ''
-                        : '교수 정보가 없습니다. 엔드림스에서 수강 기록을 다시 가져와 주세요'
-                    }
-                    create={async () =>
-                      (
-                        await unwrap(
-                          api.POST('/api/v1/me/enrollments/{enrollment_id}/request', {
-                            params: { path: { enrollment_id: w.enrollment_id } },
-                          }),
-                        )
-                      ).request_id
-                    }
-                  />
+                  w.professor_name ? (
+                    <RequestWithFiles
+                      label={`열어 달라고 요청${w.request_count > 0 ? ` (${w.request_count}명 대기)` : ''}`}
+                      create={async (note) =>
+                        (
+                          await unwrap(
+                            api.POST('/api/v1/me/enrollments/{enrollment_id}/request', {
+                              params: { path: { enrollment_id: w.enrollment_id } },
+                              body: { note },
+                            }),
+                          )
+                        ).request_id
+                      }
+                    />
+                  ) : (
+                    <Link
+                      to={`/requests/new?subject=${encodeURIComponent(w.sbj_nm)}&code=${encodeURIComponent(w.sbj_no)}&semester=${encodeURIComponent(w.term)}`}
+                      className={buttonVariants({ size: 'sm', variant: 'outline' })}
+                      title="교수 정보가 없어 교수님 이름을 직접 적어 요청합니다"
+                    >
+                      직접 요청
+                    </Link>
+                  )
                 )}
               </li>
             ))}

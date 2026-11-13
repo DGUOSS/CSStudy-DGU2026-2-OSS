@@ -1100,6 +1100,14 @@ export interface components {
             /** Waiting */
             waiting: components["schemas"]["WaitingOut"][];
         };
+        /** NoteIn */
+        NoteIn: {
+            /**
+             * Note
+             * @default
+             */
+            note?: string;
+        };
         /**
          * OfferingGroupOut
          * @description 같은 과목·교수의 분반을 한 줄로 묶은 결과. 사이트의 강좌 하나에 해당한다.
@@ -1267,6 +1275,11 @@ export interface components {
              * @default
              */
             dvcls?: string;
+            /**
+             * Note
+             * @default
+             */
+            note?: string;
         };
         /** SearchOut */
         SearchOut: {
@@ -2572,7 +2585,11 @@ export interface operations {
                 access_token?: string | null;
             };
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["NoteIn"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             201: {

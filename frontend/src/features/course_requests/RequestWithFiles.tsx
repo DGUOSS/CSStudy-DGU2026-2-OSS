@@ -1,11 +1,14 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Send } from 'lucide-react'
 import { useState } from 'react'
+import { PdfPicker } from '@/components/PdfPicker'
 import { ErrorText } from '@/components/States'
 import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 import { uploadRequestFiles } from './upload'
 
 /**
- * '열어 달라고 요청' 버튼. 누르면 교안 PDF를 같이 올릴 수 있는 칸이 열린다(선택).
+ * '열어 달라고 요청' 버튼. 누르면 교안 PDF(선택)와 메모(선택)를 넣는 칸이 열린다.
  * create는 요청을 만들고 요청 번호를 돌려준다.
  */
 export function RequestWithFiles({
@@ -15,21 +18,23 @@ export function RequestWithFiles({
   title,
 }: {
   label: string
-  create: () => Promise<number>
+  create: (note: string) => Promise<number>
   disabled?: boolean
   title?: string
 }) {
   const qc = useQueryClient()
   const [open, setOpen] = useState(false)
   const [files, setFiles] = useState<File[]>([])
+  const [note, setNote] = useState('')
   const send = useMutation({
     mutationFn: async () => {
-      const id = await create()
+      const id = await create(note)
       if (files.length) await uploadRequestFiles(id, files)
     },
     onSuccess: () => {
       setOpen(false)
       setFiles([])
+      setNote('')
       qc.invalidateQueries()
     },
   })
@@ -48,20 +53,24 @@ export function RequestWithFiles({
     )
 
   return (
-    <div className="flex w-full max-w-sm flex-col gap-2 rounded-lg border bg-muted/30 p-3 text-sm">
-      <p className="text-muted-foreground">
-        교안 PDF가 있으면 같이 올려 주세요(선택). 교안이 붙어야 관리자가 강좌를 열 수 있고, 나중에
-        &lsquo;내 요청&rsquo;에서 붙여도 됩니다.
-      </p>
-      <input
-        type="file"
-        accept="application/pdf,.pdf"
-        multiple
-        className="text-xs"
-        onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+    <div className="flex w-full max-w-sm flex-col gap-3 rounded-lg border bg-muted/30 p-3 text-sm">
+      <div>
+        <div className="font-medium">교안 PDF (선택)</div>
+        <p className="text-xs text-muted-foreground">
+          교안이 붙어야 관리자가 강좌를 열 수 있습니다. 지금 없으면 나중에 &lsquo;내 요청&rsquo;에서
+          붙여도 됩니다.
+        </p>
+      </div>
+      <PdfPicker files={files} onChange={setFiles} />
+      <Textarea
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        placeholder="관리자에게 남길 말 (선택)"
+        className="h-16 text-sm"
       />
       <div className="flex gap-2">
         <Button size="sm" disabled={send.isPending} onClick={() => send.mutate()}>
+          <Send />
           {send.isPending
             ? '보내는 중…'
             : files.length

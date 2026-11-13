@@ -58,6 +58,12 @@ export function SubjectCoursesPage() {
         <Search className="size-4" />
         찾는 강좌가 없으면 강좌 찾기에서 열어 달라고 요청하세요
       </Link>
+      <Link
+        to={`/requests/new?subject=${encodeURIComponent(subject?.name ?? '')}&code=${encodeURIComponent(subject?.code ?? '')}`}
+        className="text-sm text-muted-foreground hover:underline"
+      >
+        강좌 찾기에도 없으면 직접 요청하기
+      </Link>
       {user?.role === 'admin' && (
         <Link to="/admin/courses" className="text-sm text-primary hover:underline">
           관리자: 과목·강좌·교안 직접 추가와 수정은 관리 화면에서

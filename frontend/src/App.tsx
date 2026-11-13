@@ -5,6 +5,7 @@ import { AdminCoursesPage } from '@/features/admin/AdminCoursesPage'
 import { AuthPage } from '@/features/auth/AuthPage'
 import { AdminRequestsPage } from '@/features/course_requests/AdminRequestsPage'
 import { MyRequestsPage } from '@/features/course_requests/MyRequestsPage'
+import { RequestCoursePage } from '@/features/course_requests/RequestCoursePage'
 import { CoursePage } from '@/features/courses/CoursePage'
 import { SubjectCoursesPage } from '@/features/courses/SubjectCoursesPage'
 import { CatalogPage } from '@/features/ndrims/CatalogPage'
@@ -26,6 +27,7 @@ const router = createBrowserRouter([
       { path: '/courses/:courseId', element: <CoursePage /> },
       { path: '/courses/:courseId/chapters/:chapterId/quiz', element: <QuizPage /> },
       { path: '/requests', element: <MyRequestsPage /> },
+      { path: '/requests/new', element: <RequestCoursePage /> },
       { path: '/admin/courses', element: <AdminCoursesPage /> },
       { path: '/admin/requests', element: <AdminRequestsPage /> },
       { path: '/admin/catalog', element: <AdminCatalogPage /> },
