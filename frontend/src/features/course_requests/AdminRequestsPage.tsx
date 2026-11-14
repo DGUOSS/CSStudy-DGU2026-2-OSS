@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { AdminNav } from '@/features/admin/AdminNav'
+import { AttachFiles } from './AttachFiles'
 import { type CourseRequest, STATUS_LABEL, useAdminRequests } from './queries'
 
 type Filter = 'pending' | 'approved' | 'rejected' | undefined
@@ -28,8 +29,8 @@ export function AdminRequestsPage() {
       <div>
         <h1 className="text-2xl font-bold">관리</h1>
         <p className="text-sm text-muted-foreground">
-          승인하면 과목·강좌가 만들어지고, 함께 온 교안이 자료로 붙습니다. 이름 표기는 승인 전에 고칠 수
-          있습니다.
+          교안이 붙은 요청만 승인할 수 있습니다. 승인하면 강좌가 열리고 교안이 자료로 붙으며, 같은
+          강좌를 기다리던 요청과 수강 기록이 함께 이어집니다.
         </p>
       </div>
       <AdminNav />
@@ -66,6 +67,11 @@ function RequestCard({ r }: { r: CourseRequest }) {
   const [subjectName, setSubjectName] = useState(r.subject_name)
   const [professorName, setProfessorName] = useState(r.professor_name)
   const [reason, setReason] = useState('')
+  const SOURCE_LABEL: Record<string, string> = {
+    catalog: '개설 목록에서',
+    record: '수강 기록에서',
+    manual: '직접 입력',
+  }
   const done = () => {
     qc.invalidateQueries({ queryKey: ['course-requests'] })
     qc.invalidateQueries({ queryKey: ['subjects'] })
@@ -121,7 +127,9 @@ function RequestCard({ r }: { r: CourseRequest }) {
         </div>
       )}
       <div className="text-sm text-muted-foreground">
-        {r.subject_code && `${r.subject_code} · `}
+        {SOURCE_LABEL[r.source] ?? r.source} · {r.subject_code && `${r.subject_code} · `}
+        {r.professor_emp_no && `교원 ${r.professor_emp_no} · `}
+        {pending && r.same_pending_count > 1 && `같은 강좌 요청 ${r.same_pending_count}명 · `}
         {r.semester && `${r.semester} · `}
         {r.has_material
           ? `교안 ${r.material_count}개${r.material_page_count ? ` (${r.material_page_count}쪽)` : ''}: ${r.material_filenames.join(', ')}`
@@ -131,13 +139,19 @@ function RequestCard({ r }: { r: CourseRequest }) {
       {r.reject_reason && <p className="text-sm">반려 사유: {r.reject_reason}</p>}
       {pending && (
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Button size="sm" onClick={() => approve.mutate()} disabled={approve.isPending}>
+          {!r.has_material && <AttachFiles requestId={r.id} />}
+          <Button
+            size="sm"
+            onClick={() => approve.mutate()}
+            disabled={approve.isPending || !r.has_material}
+            title={r.has_material ? '' : '교안을 먼저 붙여 주세요'}
+          >
             <Check />
-            승인
+            승인(강좌 열기)
           </Button>
           <Input
             className="sm:max-w-xs"
-            placeholder="반려 사유"
+            placeholder="반려 사유 (적으면 반려 버튼이 켜집니다)"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />
@@ -151,6 +165,11 @@ function RequestCard({ r }: { r: CourseRequest }) {
             반려
           </Button>
         </div>
+      )}
+      {pending && !r.has_material && (
+        <p className="text-xs text-muted-foreground">
+          교안이 없어 아직 승인할 수 없습니다. 교안 PDF를 붙이면 승인 버튼이 켜집니다.
+        </p>
       )}
       <ErrorText error={approve.error ?? reject.error} />
     </Card>

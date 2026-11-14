@@ -17,7 +17,10 @@ export function AdminNav() {
         과목·강좌·교안 관리
       </NavLink>
       <NavLink to="/admin/requests" className={tab}>
-        추가 요청
+        강좌 열기 요청
+      </NavLink>
+      <NavLink to="/admin/catalog" className={tab}>
+        개설 목록
       </NavLink>
     </nav>
   )

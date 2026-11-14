@@ -18,6 +18,7 @@ from sqlmodel import func, select
 from app.core.db import SessionDep
 from app.core.security import AdminUser
 from app.features.courses.router import CourseOut, SubjectOut, _course_out, ensure_course
+from app.features.enrollments.service import relink_course
 from app.features.materials.router import MaterialOut, UploadOut, _out, read_pdf
 from app.features.materials.versioning import add_material, relink_problems
 from app.models import (
@@ -26,6 +27,7 @@ from app.models import (
     Concept,
     Course,
     CourseRequest,
+    Enrollment,
     ExamSelection,
     Material,
     MaterialVote,
@@ -33,7 +35,6 @@ from app.models import (
     ProblemConcept,
     Professor,
     Subject,
-    UserSubject,
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -53,7 +54,8 @@ class SubjectUpdate(BaseModel):
 
 
 class CourseAdminUpdate(BaseModel):
-    professor_name: str = Field(min_length=1, max_length=50)
+    professor_name: str | None = Field(default=None, min_length=1, max_length=50)
+    is_public: bool | None = None
 
 
 class MaterialUpdate(BaseModel):
@@ -114,6 +116,8 @@ async def admin_create_course(
         created_by=admin.id,
     )
     uploads = await _add_files(session, course.id, admin.id, kind, files or [])
+    if created:
+        relink_course(session, course)  # 이 강좌를 기다리던 수강 기록을 잇는다
     session.commit()
     if not created:
         response.status_code = status.HTTP_200_OK
@@ -150,9 +154,6 @@ def admin_delete_subject(subject_id: int, session: SessionDep, _: AdminUser) -> 
         raise HTTPException(status.HTTP_404_NOT_FOUND, "과목이 없습니다")
     for course in session.exec(select(Course).where(Course.subject_id == subject_id)).all():
         _purge_course(session, course)
-    for us in session.exec(select(UserSubject).where(UserSubject.subject_id == subject_id)).all():
-        session.delete(us)
-    session.flush()
     session.delete(subject)
     session.commit()
 
@@ -164,20 +165,29 @@ def admin_update_course(
     course = session.get(Course, course_id)
     if course is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "강좌가 없습니다")
-    name = body.professor_name.strip()
-    professor = session.exec(select(Professor).where(Professor.name == name)).first()
-    if professor is None:
-        professor = Professor(name=name)
-        session.add(professor)
-        session.flush()
-    dup = session.exec(
-        select(Course).where(
-            Course.subject_id == course.subject_id, Course.professor_id == professor.id
-        )
-    ).first()
-    if dup and dup.id != course.id:
-        raise HTTPException(status.HTTP_409_CONFLICT, "같은 과목에 그 교수님 강좌가 이미 있습니다")
-    course.professor_id = professor.id
+    if body.professor_name is not None:
+        name = body.professor_name.strip()
+        professor = session.exec(select(Professor).where(Professor.name == name)).first()
+        if professor is None:
+            professor = Professor(name=name)
+            session.add(professor)
+            session.flush()
+        dup = session.exec(
+            select(Course).where(
+                Course.subject_id == course.subject_id, Course.professor_id == professor.id
+            )
+        ).first()
+        if dup and dup.id != course.id:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT, "같은 과목에 그 교수님 강좌가 이미 있습니다"
+            )
+        if course.professor_id != professor.id:
+            course.professor_id = professor.id
+            session.add(course)
+            session.flush()
+            relink_course(session, course)  # 예전 교수 기록은 떼고 새 교수 기록을 잇는다
+    if body.is_public is not None:
+        course.is_public = body.is_public
     session.add(course)
     session.commit()
     return _course_out(session, course)
@@ -204,6 +214,10 @@ def _purge_course(session, course: Course) -> None:
     for r in session.exec(select(CourseRequest).where(CourseRequest.course_id == cid)).all():
         r.course_id = None
         session.add(r)
+    # 수강 기록은 남기고 강좌 연결만 끊는다(다시 열리면 다시 이어진다)
+    for e in session.exec(select(Enrollment).where(Enrollment.course_id == cid)).all():
+        e.course_id = None
+        session.add(e)
     chapters = session.exec(select(Chapter).where(Chapter.course_id == cid)).all()
     ch_ids = [c.id for c in chapters]
     problems = (

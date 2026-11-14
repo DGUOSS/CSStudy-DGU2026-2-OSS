@@ -1,12 +1,9 @@
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Lock, Search } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { Empty, ErrorText, Loading } from '@/components/States'
 import { Badge } from '@/components/ui/badge'
-import { buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useAuth } from '@/features/auth/useAuth'
-import { MySubjectButtons } from '@/features/my_subjects/MySubjectButtons'
-import { isForbidden } from '@/features/my_subjects/queries'
 import { useCourses, useSubjects } from './queries'
 
 export function SubjectCoursesPage() {
@@ -20,53 +17,53 @@ export function SubjectCoursesPage() {
       <div>
         <Link to="/" className="mb-2 inline-flex items-center text-sm text-muted-foreground">
           <ChevronLeft className="size-4" />
-          과목 목록
+          내 강좌
         </Link>
         <h1 className="text-2xl font-bold">{subject?.name ?? '과목'}</h1>
-        <p className="text-sm text-muted-foreground">교수님을 고르세요.</p>
+        <p className="text-sm text-muted-foreground">
+          수강 기록이 있는 교수님 강좌에만 들어갈 수 있습니다. 다른 교수님 강좌는 잠겨 있습니다.
+        </p>
       </div>
       {courses.isPending ? (
         <Loading />
-      ) : isForbidden(courses.error) ? (
-        <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-sm text-muted-foreground">
-            내 과목에 넣은 과목만 들어갈 수 있습니다. 수강 중이거나 수강했던 과목이면 추가해 주세요.
-          </div>
-          <MySubjectButtons subjectId={subjectId} />
-        </Card>
       ) : courses.data?.length === 0 ? (
-        <Empty>아직 등록된 강좌가 없습니다. 아래에서 추가를 요청해 주세요.</Empty>
+        <Empty>아직 열린 강좌가 없습니다.</Empty>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
-          {courses.data?.map((c) => (
-            <Link key={c.id} to={`/courses/${c.id}`}>
-              <Card className="flex items-center justify-between p-5 transition-colors hover:bg-accent">
-                <div className="flex flex-col gap-2">
-                  <div className="font-semibold">{c.professor_name} 교수님</div>
-                  <div className="flex gap-1.5">
-                    <Badge variant="secondary">자료 {c.material_count}</Badge>
-                    <Badge variant="secondary">문제 {c.problem_count}</Badge>
+          {courses.data?.map((c) =>
+            c.accessible ? (
+              <Link key={c.id} to={`/courses/${c.id}`}>
+                <Card className="flex items-center justify-between p-5 transition-colors hover:bg-accent">
+                  <div className="flex flex-col gap-2">
+                    <div className="font-semibold">{c.professor_name} 교수님</div>
+                    <div className="flex gap-1.5">
+                      <Badge variant="secondary">자료 {c.material_count}</Badge>
+                      <Badge variant="secondary">문제 {c.problem_count}</Badge>
+                    </div>
                   </div>
-                </div>
-                <ChevronRight className="size-5 text-muted-foreground" />
+                  <ChevronRight className="size-5 text-muted-foreground" />
+                </Card>
+              </Link>
+            ) : (
+              <Card key={c.id} className="flex items-center justify-between p-5 opacity-60">
+                <div className="font-semibold">{c.professor_name} 교수님</div>
+                <Lock className="size-4 text-muted-foreground" />
               </Card>
-            </Link>
-          ))}
+            ),
+          )}
         </div>
       )}
-      {!isForbidden(courses.error) && <ErrorText error={courses.error} />}
-      <Card className="flex flex-col items-start gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-sm text-muted-foreground">
-          찾는 교수님 강좌가 없나요? 교안과 함께 요청하면 관리자가 확인한 뒤 열어 드립니다.
-        </div>
-        <Link
-          to={`/requests/new?subject=${encodeURIComponent(subject?.name ?? '')}`}
-          className={buttonVariants({ variant: 'outline' })}
-        >
-          <Plus />
-          강좌 추가 요청
-        </Link>
-      </Card>
+      <ErrorText error={courses.error} />
+      <Link to="/find" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+        <Search className="size-4" />
+        찾는 강좌가 없으면 강좌 찾기에서 열어 달라고 요청하세요
+      </Link>
+      <Link
+        to={`/requests/new?subject=${encodeURIComponent(subject?.name ?? '')}&code=${encodeURIComponent(subject?.code ?? '')}`}
+        className="text-sm text-muted-foreground hover:underline"
+      >
+        강좌 찾기에도 없으면 직접 요청하기
+      </Link>
       {user?.role === 'admin' && (
         <Link to="/admin/courses" className="text-sm text-primary hover:underline">
           관리자: 과목·강좌·교안 직접 추가와 수정은 관리 화면에서

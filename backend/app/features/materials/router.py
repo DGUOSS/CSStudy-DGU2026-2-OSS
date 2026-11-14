@@ -11,9 +11,9 @@ from app.core.config import settings
 from app.core.db import SessionDep
 from app.core.security import CurrentUser
 from app.features.courses.router import get_course_or_404
+from app.features.enrollments.service import require_course_access
 from app.features.materials.pdf import PdfError, extract_pages
 from app.features.materials.versioning import Action, add_material
-from app.features.my_subjects.router import require_course_access
 from app.models import Material, User
 
 router = APIRouter(tags=["materials"])

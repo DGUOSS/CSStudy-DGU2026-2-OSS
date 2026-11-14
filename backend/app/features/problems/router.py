@@ -7,8 +7,8 @@ from sqlmodel import func, select
 from app.core.db import SessionDep
 from app.core.security import CurrentUser
 from app.features.courses.router import get_course_or_404
+from app.features.enrollments.service import require_course_access
 from app.features.mastery.service import concept_states
-from app.features.my_subjects.router import require_course_access
 from app.models import Attempt, Chapter, Concept, Material, Problem, ProblemConcept
 
 router = APIRouter(tags=["problems"])

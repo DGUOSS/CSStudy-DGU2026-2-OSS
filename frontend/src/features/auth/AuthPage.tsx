@@ -34,11 +34,11 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
         <CardContent>
           <form onSubmit={submit} className="flex flex-col gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="email">이메일</Label>
+              <Label htmlFor="email">{mode === 'login' ? '이메일 또는 아이디' : '이메일'}</Label>
               <Input
                 id="email"
-                type="email"
-                autoComplete="email"
+                type={mode === 'login' ? 'text' : 'email'}
+                autoComplete={mode === 'login' ? 'username' : 'email'}
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

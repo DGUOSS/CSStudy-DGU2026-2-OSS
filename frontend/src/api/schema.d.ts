@@ -309,6 +309,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/course-requests/{request_id}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach Files
+         * @description 대기 중인 요청에 교안 PDF를 붙인다(요청한 사람 또는 관리자). 교안이 있어야 승인할 수 있다.
+         */
+        post: operations["attach_files_api_v1_course_requests__request_id__files_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/course-requests/mine": {
         parameters: {
             query?: never;
@@ -451,15 +471,15 @@ export interface paths {
         patch: operations["admin_update_material_api_v1_admin_materials__material_id__patch"];
         trace?: never;
     };
-    "/api/v1/me/subjects": {
+    "/api/v1/me/courses": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List My Subjects */
-        get: operations["list_my_subjects_api_v1_me_subjects_get"];
+        /** My Courses */
+        get: operations["my_courses_api_v1_me_courses_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -468,7 +488,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/me/subjects/{subject_id}": {
+    "/api/v1/me/ndrims/import": {
         parameters: {
             query?: never;
             header?: never;
@@ -476,14 +496,127 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        put?: never;
         /**
-         * Add My Subject
-         * @description 내 과목에 넣는다. 이미 있으면 상태(수강 중/수강함)와 학기만 바꾼다.
+         * Import Records
+         * @description 엔드림스 수강 기록을 받아 저장하고 강좌와 잇는다. 같은 수업을 다시 보내면 덮어쓴다.
          */
-        put: operations["add_my_subject_api_v1_me_subjects__subject_id__put"];
+        post: operations["import_records_api_v1_me_ndrims_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/enrollments/{enrollment_id}/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request From Record
+         * @description 내 수강 기록의 수업을 열어 달라고 요청한다(지난 학기에만 열린 수업도 가능).
+         */
+        post: operations["request_from_record_api_v1_me_enrollments__enrollment_id__request_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import Catalog
+         * @description 엔드림스 종합강의시간표 행을 저장한다(같은 학기·학수번호·분반이면 덮어쓴다).
+         */
+        post: operations["import_catalog_api_v1_admin_catalog_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/terms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Terms */
+        get: operations["list_terms_api_v1_catalog_terms_get"];
+        put?: never;
         post?: never;
-        /** Remove My Subject */
-        delete: operations["remove_my_subject_api_v1_me_subjects__subject_id__delete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/filters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Filters */
+        get: operations["filters_api_v1_catalog_filters_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search
+         * @description 엔드림스 종합강의시간표처럼 찾는다. 같은 과목·교수의 분반은 한 줄로 묶는다.
+         */
+        get: operations["search_api_v1_catalog_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request From Catalog
+         * @description 이번 학기 개설 목록의 강좌를 열어 달라고 요청한다.
+         */
+        post: operations["request_from_catalog_api_v1_catalog_request_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -606,6 +739,11 @@ export interface components {
             /** Files */
             files?: string[] | null;
         };
+        /** Body_attach_files_api_v1_course_requests__request_id__files_post */
+        Body_attach_files_api_v1_course_requests__request_id__files_post: {
+            /** Files */
+            files: string[];
+        };
         /** Body_create_request_api_v1_course_requests_post */
         Body_create_request_api_v1_course_requests_post: {
             /** Subject Name */
@@ -636,6 +774,24 @@ export interface components {
             /** Title */
             title?: string | null;
         };
+        /** CatalogImportIn */
+        CatalogImportIn: {
+            /** Rows */
+            rows: components["schemas"]["OfferingIn"][];
+        };
+        /** CatalogImportOut */
+        CatalogImportOut: {
+            /** Terms */
+            terms: string[];
+            /** Added */
+            added: number;
+            /** Updated */
+            updated: number;
+            /** Professors Linked */
+            professors_linked: number;
+            /** Records Linked */
+            records_linked: number;
+        };
         /** ChapterMasteryOut */
         ChapterMasteryOut: {
             /** Chapter Id */
@@ -660,6 +816,13 @@ export interface components {
             /** Problem Count */
             problem_count: number;
         };
+        /** CollegeOut */
+        CollegeOut: {
+            /** Name */
+            name: string;
+            /** Departments */
+            departments: string[];
+        };
         /** ConceptMasteryOut */
         ConceptMasteryOut: {
             /** Concept Id */
@@ -683,7 +846,9 @@ export interface components {
         /** CourseAdminUpdate */
         CourseAdminUpdate: {
             /** Professor Name */
-            professor_name: string;
+            professor_name?: string | null;
+            /** Is Public */
+            is_public?: boolean | null;
         };
         /** CourseIn */
         CourseIn: {
@@ -722,6 +887,16 @@ export interface components {
             material_count: number;
             /** Problem Count */
             problem_count: number;
+            /**
+             * Accessible
+             * @default true
+             */
+            accessible?: boolean;
+            /**
+             * Is Public
+             * @default false
+             */
+            is_public?: boolean;
         };
         /** CourseRequestOut */
         CourseRequestOut: {
@@ -747,6 +922,12 @@ export interface components {
             material_filenames: string[];
             /** Material Page Count */
             material_page_count: number;
+            /** Source */
+            source: string;
+            /** Professor Emp No */
+            professor_emp_no: string | null;
+            /** Same Pending Count */
+            same_pending_count: number;
             /** Status */
             status: string;
             /** Reject Reason */
@@ -796,17 +977,48 @@ export interface components {
             /** Selected */
             selected: boolean;
         };
+        /** FiltersOut */
+        FiltersOut: {
+            /** Colleges */
+            colleges: components["schemas"]["CollegeOut"][];
+            /** Cpdivs */
+            cpdivs: string[];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** ImportIn */
+        ImportIn: {
+            /** Records */
+            records: components["schemas"]["RecordIn"][];
+        };
+        /** ImportOut */
+        ImportOut: {
+            /** Current Term */
+            current_term: string | null;
+            /** Record Count */
+            record_count: number;
+            /** Imported At */
+            imported_at: string | null;
+            /** Courses */
+            courses: components["schemas"]["MyCourseOut"][];
+            /** Waiting */
+            waiting: components["schemas"]["WaitingOut"][];
+            /**
+             * Public
+             * @default []
+             */
+            public?: components["schemas"]["PublicCourseOut"][];
+            /** Received */
+            received: number;
+            /** Added */
+            added: number;
+        };
         /** LoginIn */
         LoginIn: {
-            /**
-             * Email
-             * Format: email
-             */
+            /** Email */
             email: string;
             /** Password */
             password: string;
@@ -869,36 +1081,134 @@ export interface components {
             /** Kind */
             kind?: ("lecture" | "exam" | "note") | null;
         };
-        /** MySubjectIn */
-        MySubjectIn: {
-            /**
-             * Status
-             * @default current
-             * @enum {string}
-             */
-            status?: "current" | "taken";
-            /** Semester */
-            semester?: string | null;
-        };
-        /** MySubjectOut */
-        MySubjectOut: {
-            /** Subject Id */
-            subject_id: number;
-            /** Name */
-            name: string;
-            /** Code */
-            code: string | null;
+        /** MyCourseOut */
+        MyCourseOut: {
+            /** Course Id */
+            course_id: number;
+            /** Subject Name */
+            subject_name: string;
+            /** Sbj No */
+            sbj_no: string | null;
+            /** Professor Name */
+            professor_name: string;
             /** Status */
             status: string;
-            /** Semester */
-            semester: string | null;
-            /** Source */
-            source: string;
+            /** Terms */
+            terms: string[];
+        };
+        /** MyCoursesOut */
+        MyCoursesOut: {
+            /** Current Term */
+            current_term: string | null;
+            /** Record Count */
+            record_count: number;
+            /** Imported At */
+            imported_at: string | null;
+            /** Courses */
+            courses: components["schemas"]["MyCourseOut"][];
+            /** Waiting */
+            waiting: components["schemas"]["WaitingOut"][];
             /**
-             * Created At
-             * Format: date-time
+             * Public
+             * @default []
              */
-            created_at: string;
+            public?: components["schemas"]["PublicCourseOut"][];
+        };
+        /** NoteIn */
+        NoteIn: {
+            /**
+             * Note
+             * @default
+             */
+            note?: string;
+        };
+        /**
+         * OfferingGroupOut
+         * @description 같은 과목·교수의 분반을 한 줄로 묶은 결과. 사이트의 강좌 하나에 해당한다.
+         */
+        OfferingGroupOut: {
+            /** Year */
+            year: string;
+            /** Sem Cd */
+            sem_cd: string;
+            /** Sbj No */
+            sbj_no: string;
+            /** Sbj Nm */
+            sbj_nm: string;
+            /** Emp No */
+            emp_no: string | null;
+            /** Emp Nm */
+            emp_nm: string | null;
+            /** Dvcls */
+            dvcls: string[];
+            /** Colg Nm */
+            colg_nm: string | null;
+            /** Dpt Nm */
+            dpt_nm: string | null;
+            /** Cpdiv Nm */
+            cpdiv_nm: string | null;
+            /** Cdt */
+            cdt: string | null;
+            /** Timetable */
+            timetable: string[];
+            /** Plan Url */
+            plan_url: string | null;
+            /** Eval Rates */
+            eval_rates: {
+                [key: string]: number | null;
+            };
+            /** Status */
+            status: string;
+            /** Course Id */
+            course_id: number | null;
+            /** Request Count */
+            request_count: number;
+            /** Requested By Me */
+            requested_by_me: boolean;
+            /** Mine */
+            mine: boolean;
+        };
+        /** OfferingIn */
+        OfferingIn: {
+            /** Year */
+            year: string;
+            /** Sem Cd */
+            sem_cd: string;
+            /** Sbj No */
+            sbj_no: string;
+            /** Sbj Nm */
+            sbj_nm: string;
+            /**
+             * Dvcls
+             * @default
+             */
+            dvcls?: string;
+            /** Emp No */
+            emp_no?: string | null;
+            /** Emp Nm */
+            emp_nm?: string | null;
+            /** Colg Nm */
+            colg_nm?: string | null;
+            /** Dpt Nm */
+            dpt_nm?: string | null;
+            /** Cpdiv Nm */
+            cpdiv_nm?: string | null;
+            /** Cdt */
+            cdt?: string | null;
+            /** Timetable */
+            timetable?: string | null;
+            /** Room */
+            room?: string | null;
+            /** Mid Rate */
+            mid_rate?: number | null;
+            /** Fnl Rate */
+            fnl_rate?: number | null;
+            /** Atnd Rate */
+            atnd_rate?: number | null;
+            /** Proj Rate */
+            proj_rate?: number | null;
+            /** Plan Url */
+            plan_url?: string | null;
         };
         /**
          * ProblemOut
@@ -918,10 +1228,93 @@ export interface components {
             /** Origin */
             origin: string;
         };
+        /** PublicCourseOut */
+        PublicCourseOut: {
+            /** Course Id */
+            course_id: number;
+            /** Subject Name */
+            subject_name: string;
+            /** Professor Name */
+            professor_name: string;
+        };
+        /**
+         * RecordIn
+         * @description 엔드림스 수강신청내역(OPEN_YY·OPEN_SEM_CD…) 또는 전체성적조회(YY·SEM_CD…·EMP_NM) 한 줄.
+         */
+        RecordIn: {
+            /** Year */
+            year: string;
+            /** Sem Cd */
+            sem_cd: string;
+            /** Sbj No */
+            sbj_no: string;
+            /** Sbj Nm */
+            sbj_nm: string;
+            /**
+             * Dvcls
+             * @default
+             */
+            dvcls?: string;
+            /** Emp Nm */
+            emp_nm?: string | null;
+            /** Emp No */
+            emp_no?: string | null;
+        };
+        /** RecordRequestOut */
+        RecordRequestOut: {
+            /** Current Term */
+            current_term: string | null;
+            /** Record Count */
+            record_count: number;
+            /** Imported At */
+            imported_at: string | null;
+            /** Courses */
+            courses: components["schemas"]["MyCourseOut"][];
+            /** Waiting */
+            waiting: components["schemas"]["WaitingOut"][];
+            /**
+             * Public
+             * @default []
+             */
+            public?: components["schemas"]["PublicCourseOut"][];
+            /** Request Id */
+            request_id: number;
+        };
         /** RejectIn */
         RejectIn: {
             /** Reason */
             reason: string;
+        };
+        /** RequestCreatedOut */
+        RequestCreatedOut: {
+            /** Request Id */
+            request_id: number;
+        };
+        /** RequestIn */
+        RequestIn: {
+            /** Year */
+            year: string;
+            /** Sem Cd */
+            sem_cd: string;
+            /** Sbj No */
+            sbj_no: string;
+            /**
+             * Dvcls
+             * @default
+             */
+            dvcls?: string;
+            /**
+             * Note
+             * @default
+             */
+            note?: string;
+        };
+        /** SearchOut */
+        SearchOut: {
+            /** Total */
+            total: number;
+            /** Items */
+            items: components["schemas"]["OfferingGroupOut"][];
         };
         /** SelectionIn */
         SelectionIn: {
@@ -973,6 +1366,17 @@ export interface components {
             name?: string | null;
             /** Code */
             code?: string | null;
+        };
+        /** TermOut */
+        TermOut: {
+            /** Year */
+            year: string;
+            /** Sem Cd */
+            sem_cd: string;
+            /** Label */
+            label: string;
+            /** Count */
+            count: number;
         };
         /** UploadOut */
         UploadOut: {
@@ -1077,6 +1481,28 @@ export interface components {
             dislikes: number;
             /** My Vote */
             my_vote: number;
+        };
+        /**
+         * WaitingOut
+         * @description 수강 기록은 있지만 사이트에 아직 열린 강좌가 없는 수업.
+         */
+        WaitingOut: {
+            /** Enrollment Id */
+            enrollment_id: number;
+            /** Sbj No */
+            sbj_no: string;
+            /** Sbj Nm */
+            sbj_nm: string;
+            /** Professor Name */
+            professor_name: string | null;
+            /** Status */
+            status: string;
+            /** Term */
+            term: string;
+            /** Request */
+            request: string;
+            /** Request Count */
+            request_count: number;
         };
     };
     responses: never;
@@ -1696,6 +2122,43 @@ export interface operations {
             };
         };
     };
+    attach_files_api_v1_course_requests__request_id__files_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_attach_files_api_v1_course_requests__request_id__files_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourseRequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     my_requests_api_v1_course_requests_mine_get: {
         parameters: {
             query?: never;
@@ -2073,7 +2536,7 @@ export interface operations {
             };
         };
     };
-    list_my_subjects_api_v1_me_subjects_get: {
+    my_courses_api_v1_me_courses_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -2090,7 +2553,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MySubjectOut"][];
+                    "application/json": components["schemas"]["MyCoursesOut"];
                 };
             };
             /** @description Validation Error */
@@ -2104,20 +2567,18 @@ export interface operations {
             };
         };
     };
-    add_my_subject_api_v1_me_subjects__subject_id__put: {
+    import_records_api_v1_me_ndrims_import_post: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                subject_id: number;
-            };
+            path?: never;
             cookie?: {
                 access_token?: string | null;
             };
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["MySubjectIn"];
+                "application/json": components["schemas"]["ImportIn"];
             };
         };
         responses: {
@@ -2127,7 +2588,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MySubjectOut"];
+                    "application/json": components["schemas"]["ImportOut"];
                 };
             };
             /** @description Validation Error */
@@ -2141,13 +2602,83 @@ export interface operations {
             };
         };
     };
-    remove_my_subject_api_v1_me_subjects__subject_id__delete: {
+    request_from_record_api_v1_me_enrollments__enrollment_id__request_post: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                subject_id: number;
+                enrollment_id: number;
             };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["NoteIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordRequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_catalog_api_v1_admin_catalog_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatalogImportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogImportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_terms_api_v1_catalog_terms_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
             cookie?: {
                 access_token?: string | null;
             };
@@ -2155,11 +2686,123 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["TermOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    filters_api_v1_catalog_filters_get: {
+        parameters: {
+            query: {
+                year: string;
+                sem_cd: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FiltersOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_api_v1_catalog_search_get: {
+        parameters: {
+            query: {
+                year: string;
+                sem_cd: string;
+                colg?: string | null;
+                dpt?: string | null;
+                cpdiv?: string | null;
+                q?: string | null;
+                prof?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_from_catalog_api_v1_catalog_request_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestCreatedOut"];
+                };
             };
             /** @description Validation Error */
             422: {
