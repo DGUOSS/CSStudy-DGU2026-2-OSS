@@ -39,7 +39,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean) {
     alert('엔드림스(ndrims.dongguk.edu) 창에서 눌러 주세요.')
     return
   }
-  const VER = 10
+  const VER = 11
   // 예전 버전 상자가 남아 있으면 치우고 새로 시작한다(새로고침 없이 새 버튼이 동작하도록)
   if (w.__dguStudy && w.__dguStudy.v !== VER) {
     w.__dguStudy.box?.remove()
@@ -219,9 +219,15 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean) {
   }
   let viaOpener = !!window.opener
   let acked = false
+  let pending: unknown = null // 새 탭이 달라고 하면 보낼 것
   window.addEventListener('message', (e) => {
-    if (e.origin === SITE && (e.data as { type?: string } | null)?.type === TYPE + '-ack')
-      acked = true
+    if (e.origin !== SITE) return
+    const t = (e.data as { type?: string } | null)?.type
+    if (t === TYPE + '-ack') acked = true
+    if (t === TYPE + '-pull' && pending && e.source) {
+      ;(e.source as Window).postMessage(pending, SITE)
+      msg('보냈습니다. 동국스터디 탭에서 확인을 눌러 저장하세요.')
+    }
   })
   function send(auto = false) {
     const payload = { type: TYPE, records: Object.values(rec), catalog: Object.values(cat) }
@@ -250,19 +256,13 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean) {
       msg('다 모았습니다. [동국스터디로 보내기]를 누르면 동국스터디로 보냅니다.')
       return
     }
-    // 2) 창 연결이 끊겼으면 우리 사이트를 새 탭으로 열고 주소 # 뒤에 담아 보낸다(# 뒤는 서버로 가지 않는다)
-    // 주소 길이 제한: 개설 목록(관리자)이 크면 수강 기록만 보낸다
-    let hash = encodeURIComponent(JSON.stringify(payload))
-    const big = hash.length > 1500000
-    if (big) hash = encodeURIComponent(JSON.stringify({ ...payload, catalog: [] }))
-    const tab = window.open(SITE + '/ndrims#' + hash, 'dgu-study-import')
-    if (tab && big) {
-      msg('수강 기록만 보냈습니다. 개설 목록은 너무 커서 동국스터디의 [엔드림스 열기]로 연 창에서 다시 보내 주세요.')
-      return
-    }
+    // 2) 창 연결이 끊겼으면(엔드림스 로그인 과정에서 끊긴다) 우리 사이트를 새 탭으로 연다.
+    //    그 탭이 이 창에 '달라'고 하면 그 탭으로 보낸다(주소에 담지 않으니 개설 목록이 커도 된다)
+    pending = payload
+    const tab = window.open(SITE + '/ndrims#pull', 'dgu-study-import')
     msg(
       tab
-        ? '새 탭으로 보냈습니다. 동국스터디 탭을 확인하세요.'
+        ? '동국스터디 탭을 열었습니다. 그 탭으로 보내는 중…'
         : '[동국스터디로 보내기]를 눌러 주세요. (팝업이 막혔다면 주소창 오른쪽에서 허용)',
     )
   }
