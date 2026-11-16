@@ -39,7 +39,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean) {
     alert('엔드림스(ndrims.dongguk.edu) 창에서 눌러 주세요.')
     return
   }
-  const VER = 9
+  const VER = 10
   // 예전 버전 상자가 남아 있으면 치우고 새로 시작한다(새로고침 없이 새 버튼이 동작하도록)
   if (w.__dguStudy && w.__dguStudy.v !== VER) {
     w.__dguStudy.box?.remove()
@@ -205,14 +205,17 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean) {
       (ADMIN
         ? '<button data-c style="width:100%;margin-top:8px;padding:6px;border:1px solid #c8102e;border-radius:8px;background:#fff;color:#c8102e;cursor:pointer">관리자: ' +
           termLabel() +
-          ' 개설 목록 전체 가져오기</button>'
+          ' 개설 목록 전체 가져오기</button>' +
+          '<button data-r style="width:100%;margin-top:6px;padding:4px;border:0;background:none;color:#666;font-size:12px;cursor:pointer;text-decoration:underline">내 수강 기록도 가져오기</button>'
         : '') +
       '<div style="display:flex;gap:6px;margin-top:8px"><button data-s style="flex:1;padding:6px;border:0;border-radius:8px;background:#c8102e;color:#fff;cursor:pointer">동국스터디로 보내기</button>' +
       '<button data-x style="padding:6px 10px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer">닫기</button></div>'
     ;(box.querySelector('[data-x]') as HTMLElement).onclick = () => (box.style.display = 'none')
-    ;(box.querySelector('[data-s]') as HTMLElement).onclick = send
+    ;(box.querySelector('[data-s]') as HTMLElement).onclick = () => send()
     const c = box.querySelector('[data-c]') as HTMLElement | null
     if (c) c.onclick = () => fullCatalog().catch(fail)
+    const r = box.querySelector('[data-r]') as HTMLElement | null
+    if (r) r.onclick = () => run(true)
   }
   let viaOpener = !!window.opener
   let acked = false
@@ -220,7 +223,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean) {
     if (e.origin === SITE && (e.data as { type?: string } | null)?.type === TYPE + '-ack')
       acked = true
   })
-  function send() {
+  function send(auto = false) {
     const payload = { type: TYPE, records: Object.values(rec), catalog: Object.values(cat) }
     if (!payload.records.length && !payload.catalog.length) {
       msg('아직 모은 기록이 없습니다. 위 화면을 먼저 열어 주세요.')
@@ -238,8 +241,13 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean) {
       setTimeout(() => {
         if (acked) return msg('보냈습니다. 동국스터디 창으로 돌아가세요.')
         viaOpener = false
-        msg('동국스터디 창을 찾지 못했습니다. [동국스터디로 보내기]를 한 번 더 누르면 새 탭으로 보냅니다.')
+        msg('동국스터디 창을 찾지 못했습니다. [동국스터디로 보내기]를 누르면 새 탭으로 보냅니다.')
       }, 2000)
+      return
+    }
+    // 자동으로는 새 창을 열지 않는다(사용자가 버튼을 눌렀을 때만)
+    if (auto) {
+      msg('다 모았습니다. [동국스터디로 보내기]를 누르면 동국스터디로 보냅니다.')
       return
     }
     // 2) 창 연결이 끊겼으면 우리 사이트를 새 탭으로 열고 주소 # 뒤에 담아 보낸다(# 뒤는 서버로 가지 않는다)
@@ -386,7 +394,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean) {
       msg('전체 조회가 안 됩니다. 수업/강의평가 > 종합강의시간표조회에서 대학별로 조회하면 상자에 모입니다.')
       return
     }
-    send()
+    send(true)
   }
 
   async function auto() {
@@ -455,11 +463,16 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean) {
     log.push(`모은 수강 기록 모두 ${Object.keys(rec).length}건`)
     render()
     if (!Object.keys(rec).length) throw new Error('empty')
-    send()
+    send(true)
   }
 
   let busy = false
-  const run = () => {
+  const run = (force = false) => {
+    if (ADMIN && !force) {
+      render()
+      msg('관리자: 아래 버튼으로 이번 학기 개설 목록 전체를 가져옵니다.')
+      return
+    }
     if (busy) return
     busy = true
     log.length = 0
