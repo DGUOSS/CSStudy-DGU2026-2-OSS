@@ -33,13 +33,13 @@ export type NdrimsPayload = {
 }
 
 // 엔드림스 창 안에서 실행되는 코드. 바깥 변수는 쓰지 않는다(문자열로 바뀌어 들어간다).
-function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
+function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean) {
   const w = window as unknown as { __dguStudy?: { show: () => void; run: () => void; v?: number; box?: HTMLElement } }
   if (!HOSTS.some((h) => location.origin === h)) {
     alert('엔드림스(ndrims.dongguk.edu) 창에서 눌러 주세요.')
     return
   }
-  const VER = 8
+  const VER = 9
   // 예전 버전 상자가 남아 있으면 치우고 새로 시작한다(새로고침 없이 새 버튼이 동작하도록)
   if (w.__dguStudy && w.__dguStudy.v !== VER) {
     w.__dguStudy.box?.remove()
@@ -52,7 +52,8 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
   }
   type Row = Record<string, unknown>
   const rec: Record<string, Row> = {}
-  const cat: Record<string, Row> = {}
+  const cat: Record<string, Row> = {} // 개설 목록(관리자가 보냄): 종합강의시간표 화면·전체 가져오기
+  const look: Record<string, Row> = {} // 내 수업 교수 찾기용 조회 결과(보내지 않음)
   const str = (v: unknown, n = 200) => (v == null ? null : String(v).slice(0, n))
   const num = (v: unknown) => (v == null || v === '' || isNaN(Number(v)) ? null : Number(v))
   const take = (url: string, text: string) => {
@@ -85,33 +86,37 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
             (rows.length && !kept ? ` (칸: ${Object.keys(rows[0]).join(',')})` : ''),
         )
     } else if (/EdcLesn010\/doList/.test(url)) {
-      for (const x of rows) {
-        if (!x.SBJ_NO || !x.OPEN_YY || !x.OPEN_SEM_CD || !x.SBJ_NM) continue
-        const k = [x.OPEN_YY, x.OPEN_SEM_CD, x.SBJ_NO, x.DVCLS].join('|')
-        if (cat[k] && x.MAIN_PROF_YN !== 'Y') continue // 공동 강의는 대표 교수만
-        cat[k] = {
-          year: str(x.OPEN_YY, 4),
-          sem_cd: str(x.OPEN_SEM_CD, 20),
-          sbj_no: str(x.SBJ_NO, 20),
-          sbj_nm: str(x.SBJ_NM),
-          dvcls: str(x.DVCLS, 10) || '',
-          emp_no: str(x.EMP_NO, 20),
-          emp_nm: str(x.EMP_NM, 50),
-          colg_nm: str(x.COLG_NM, 100),
-          dpt_nm: str(x.DPT_NM, 100),
-          cpdiv_nm: str(x.CPDIV_CD_NM, 50),
-          cdt: str(x.CDT, 10),
-          timetable: str(x.TMTBL_KOR_DSC, 300),
-          room: str(x.ROOM_KOR_DSC, 300),
-          mid_rate: num(x.MID_EVAL_RATE),
-          fnl_rate: num(x.FNL_EVAL_RATE),
-          atnd_rate: num(x.ATND_EVAL_RATE),
-          proj_rate: num(x.PROJ_EVAL_RATE),
-          plan_url: str(x.PLAN_URL, 500),
-        }
-      }
+      lesnInto(cat, rows)
     } else return
     render()
+  }
+  // 종합강의시간표 행 → 개설 목록 한 줄(공동 강의는 대표 교수만)
+  function lesnInto(into: Record<string, Row>, rows: Row[]) {
+    for (const x of rows) {
+      if (!x.SBJ_NO || !x.OPEN_YY || !x.OPEN_SEM_CD || !x.SBJ_NM) continue
+      const k = [x.OPEN_YY, x.OPEN_SEM_CD, x.SBJ_NO, x.DVCLS].join('|')
+      if (into[k] && x.MAIN_PROF_YN !== 'Y') continue
+      into[k] = {
+        year: str(x.OPEN_YY, 4),
+        sem_cd: str(x.OPEN_SEM_CD, 20),
+        sbj_no: str(x.SBJ_NO, 20),
+        sbj_nm: str(x.SBJ_NM),
+        dvcls: str(x.DVCLS, 10) || '',
+        emp_no: str(x.EMP_NO, 20),
+        emp_nm: str(x.EMP_NM, 50),
+        colg_nm: str(x.COLG_NM, 100),
+        dpt_nm: str(x.DPT_NM, 100),
+        cpdiv_nm: str(x.CPDIV_CD_NM, 50),
+        cdt: str(x.CDT, 10),
+        timetable: str(x.TMTBL_KOR_DSC, 300),
+        room: str(x.ROOM_KOR_DSC, 300),
+        mid_rate: num(x.MID_EVAL_RATE),
+        fnl_rate: num(x.FNL_EVAL_RATE),
+        atnd_rate: num(x.ATND_EVAL_RATE),
+        proj_rate: num(x.PROJ_EVAL_RATE),
+        plan_url: str(x.PLAN_URL, 500),
+      }
+    }
   }
   const XO = XMLHttpRequest.prototype.open
   const XS = XMLHttpRequest.prototype.send
@@ -197,10 +202,17 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
       ' 모음</div>' +
       '<div style="font-size:12px;color:#666">누르면 바로 가져옵니다. 안 되면 수강신청 &gt; 수강신청내역확인, 성적 &gt; 전체성적조회 화면을 열어도 모입니다.</div>' +
       '<div data-m style="font-size:12px;color:#c8102e;margin-top:6px"></div>' +
+      (ADMIN
+        ? '<button data-c style="width:100%;margin-top:8px;padding:6px;border:1px solid #c8102e;border-radius:8px;background:#fff;color:#c8102e;cursor:pointer">관리자: ' +
+          termLabel() +
+          ' 개설 목록 전체 가져오기</button>'
+        : '') +
       '<div style="display:flex;gap:6px;margin-top:8px"><button data-s style="flex:1;padding:6px;border:0;border-radius:8px;background:#c8102e;color:#fff;cursor:pointer">동국스터디로 보내기</button>' +
       '<button data-x style="padding:6px 10px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer">닫기</button></div>'
     ;(box.querySelector('[data-x]') as HTMLElement).onclick = () => (box.style.display = 'none')
     ;(box.querySelector('[data-s]') as HTMLElement).onclick = send
+    const c = box.querySelector('[data-c]') as HTMLElement | null
+    if (c) c.onclick = () => fullCatalog().catch(fail)
   }
   let viaOpener = !!window.opener
   let acked = false
@@ -249,7 +261,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
   // 화면을 열지 않고 바로 요청한다. 엔드림스 화면이 쓰는 것과 같은 순서:
   // 로그인 정보(NANA) → 사용자 정보(LOGIN_IDEN_NO, MAIN_OPEN_KEY) → 메뉴에서 화면별 NANA → 화면 데이터
   type Json = Record<string, unknown>
-  const post = async (path: string, data: Record<string, string>, ds = true) => {
+  const post = async (path: string, data: Record<string, string>, ds = true, lookup = false) => {
     const body = new URLSearchParams(
       ds
         ? {
@@ -279,7 +291,8 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
       throw new Error(/LoginAccs/.test(name) ? 'login' : 'step')
     }
     log.push(`${name} ${res.status} ${shape(j)}`)
-    take(path, text)
+    if (lookup) lesnInto(look, ((j as { dsMain?: Row[] }).dsMain || []) as Row[])
+    else take(path, text)
     return j
   }
   // 응답 모양: 데이터셋 이름[행 수], 객체{칸 이름}. 오류 문구만 값을 보인다
@@ -297,46 +310,88 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
       .join(' ')
   const rowsOf = (j: Json) =>
     Object.values(j).flatMap((v) => (Array.isArray(v) ? (v as Json[]) : [])) as Json[]
+  // 이번 학기(2~7월 1학기, 8~1월 2학기)
+  function term(): [string, string] {
+    const d = new Date()
+    const mo = d.getMonth() + 1
+    return [String(mo === 1 ? d.getFullYear() - 1 : d.getFullYear()), mo >= 2 && mo <= 7 ? 'CM160.10' : 'CM160.20']
+  }
+  function termLabel() {
+    const [y, s] = term()
+    return y + ' ' + (s === 'CM160.10' ? '1학기' : '2학기')
+  }
+  type Sess = { nana: string; ids: Record<string, string>; pgmNana: (p: string) => Promise<string>; u: Json; acc: Json }
+  let sess: Promise<Sess> | null = null
+  function session(): Promise<Sess> {
+    sess ??= (async () => {
+      const acc = (await post('/unis/main/view/login/doUserLoginAccs.do', {}, false))
+        .dmLoginAccsResult as Json | undefined
+      const nana = acc && String(acc.NANA || '')
+      if (!nana) throw new Error('login')
+      const top = await post('/unis/main/view/menu/doListUserMenuListTop.do', {
+        _runningNana: nana,
+        '@d1#MOBILE_YN': 'N',
+      })
+      const u = (top.dmUserInfo || {}) as Json
+      const ids = {
+        _runningLoginIdenNo: String(u.LOGIN_IDEN_NO || ''),
+        _runningMainOpenKey: String(u.MAIN_OPEN_KEY || ''),
+      }
+      // 화면별 NANA: 위쪽 메뉴에 없으면 왼쪽 메뉴를 펼쳐 찾는다
+      const menus = rowsOf(top)
+      const pgmNana = async (pgm: string) => {
+        const hit = (rows: Json[]) => rows.find((m) => String(m.PGM_URL || '').includes(pgm))
+        let m = hit(menus)
+        const tops = [...new Set(menus.map((x) => String(x.MENU_NO || '')).filter(Boolean))]
+        for (const no of tops) {
+          if (m) break
+          const left = rowsOf(
+            await post('/unis/main/view/menu/doListUserMenuListLeft.do', {
+              _runningNana: nana,
+              ...ids,
+              '@d1#MENU_NO': no,
+              '@d1#MOBILE_YN': 'N',
+            }),
+          )
+          menus.push(...left)
+          m = hit(left)
+        }
+        log.push(`메뉴 ${menus.length}개, ${pgm} ${m ? '찾음' : '없음'}`)
+        return m ? String(m.NANA || '') : ''
+      }
+      return { nana, ids, pgmNana, u, acc: acc || {} }
+    })()
+    sess.catch(() => (sess = null)) // 실패하면 다음에 다시
+    return sess
+  }
+
+  // 관리자: 이번 학기 종합강의시간표 전체(대학·학과 조건 없이)
+  async function fullCatalog() {
+    msg(termLabel() + ' 개설 목록을 가져오는 중… (몇 초 걸립니다)')
+    const { ids, pgmNana } = await session()
+    const lesnNana = await pgmNana('EdcLesn010')
+    if (!lesnNana) throw new Error('lesn')
+    const [yy, sem] = term()
+    const before = Object.keys(cat).length
+    await post('/ed/edc/lesn/EdcLesn010/doList.do', {
+      _runningNana: lesnNana,
+      ...ids,
+      '@d1#OPEN_ORGN_CLSF_CD': 'CM015.110',
+      '@d1#OPEN_YY': yy,
+      '@d1#OPEN_SEM_CD': sem,
+    })
+    render()
+    const got = Object.keys(cat).length - before
+    if (!got) {
+      msg('전체 조회가 안 됩니다. 수업/강의평가 > 종합강의시간표조회에서 대학별로 조회하면 상자에 모입니다.')
+      return
+    }
+    send()
+  }
+
   async function auto() {
     msg('엔드림스에서 바로 가져오는 중…')
-    const acc = (await post('/unis/main/view/login/doUserLoginAccs.do', {}, false))
-      .dmLoginAccsResult as Json | undefined
-    const nana = acc && String(acc.NANA || '')
-    if (!nana) throw new Error('login')
-    const top = await post('/unis/main/view/menu/doListUserMenuListTop.do', {
-      _runningNana: nana,
-      '@d1#MOBILE_YN': 'N',
-    })
-    const u = (top.dmUserInfo || {}) as Json
-    const ids = {
-      _runningLoginIdenNo: String(u.LOGIN_IDEN_NO || ''),
-      _runningMainOpenKey: String(u.MAIN_OPEN_KEY || ''),
-    }
-    // 화면별 NANA: 위쪽 메뉴에 없으면 왼쪽 메뉴를 펼쳐 찾는다
-    const menus = rowsOf(top)
-    const pgmNana = async (pgm: string) => {
-      const hit = (rows: Json[]) => rows.find((m) => String(m.PGM_URL || '').includes(pgm))
-      let m = hit(menus)
-      const tops = [...new Set(menus.map((x) => String(x.MENU_NO || '')).filter(Boolean))]
-      for (const no of tops) {
-        if (m) break
-        const left = rowsOf(
-          await post('/unis/main/view/menu/doListUserMenuListLeft.do', {
-            _runningNana: nana,
-            ...ids,
-            '@d1#MENU_NO': no,
-            '@d1#MOBILE_YN': 'N',
-          }),
-        )
-        menus.push(...left)
-        m = hit(left)
-      }
-      log.push(
-        `메뉴 ${menus.length}개, ${pgm} ${m ? '찾음' : '없음'}` +
-          (menus[0] ? ` (칸: ${Object.keys(menus[0]).join(',')})` : ''),
-      )
-      return m ? String(m.NANA || '') : ''
-    }
+    const { ids, pgmNana, u, acc } = await session()
     // 학번: 사용자 정보 중 10자리 숫자
     const pref = /STD|LOGIN_ID|MEMB_NO|USER/
     const hit = [...Object.entries(u), ...Object.entries(acc || {})]
@@ -358,10 +413,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
     // 이번 학기: 수강신청내역확인 (2~7월 1학기, 8~1월 2학기)
     const regiNana = await pgmNana('EdcRegi170')
     if (regiNana) {
-      const d = new Date()
-      const mo = d.getMonth() + 1
-      const yy = String(mo === 1 ? d.getFullYear() - 1 : d.getFullYear())
-      const sem = mo >= 2 && mo <= 7 ? 'CM160.10' : 'CM160.20'
+      const [yy, sem] = term()
       await post('/ed/edc/regi/EdcRegi170/doList.do', {
         _runningNana: regiNana,
         ...ids,
@@ -385,11 +437,11 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
             '@d1#OPEN_YY': String(r.year),
             '@d1#OPEN_SEM_CD': String(r.sem_cd),
             '@d1#SBJ_NO': String(r.sbj_no),
-          })
+          }, true, true)
         } catch {
           /* 진단에 남음 */
         }
-        const c = cat[[r.year, r.sem_cd, r.sbj_no, r.dvcls].join('|')]
+        const c = look[[r.year, r.sem_cd, r.sbj_no, r.dvcls].join('|')]
         if (c) {
           r.emp_nm = c.emp_nm
           r.emp_no = c.emp_no
@@ -397,7 +449,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
       }
       log.push(
         `교수 찾음 ${noProf.filter((r) => r.emp_nm).length}/${noProf.length}` +
-          ` (시간표 행 ${Object.keys(cat).length})`,
+          ` (시간표 행 ${Object.keys(look).length})`,
       )
     }
     log.push(`모은 수강 기록 모두 ${Object.keys(rec).length}건`)
@@ -411,6 +463,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
     if (busy) return
     busy = true
     log.length = 0
+    sess = null // 다시 누르면 엔드림스 로그인 정보부터 다시
     auto()
       .catch(fail)
       .finally(() => (busy = false))
@@ -426,14 +479,16 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string) {
     msg(
       e.message === 'login'
         ? '엔드림스에 먼저 로그인한 뒤 다시 눌러 주세요.'
+        : e.message === 'lesn'
+          ? '종합강의시간표 메뉴를 찾지 못했습니다. 그 화면을 열고 대학별로 조회하면 상자에 모입니다.'
         : '바로 가져오지 못했습니다. 수강신청 > 수강신청내역확인, 성적 > 전체성적조회 화면을 열면 모입니다.',
     )
   }
 }
 
 /** 즐겨찾기 줄에 끌어다 놓을 javascript: 주소 */
-export function bookmarkletHref(siteOrigin: string): string {
+export function bookmarkletHref(siteOrigin: string, admin = false): string {
   const hosts = NDRIMS_ORIGINS
-  const code = `(${inNdrims.toString()})(${JSON.stringify(siteOrigin)},${JSON.stringify(hosts)},${JSON.stringify(MESSAGE_TYPE)})`
+  const code = `(${inNdrims.toString()})(${JSON.stringify(siteOrigin)},${JSON.stringify(hosts)},${JSON.stringify(MESSAGE_TYPE)},${admin})`
   return `javascript:${encodeURIComponent(code)}`
 }

@@ -25,8 +25,8 @@ export function ImportPanel({ compact = false }: { compact?: boolean }) {
 
   // React는 javascript: 주소를 막으므로 직접 넣는다
   useEffect(() => {
-    linkRef.current?.setAttribute('href', bookmarkletHref(window.location.origin))
-  }, [])
+    linkRef.current?.setAttribute('href', bookmarkletHref(window.location.origin, isAdmin))
+  }, [isAdmin])
 
   // 엔드림스 창에서 보낸 기록을 받는다
   useEffect(() => {
