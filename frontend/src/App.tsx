@@ -11,12 +11,24 @@ import { SubjectCoursesPage } from '@/features/courses/SubjectCoursesPage'
 import { CatalogPage } from '@/features/catalog/CatalogPage'
 import { HomePage } from '@/features/enrollments/HomePage'
 import { ReceivePage } from '@/features/enrollments/ReceivePage'
+import { HomePage as DesignHomePage } from '@/features/home/HomePage'
 import { QuizPage } from '@/features/problems/QuizPage'
+import { CourseChaptersPage } from '@/features/study/CourseChaptersPage'
+import { FindPage } from '@/features/study/FindPage'
+import { ImportPage } from '@/features/study/ImportPage'
+import { StudyQuizPage } from '@/features/study/QuizPage'
+import { StudyPage } from '@/features/study/StudyPage'
 
 // 새 화면은 여기에 경로를 한 줄 추가한다
 const router = createBrowserRouter([
   { path: '/login', element: <AuthPage mode="login" /> },
   { path: '/signup', element: <AuthPage mode="signup" /> },
+  { path: '/home', element: <DesignHomePage /> },
+  { path: '/study', element: <StudyPage /> },
+  { path: '/study/find', element: <FindPage /> },
+  { path: '/study/import', element: <ImportPage /> },
+  { path: '/study/courses/:courseId', element: <CourseChaptersPage /> },
+  { path: '/study/courses/:courseId/quiz', element: <StudyQuizPage /> },
   {
     element: <Layout />,
     children: [
