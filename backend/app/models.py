@@ -193,6 +193,23 @@ class Enrollment(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_now)
 
 
+class CourseReview(SQLModel, table=True):
+    __tablename__ = "course_reviews"
+    __table_args__ = (UniqueConstraint("user_id", "course_id"),)
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    course_id: int = Field(foreign_key="courses.id", index=True)
+    recommendation: int
+    is_deleted: bool = Field(default=False)
+    enrollment_id: int = Field(foreign_key="enrollments.id")
+    year: str = Field(max_length=4)
+    sem_cd: str = Field(max_length=20)
+    difficulty: int
+    workload: int
+    content: str = Field(sa_column=Column(Text, nullable=False))
+    created_at: datetime = Field(default_factory=_now)
+
+
 class CatalogOffering(SQLModel, table=True):
     """엔드림스 종합강의시간표의 개설 강좌 한 줄. 강좌 찾기·요청·교수 확정에 쓰는 참고용 목록."""
 
