@@ -2855,6 +2855,1105 @@
           }
         }
       }
+    },
+    "/api/v1/courses/{course_id}/papers": {
+      "post": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Create Paper",
+        "operationId": "create_paper_api_v1_courses__course_id__papers_post",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaperIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaperOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "List Papers",
+        "operationId": "list_papers_api_v1_courses__course_id__papers_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PaperSummary"
+                  },
+                  "title": "Response List Papers Api V1 Courses  Course Id  Papers Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/papers/{paper_id}": {
+      "get": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Get Paper",
+        "description": "시험지 문제(정답 없음). 인쇄 화면에서 쓴다.",
+        "operationId": "get_paper_api_v1_papers__paper_id__get",
+        "parameters": [
+          {
+            "name": "paper_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Paper Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaperOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/papers/{paper_id}/sheet": {
+      "get": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Get Sheet",
+        "description": "인쇄용 답안지(쪽별 SVG).",
+        "operationId": "get_sheet_api_v1_papers__paper_id__sheet_get",
+        "parameters": [
+          {
+            "name": "paper_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Paper Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SheetOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/papers/{paper_id}/takes": {
+      "post": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Start Take",
+        "description": "[시험 시작]. 시작 시각은 서버가 기록한다. 끝나지 않은 응시가 있으면 그것을 이어 간다.",
+        "operationId": "start_take_api_v1_papers__paper_id__takes_post",
+        "parameters": [
+          {
+            "name": "paper_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Paper Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/takes/{take_id}/pause": {
+      "post": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Pause Take",
+        "description": "일시정지. 멈춘 동안은 시간이 흐르지 않는다.",
+        "operationId": "pause_take_api_v1_takes__take_id__pause_post",
+        "parameters": [
+          {
+            "name": "take_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Take Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/takes/{take_id}/resume": {
+      "post": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Resume Take",
+        "operationId": "resume_take_api_v1_takes__take_id__resume_post",
+        "parameters": [
+          {
+            "name": "take_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Take Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/takes/{take_id}/abandon": {
+      "post": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Abandon Take",
+        "description": "처음부터 다시(그만두기): 이 응시는 버리고 시작 전 상태로. 기록·등수에 들어가지 않는다.",
+        "operationId": "abandon_take_api_v1_takes__take_id__abandon_post",
+        "parameters": [
+          {
+            "name": "take_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Take Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/papers/{paper_id}/mine": {
+      "get": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "My Takes",
+        "operationId": "my_takes_api_v1_papers__paper_id__mine_get",
+        "parameters": [
+          {
+            "name": "paper_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Paper Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MineOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/takes/{take_id}": {
+      "get": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Get Take",
+        "operationId": "get_take_api_v1_takes__take_id__get",
+        "parameters": [
+          {
+            "name": "take_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Take Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/takes/{take_id}/scan": {
+      "post": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Scan Sheet",
+        "description": "답안지 사진(쪽마다 한 장)을 읽어 결과만 돌려준다. 사진은 저장하지 않는다.",
+        "operationId": "scan_sheet_api_v1_takes__take_id__scan_post",
+        "parameters": [
+          {
+            "name": "take_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Take Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_scan_sheet_api_v1_takes__take_id__scan_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/takes/{take_id}/submit": {
+      "post": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Submit Take",
+        "description": "확인한 답을 제출해 채점한다. 객관식은 바로 채점하고 풀이 기록(Attempt)으로 남겨 숙련도에 반영한다.\n서술형 채점과 결과 요약은 제출 뒤 백그라운드에서 Claude로 한다(grading.finish_take).",
+        "operationId": "submit_take_api_v1_takes__take_id__submit_post",
+        "parameters": [
+          {
+            "name": "take_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Take Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/takes/{take_id}/result": {
+      "get": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Get Result",
+        "operationId": "get_result_api_v1_takes__take_id__result_get",
+        "parameters": [
+          {
+            "name": "take_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Take Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/papers/{paper_id}/ranking": {
+      "get": {
+        "tags": [
+          "papers"
+        ],
+        "summary": "Ranking",
+        "description": "같은 시험지를 본 사람끼리. 사람마다 첫 응시만, 점수 높은 순 → 걸린 시간 짧은 순. 다른 사람은 익명.",
+        "operationId": "ranking_api_v1_papers__paper_id__ranking_get",
+        "parameters": [
+          {
+            "name": "paper_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Paper Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RankingOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/courses/{course_id}/misconceptions/generate": {
+      "post": {
+        "tags": [
+          "misconceptions"
+        ],
+        "summary": "Generate",
+        "description": "오개념이 없는 객관식 문제에 붙인다. 문제당 수 초, 백그라운드로 돈다.",
+        "operationId": "generate_api_v1_admin_courses__course_id__misconceptions_generate_post",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/courses/{course_id}/misconceptions/status": {
+      "get": {
+        "tags": [
+          "misconceptions"
+        ],
+        "summary": "Job Status",
+        "operationId": "job_status_api_v1_admin_courses__course_id__misconceptions_status_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/courses/{course_id}/misconceptions": {
+      "get": {
+        "tags": [
+          "misconceptions"
+        ],
+        "summary": "List Misconceptions",
+        "operationId": "list_misconceptions_api_v1_admin_courses__course_id__misconceptions_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MisconceptionAdminOut"
+                  },
+                  "title": "Response List Misconceptions Api V1 Admin Courses  Course Id  Misconceptions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/misconceptions/{misconception_id}": {
+      "patch": {
+        "tags": [
+          "misconceptions"
+        ],
+        "summary": "Set Status",
+        "operationId": "set_status_api_v1_admin_misconceptions__misconception_id__patch",
+        "parameters": [
+          {
+            "name": "misconception_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Misconception Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MisconceptionAdminOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2883,6 +3982,30 @@
           "uploads"
         ],
         "title": "AdminCourseCreated"
+      },
+      "AnswerIn": {
+        "properties": {
+          "problem_id": {
+            "type": "integer",
+            "title": "Problem Id"
+          },
+          "chosen": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chosen"
+          }
+        },
+        "type": "object",
+        "required": [
+          "problem_id"
+        ],
+        "title": "AnswerIn"
       },
       "ApproveIn": {
         "properties": {
@@ -3139,6 +4262,23 @@
         ],
         "title": "Body_create_request_api_v1_course_requests_post"
       },
+      "Body_scan_sheet_api_v1_takes__take_id__scan_post": {
+        "properties": {
+          "files": {
+            "items": {
+              "type": "string",
+              "contentMediaType": "application/octet-stream"
+            },
+            "type": "array",
+            "title": "Files"
+          }
+        },
+        "type": "object",
+        "required": [
+          "files"
+        ],
+        "title": "Body_scan_sheet_api_v1_takes__take_id__scan_post"
+      },
       "Body_upload_material_api_v1_courses__course_id__materials_post": {
         "properties": {
           "file": {
@@ -3283,6 +4423,10 @@
           "problem_count": {
             "type": "integer",
             "title": "Problem Count"
+          },
+          "essay_count": {
+            "type": "integer",
+            "title": "Essay Count"
           }
         },
         "type": "object",
@@ -3291,9 +4435,38 @@
           "order",
           "title",
           "concepts",
-          "problem_count"
+          "problem_count",
+          "essay_count"
         ],
         "title": "ChapterOut"
+      },
+      "ChapterStat": {
+        "properties": {
+          "chapter_id": {
+            "type": "integer",
+            "title": "Chapter Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "before": {
+            "type": "number",
+            "title": "Before"
+          },
+          "after": {
+            "type": "number",
+            "title": "After"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapter_id",
+          "title",
+          "before",
+          "after"
+        ],
+        "title": "ChapterStat"
       },
       "CollegeOut": {
         "properties": {
@@ -3366,6 +4539,60 @@
           "name"
         ],
         "title": "ConceptRef"
+      },
+      "ConceptStat": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "chapter": {
+            "type": "string",
+            "title": "Chapter"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "correct": {
+            "type": "integer",
+            "title": "Correct"
+          },
+          "before": {
+            "type": "number",
+            "title": "Before"
+          },
+          "after": {
+            "type": "number",
+            "title": "After"
+          },
+          "labels": {
+            "items": {
+              "$ref": "#/components/schemas/LabelCount"
+            },
+            "type": "array",
+            "title": "Labels"
+          },
+          "pages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "chapter",
+          "total",
+          "correct",
+          "before",
+          "after",
+          "labels",
+          "pages"
+        ],
+        "title": "ConceptStat"
       },
       "CourseAdminUpdate": {
         "properties": {
@@ -3675,6 +4902,58 @@
         "type": "object",
         "title": "CourseUpdate"
       },
+      "Dist": {
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "title": "Rank"
+          },
+          "score": {
+            "type": "integer",
+            "title": "Score"
+          },
+          "total_points": {
+            "type": "integer",
+            "title": "Total Points"
+          },
+          "me": {
+            "type": "boolean",
+            "title": "Me"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rank",
+          "score",
+          "total_points",
+          "me"
+        ],
+        "title": "Dist"
+      },
+      "EssayIn": {
+        "properties": {
+          "problem_id": {
+            "type": "integer",
+            "title": "Problem Id"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image"
+          }
+        },
+        "type": "object",
+        "required": [
+          "problem_id"
+        ],
+        "title": "EssayIn"
+      },
       "ExamOut": {
         "properties": {
           "id": {
@@ -3769,6 +5048,56 @@
           "cpdivs"
         ],
         "title": "FiltersOut"
+      },
+      "Flow": {
+        "properties": {
+          "no": {
+            "type": "integer",
+            "title": "No"
+          },
+          "misconception": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Misconception"
+          },
+          "concept": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Concept"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page"
+          }
+        },
+        "type": "object",
+        "required": [
+          "no",
+          "misconception",
+          "concept",
+          "page"
+        ],
+        "title": "Flow",
+        "description": "틀린 객관식 하나가 이어지는 길: 문제 → 오개념 → 개념 → 다시 볼 교안 쪽(오답 흐름 차트)."
       },
       "HTTPValidationError": {
         "properties": {
@@ -3871,6 +5200,79 @@
           "added"
         ],
         "title": "ImportOut"
+      },
+      "JobOut": {
+        "properties": {
+          "running": {
+            "type": "boolean",
+            "title": "Running"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "done": {
+            "type": "integer",
+            "title": "Done"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "problems": {
+            "type": "integer",
+            "title": "Problems"
+          },
+          "covered": {
+            "type": "integer",
+            "title": "Covered"
+          },
+          "misconceptions": {
+            "type": "integer",
+            "title": "Misconceptions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "running",
+          "total",
+          "done",
+          "failed",
+          "error",
+          "problems",
+          "covered",
+          "misconceptions"
+        ],
+        "title": "JobOut"
+      },
+      "LabelCount": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "count"
+        ],
+        "title": "LabelCount"
       },
       "LoginIn": {
         "properties": {
@@ -4061,6 +5463,155 @@
         "type": "object",
         "title": "MaterialUpdate"
       },
+      "MineOut": {
+        "properties": {
+          "open_take": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TakeOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "submitted": {
+            "items": {
+              "$ref": "#/components/schemas/MyTake"
+            },
+            "type": "array",
+            "title": "Submitted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "open_take",
+          "submitted"
+        ],
+        "title": "MineOut"
+      },
+      "MisconceptionAdminOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "problem_id": {
+            "type": "integer",
+            "title": "Problem Id"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "choice": {
+            "type": "string",
+            "title": "Choice"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "hypothesis": {
+            "type": "string",
+            "title": "Hypothesis"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          },
+          "evidence_found": {
+            "type": "boolean",
+            "title": "Evidence Found"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "problem_id",
+          "question",
+          "choice",
+          "label",
+          "hypothesis",
+          "explanation",
+          "evidence",
+          "evidence_found",
+          "status",
+          "created_at"
+        ],
+        "title": "MisconceptionAdminOut"
+      },
+      "MisconceptionOut": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "hypothesis": {
+            "type": "string",
+            "title": "Hypothesis"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "hypothesis",
+          "explanation",
+          "evidence",
+          "source",
+          "status"
+        ],
+        "title": "MisconceptionOut"
+      },
       "MyCourseOut": {
         "properties": {
           "course_id": {
@@ -4170,6 +5721,50 @@
           "waiting"
         ],
         "title": "MyCoursesOut"
+      },
+      "MyTake": {
+        "properties": {
+          "take_id": {
+            "type": "integer",
+            "title": "Take Id"
+          },
+          "score": {
+            "type": "integer",
+            "title": "Score"
+          },
+          "total_points": {
+            "type": "integer",
+            "title": "Total Points"
+          },
+          "elapsed_sec": {
+            "type": "integer",
+            "title": "Elapsed Sec"
+          },
+          "late": {
+            "type": "boolean",
+            "title": "Late"
+          },
+          "essay_pending": {
+            "type": "boolean",
+            "title": "Essay Pending"
+          },
+          "submitted_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Submitted At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "take_id",
+          "score",
+          "total_points",
+          "elapsed_sec",
+          "late",
+          "essay_pending",
+          "submitted_at"
+        ],
+        "title": "MyTake"
       },
       "NoteIn": {
         "properties": {
@@ -4552,6 +6147,211 @@
         ],
         "title": "OfferingIn"
       },
+      "PaperIn": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "chapter_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Chapter Ids"
+          },
+          "mcq_count": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Mcq Count",
+            "default": 0
+          },
+          "essay_count": {
+            "type": "integer",
+            "maximum": 30.0,
+            "minimum": 0.0,
+            "title": "Essay Count",
+            "default": 0
+          },
+          "time_limit_min": {
+            "type": "integer",
+            "maximum": 300.0,
+            "minimum": 5.0,
+            "title": "Time Limit Min"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "chapter_ids",
+          "time_limit_min"
+        ],
+        "title": "PaperIn"
+      },
+      "PaperOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "course_id": {
+            "type": "integer",
+            "title": "Course Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "time_limit_min": {
+            "type": "integer",
+            "title": "Time Limit Min"
+          },
+          "total_points": {
+            "type": "integer",
+            "title": "Total Points"
+          },
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/PaperProblemOut"
+            },
+            "type": "array",
+            "title": "Problems"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "course_id",
+          "title",
+          "time_limit_min",
+          "total_points",
+          "problems"
+        ],
+        "title": "PaperOut"
+      },
+      "PaperProblemOut": {
+        "properties": {
+          "no": {
+            "type": "integer",
+            "title": "No"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "qtype": {
+            "type": "string",
+            "title": "Qtype"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "choices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Choices"
+          },
+          "points": {
+            "type": "integer",
+            "title": "Points"
+          }
+        },
+        "type": "object",
+        "required": [
+          "no",
+          "id",
+          "qtype",
+          "question",
+          "choices",
+          "points"
+        ],
+        "title": "PaperProblemOut"
+      },
+      "PaperSummary": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "n_questions": {
+            "type": "integer",
+            "title": "N Questions"
+          },
+          "n_essay": {
+            "type": "integer",
+            "title": "N Essay"
+          },
+          "time_limit_min": {
+            "type": "integer",
+            "title": "Time Limit Min"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by_me": {
+            "type": "boolean",
+            "title": "Created By Me"
+          },
+          "takers": {
+            "type": "integer",
+            "title": "Takers"
+          },
+          "my_best": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "My Best"
+          },
+          "total_points": {
+            "type": "integer",
+            "title": "Total Points"
+          },
+          "my_open_take_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "My Open Take Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "n_questions",
+          "n_essay",
+          "time_limit_min",
+          "created_at",
+          "created_by_me",
+          "takers",
+          "my_best",
+          "total_points",
+          "my_open_take_id"
+        ],
+        "title": "PaperSummary"
+      },
       "ProblemOut": {
         "properties": {
           "id": {
@@ -4619,6 +6419,75 @@
           "professor_name"
         ],
         "title": "PublicCourseOut"
+      },
+      "RankEntry": {
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "title": "Rank"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "me": {
+            "type": "boolean",
+            "title": "Me"
+          },
+          "score": {
+            "type": "integer",
+            "title": "Score"
+          },
+          "total_points": {
+            "type": "integer",
+            "title": "Total Points"
+          },
+          "elapsed_sec": {
+            "type": "integer",
+            "title": "Elapsed Sec"
+          },
+          "late": {
+            "type": "boolean",
+            "title": "Late"
+          },
+          "paused": {
+            "type": "boolean",
+            "title": "Paused"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rank",
+          "label",
+          "me",
+          "score",
+          "total_points",
+          "elapsed_sec",
+          "late",
+          "paused"
+        ],
+        "title": "RankEntry"
+      },
+      "RankingOut": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/RankEntry"
+            },
+            "type": "array",
+            "title": "Entries"
+          },
+          "essay_pending": {
+            "type": "boolean",
+            "title": "Essay Pending"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entries",
+          "essay_pending"
+        ],
+        "title": "RankingOut"
       },
       "RecordIn": {
         "properties": {
@@ -4768,6 +6637,70 @@
         ],
         "title": "RejectIn"
       },
+      "ReportOut": {
+        "properties": {
+          "chapters": {
+            "items": {
+              "$ref": "#/components/schemas/ChapterStat"
+            },
+            "type": "array",
+            "title": "Chapters"
+          },
+          "concepts": {
+            "items": {
+              "$ref": "#/components/schemas/ConceptStat"
+            },
+            "type": "array",
+            "title": "Concepts"
+          },
+          "repeated": {
+            "items": {
+              "$ref": "#/components/schemas/LabelCount"
+            },
+            "type": "array",
+            "title": "Repeated"
+          },
+          "review_pages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Review Pages"
+          },
+          "distribution": {
+            "items": {
+              "$ref": "#/components/schemas/Dist"
+            },
+            "type": "array",
+            "title": "Distribution"
+          },
+          "flows": {
+            "items": {
+              "$ref": "#/components/schemas/Flow"
+            },
+            "type": "array",
+            "title": "Flows"
+          },
+          "blank_nos": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Blank Nos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapters",
+          "concepts",
+          "repeated",
+          "review_pages",
+          "distribution",
+          "flows",
+          "blank_nos"
+        ],
+        "title": "ReportOut"
+      },
       "RequestCreatedOut": {
         "properties": {
           "request_id": {
@@ -4814,6 +6747,276 @@
           "sbj_no"
         ],
         "title": "RequestIn"
+      },
+      "ResultItem": {
+        "properties": {
+          "no": {
+            "type": "integer",
+            "title": "No"
+          },
+          "problem_id": {
+            "type": "integer",
+            "title": "Problem Id"
+          },
+          "qtype": {
+            "type": "string",
+            "title": "Qtype"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "choices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Choices"
+          },
+          "points": {
+            "type": "integer",
+            "title": "Points"
+          },
+          "chosen": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chosen"
+          },
+          "answer_index": {
+            "type": "integer",
+            "title": "Answer Index"
+          },
+          "correct": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correct"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "model_answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Answer"
+          },
+          "misconception": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MisconceptionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "transcription": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcription"
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback"
+          },
+          "rubric": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/RubricOut"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rubric"
+          }
+        },
+        "type": "object",
+        "required": [
+          "no",
+          "problem_id",
+          "qtype",
+          "question",
+          "choices",
+          "points",
+          "chosen",
+          "answer_index",
+          "correct",
+          "score",
+          "explanation",
+          "evidence",
+          "source",
+          "model_answer"
+        ],
+        "title": "ResultItem"
+      },
+      "ResultOut": {
+        "properties": {
+          "take_id": {
+            "type": "integer",
+            "title": "Take Id"
+          },
+          "paper_id": {
+            "type": "integer",
+            "title": "Paper Id"
+          },
+          "score": {
+            "type": "integer",
+            "title": "Score"
+          },
+          "total_points": {
+            "type": "integer",
+            "title": "Total Points"
+          },
+          "essay_pending": {
+            "type": "boolean",
+            "title": "Essay Pending"
+          },
+          "elapsed_sec": {
+            "type": "integer",
+            "title": "Elapsed Sec"
+          },
+          "late": {
+            "type": "boolean",
+            "title": "Late"
+          },
+          "essay_status": {
+            "type": "string",
+            "title": "Essay Status"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank"
+          },
+          "takers": {
+            "type": "integer",
+            "title": "Takers"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ResultItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "report": {
+            "$ref": "#/components/schemas/ReportOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "take_id",
+          "paper_id",
+          "score",
+          "total_points",
+          "essay_pending",
+          "elapsed_sec",
+          "late",
+          "essay_status",
+          "submitted_at",
+          "summary",
+          "rank",
+          "takers",
+          "items",
+          "report"
+        ],
+        "title": "ResultOut"
       },
       "ReviewCreate": {
         "properties": {
@@ -4953,6 +7156,131 @@
         ],
         "title": "ReviewTerm"
       },
+      "RubricOut": {
+        "properties": {
+          "item": {
+            "type": "string",
+            "title": "Item"
+          },
+          "max_points": {
+            "type": "integer",
+            "title": "Max Points"
+          },
+          "points": {
+            "type": "integer",
+            "title": "Points"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item",
+          "max_points",
+          "points",
+          "reason"
+        ],
+        "title": "RubricOut"
+      },
+      "ScanEssay": {
+        "properties": {
+          "no": {
+            "type": "integer",
+            "title": "No"
+          },
+          "problem_id": {
+            "type": "integer",
+            "title": "Problem Id"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image"
+          }
+        },
+        "type": "object",
+        "required": [
+          "no",
+          "problem_id",
+          "image"
+        ],
+        "title": "ScanEssay"
+      },
+      "ScanMcq": {
+        "properties": {
+          "no": {
+            "type": "integer",
+            "title": "No"
+          },
+          "problem_id": {
+            "type": "integer",
+            "title": "Problem Id"
+          },
+          "chosen": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chosen"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "no",
+          "problem_id",
+          "chosen",
+          "status"
+        ],
+        "title": "ScanMcq"
+      },
+      "ScanOut": {
+        "properties": {
+          "mcq": {
+            "items": {
+              "$ref": "#/components/schemas/ScanMcq"
+            },
+            "type": "array",
+            "title": "Mcq"
+          },
+          "essays": {
+            "items": {
+              "$ref": "#/components/schemas/ScanEssay"
+            },
+            "type": "array",
+            "title": "Essays"
+          },
+          "missing_pages": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Missing Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mcq",
+          "essays",
+          "missing_pages"
+        ],
+        "title": "ScanOut"
+      },
       "SearchOut": {
         "properties": {
           "total": {
@@ -4989,6 +7317,22 @@
           "material_ids"
         ],
         "title": "SelectionIn"
+      },
+      "SheetOut": {
+        "properties": {
+          "pages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pages"
+        ],
+        "title": "SheetOut"
       },
       "SignupIn": {
         "properties": {
@@ -5047,6 +7391,24 @@
           "page"
         ],
         "title": "SourceOut"
+      },
+      "StatusIn": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "hidden",
+              "approved"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "StatusIn"
       },
       "SubjectIn": {
         "properties": {
@@ -5140,6 +7502,84 @@
         },
         "type": "object",
         "title": "SubjectUpdate"
+      },
+      "SubmitIn": {
+        "properties": {
+          "answers": {
+            "items": {
+              "$ref": "#/components/schemas/AnswerIn"
+            },
+            "type": "array",
+            "title": "Answers"
+          },
+          "essays": {
+            "items": {
+              "$ref": "#/components/schemas/EssayIn"
+            },
+            "type": "array",
+            "title": "Essays",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "answers"
+        ],
+        "title": "SubmitIn"
+      },
+      "TakeOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "paper_id": {
+            "type": "integer",
+            "title": "Paper Id"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "paused": {
+            "type": "boolean",
+            "title": "Paused"
+          },
+          "pause_count": {
+            "type": "integer",
+            "title": "Pause Count"
+          },
+          "time_limit_sec": {
+            "type": "integer",
+            "title": "Time Limit Sec"
+          },
+          "spent_sec": {
+            "type": "number",
+            "title": "Spent Sec"
+          },
+          "remaining_sec": {
+            "type": "number",
+            "title": "Remaining Sec"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "paper_id",
+          "started_at",
+          "status",
+          "paused",
+          "pause_count",
+          "time_limit_sec",
+          "spent_sec",
+          "remaining_sec"
+        ],
+        "title": "TakeOut"
       },
       "TermOut": {
         "properties": {

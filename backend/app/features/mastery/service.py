@@ -1,5 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import datetime
 
 from sqlmodel import Session, select
 
@@ -15,19 +16,25 @@ class ConceptState:
 
 
 def concept_states(
-    session: Session, user_id: int, concept_ids: list[int]
+    session: Session, user_id: int, concept_ids: list[int], before: datetime | None = None
 ) -> dict[int, ConceptState]:
-    """개념별로 이 사용자의 숙련도를 계산한다. 파라미터 학습에는 모든 사용자의 기록을 쓴다."""
+    """개념별로 이 사용자의 숙련도를 계산한다. 파라미터 학습에는 모든 사용자의 기록을 쓴다.
+
+    before를 주면 이 사용자의 그 시각 이후 풀이는 빼고 계산한다(예: 시험 보기 전 숙련도).
+    """
     if not concept_ids:
         return {}
     rows = session.exec(
-        select(ProblemConcept.concept_id, Attempt.user_id, Attempt.correct)
+        select(ProblemConcept.concept_id, Attempt.user_id, Attempt.correct, Attempt.created_at)
         .join(Attempt, Attempt.problem_id == ProblemConcept.problem_id)
         .where(ProblemConcept.concept_id.in_(concept_ids))
         .order_by(Attempt.id)
     ).all()
     seqs: dict[int, dict[str, list[bool]]] = defaultdict(lambda: defaultdict(list))
-    for concept_id, uid, correct in rows:
+    cut = before.replace(tzinfo=None) if before else None
+    for concept_id, uid, correct, at in rows:
+        if cut and uid == user_id and at is not None and at.replace(tzinfo=None) >= cut:
+            continue
         seqs[concept_id][str(uid)].append(correct)
 
     out = {}

@@ -9,7 +9,8 @@ from app.core.security import CurrentUser
 from app.features.courses.router import get_course_or_404
 from app.features.enrollments.service import require_course_access
 from app.features.mastery.service import concept_states
-from app.models import Attempt, Chapter, Concept, Material, Problem, ProblemConcept
+from app.features.problems.service import concepts_of, pick_problems
+from app.models import Attempt, Chapter, Concept, Material, Problem
 
 router = APIRouter(tags=["problems"])
 
@@ -19,7 +20,8 @@ class ChapterOut(BaseModel):
     order: int
     title: str
     concepts: list[str]
-    problem_count: int
+    problem_count: int  # 객관식(퀴즈에 나오는 것)
+    essay_count: int  # 서술형(종이 시험에만)
 
 
 class ConceptRef(BaseModel):
@@ -64,16 +66,7 @@ class AttemptResult(BaseModel):
     mastery: list[MasteryChange]
 
 
-def _concepts_of(session: SessionDep, problem_ids: list[int]) -> dict[int, list[Concept]]:
-    rows = session.exec(
-        select(ProblemConcept.problem_id, Concept)
-        .join(Concept, Concept.id == ProblemConcept.concept_id)
-        .where(ProblemConcept.problem_id.in_(problem_ids))
-    ).all()
-    out: dict[int, list[Concept]] = {pid: [] for pid in problem_ids}
-    for pid, concept in rows:
-        out[pid].append(concept)
-    return out
+_concepts_of = concepts_of
 
 
 @router.get("/courses/{course_id}/chapters")
@@ -91,20 +84,22 @@ def list_chapters(course_id: int, session: SessionDep, user: CurrentUser) -> lis
         .order_by(Concept.id)
     ).all():
         names[chapter_id].append(name)
-    counts = dict(
-        session.exec(
-            select(Problem.chapter_id, func.count())
-            .where(Problem.chapter_id.in_(ids))
-            .group_by(Problem.chapter_id)
-        ).all()
-    )
+    counts: dict[tuple[int, bool], int] = {}
+    for chapter_id, qtype, n in session.exec(
+        select(Problem.chapter_id, Problem.qtype, func.count())
+        .where(Problem.chapter_id.in_(ids))
+        .group_by(Problem.chapter_id, Problem.qtype)
+    ).all():
+        key = (chapter_id, qtype == "mcq")
+        counts[key] = counts.get(key, 0) + n
     return [
         ChapterOut(
             id=ch.id,
             order=ch.order,
             title=ch.title,
             concepts=names[ch.id],
-            problem_count=counts.get(ch.id, 0),
+            problem_count=counts.get((ch.id, True), 0),
+            essay_count=counts.get((ch.id, False), 0),
         )
         for ch in chapters
     ]
@@ -126,42 +121,11 @@ def next_problems(
     if chapter is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "챕터가 없습니다")
     require_course_access(session, user, get_course_or_404(session, chapter.course_id))
-    problems = session.exec(select(Problem).where(Problem.chapter_id == chapter_id)).all()
-    if not problems:
-        return []
-    concepts = _concepts_of(session, [p.id for p in problems])
-    concept_ids = sorted({c.id for cs in concepts.values() for c in cs})
-    states = concept_states(session, user.id, concept_ids)
-    solved = set(
-        session.exec(
-            select(Attempt.problem_id).where(
-                Attempt.user_id == user.id, Attempt.problem_id.in_([p.id for p in problems])
-            )
-        ).all()
-    )
-
-    def priority(p: Problem) -> tuple:
-        cs = concepts[p.id]
-        has_unseen = any(states[c.id].attempts == 0 for c in cs)
-        lowest = min((states[c.id].mastery for c in cs), default=1.0)
-        return (not has_unseen, p.id in solved, lowest, p.id)
-
-    picked: list[Problem] = []
-    seen_now: set[int] = set()
-    # 한 번에 고를 때도 아직 안 나온 개념이 골고루 들어가도록 한 문제씩 고른다
-    pool = sorted(problems, key=priority)
-    while pool and len(picked) < count:
-        best = next(
-            (
-                p
-                for p in pool
-                if any(c.id not in seen_now and states[c.id].attempts == 0 for c in concepts[p.id])
-            ),
-            pool[0],
-        )
-        picked.append(best)
-        pool.remove(best)
-        seen_now.update(c.id for c in concepts[best.id])
+    problems = session.exec(
+        select(Problem).where(Problem.chapter_id == chapter_id, Problem.qtype == "mcq")
+    ).all()  # 퀴즈는 객관식만(서술형은 종이 시험에서)
+    picked = pick_problems(session, user.id, list(problems), count)
+    concepts = _concepts_of(session, [p.id for p in picked])
 
     return [
         ProblemOut(
