@@ -15,7 +15,7 @@ from app.features.courses.router import get_course_or_404
 from app.features.enrollments.service import require_course_access
 from app.features.misconceptions.service import visible_for
 from app.features.papers import omr
-from app.features.papers.grading import finish_take, grade_mcq
+from app.features.papers.grading import claim, finish_take, grade_mcq
 from app.features.papers.report import ReportOut, build_report, first_takes
 from app.features.papers.source import pick_for_paper
 from app.features.problems.router import SourceOut
@@ -164,6 +164,7 @@ class ResultOut(BaseModel):
     elapsed_sec: int
     late: bool
     essay_status: str  # none | pending(채점 중) | done | unavailable
+    submitted_at: datetime | None
     summary: str | None
     rank: int | None
     takers: int
@@ -556,6 +557,7 @@ def _result(session: Session, take: PaperTake, paper: Paper) -> ResultOut:
         elapsed_sec=take.elapsed_sec or 0,
         late=take.late,
         essay_status=take.essay_status,
+        submitted_at=take.submitted_at,
         summary=take.summary,
         rank=rank,
         takers=len(ranking),
@@ -625,15 +627,21 @@ def submit_take(
     session.add(take)
     session.commit()
     session.refresh(take)
+    claim(take.id)
     background.add_task(finish_take, session.get_bind(), take.id)
     return _result(session, take, paper)
 
 
 @router.get("/takes/{take_id}/result")
-def get_result(take_id: int, session: SessionDep, user: CurrentUser) -> ResultOut:
+def get_result(
+    take_id: int, background: BackgroundTasks, session: SessionDep, user: CurrentUser
+) -> ResultOut:
     take, paper = _take_or_404(session, user, take_id)
     if take.status != "submitted":
         raise HTTPException(status.HTTP_409_CONFLICT, "아직 제출하지 않았습니다")
+    # 채점 중인데 맡은 작업이 없으면(서버가 다시 켜져 끊김) 이어서 채점한다. 이미 채점한 칸은 건너뜀
+    if take.essay_status == "pending" and claim(take.id):
+        background.add_task(finish_take, session.get_bind(), take.id)
     return _result(session, take, paper)
 
 

@@ -641,7 +641,8 @@ function ResultView({ takeId, onBack }: { takeId: number; onBack: () => void }) 
             <div>틀린 문제 {wrong}개</div>
             {grading && (
               <div className="flex items-center gap-1 text-amber-700">
-                <Loader2 className="size-3.5 animate-spin" /> 서술형 채점 중… (점수·등수에 곧 반영)
+                <Loader2 className="size-3.5 animate-spin" /> 서술형 채점 중…{' '}
+                <GradingClock since={r.submitted_at} /> (보통 30초~1분, 끝나면 점수·등수에 반영)
               </div>
             )}
             {r.essay_status === 'unavailable' && (
@@ -736,6 +737,18 @@ function ResultView({ takeId, onBack }: { takeId: number; onBack: () => void }) 
 }
 
 type ResultItem = Schemas['ResultItem']
+
+/** 제출한 지 몇 초 지났는지(채점 기다리는 동안 멈춘 게 아니라는 표시) */
+function GradingClock({ since }: { since: string | null | undefined }) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [])
+  if (!since) return null
+  const t = new Date(since.endsWith('Z') || since.includes('+') ? since : `${since}Z`).getTime()
+  return <span className="tabular-nums">{Math.max(0, Math.round((now - t) / 1000))}초</span>
+}
 
 function MisconceptionBox({ m }: { m: NonNullable<ResultItem['misconception']> }) {
   return (

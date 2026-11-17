@@ -56,13 +56,15 @@ export const useTakeResult = (takeId: number | null) =>
   useQuery({
     queryKey: ['takes', takeId, 'result'],
     enabled: takeId != null,
-    // 서술형 채점·요약은 제출 뒤 서버에서 이어서 한다. 끝날 때까지(최대 약 2분) 3초마다 다시 받는다
+    // 서술형 채점·요약은 제출 뒤 서버에서 이어서 한다. 채점 중이면 끝날 때까지(최대 10분) 3초마다,
+    // 요약만 남았으면 1분 동안 더 받는다
     refetchInterval: (q) => {
       const d = q.state.data
-      if (!d || q.state.dataUpdateCount > 40) return false
-      return d.essay_status === 'pending' || (d.summary == null && d.essay_status !== 'unavailable')
-        ? 3000
-        : false
+      if (!d) return false
+      if (d.essay_status === 'pending') return q.state.dataUpdateCount < 200 ? 3000 : false
+      if (d.summary == null && d.essay_status !== 'unavailable')
+        return q.state.dataUpdateCount < 220 ? 3000 : false
+      return false
     },
     queryFn: () =>
       unwrap(api.GET('/api/v1/takes/{take_id}/result', { params: { path: { take_id: takeId! } } })),

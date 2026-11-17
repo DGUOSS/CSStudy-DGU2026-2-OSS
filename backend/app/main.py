@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import APIRouter, FastAPI
 
 from app.features.admin.router import router as admin_router
@@ -12,8 +14,16 @@ from app.features.materials.router import router as materials_router
 from app.features.misconceptions.router import router as misconceptions_router
 from app.features.papers.router import router as papers_router
 from app.features.problems.router import router as problems_router
+from app.services import llm
 
-app = FastAPI(title="dgu-study", version="0.2.0")
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    llm.warm_up()
+    yield
+
+
+app = FastAPI(title="dgu-study", version="0.2.0", lifespan=lifespan)
 
 api = APIRouter(prefix="/api/v1")
 

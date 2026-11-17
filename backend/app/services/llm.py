@@ -37,6 +37,15 @@ def generate_problems(
     raise LLMNotConfigured("문제 생성기는 아직 연결되지 않았습니다")
 
 
+def warm_up() -> None:
+    """서버를 켤 때 anthropic 라이브러리를 미리 불러 둔다(백그라운드). 첫 채점이 느려지지 않게.
+    WSL에서 Windows 드라이브(/mnt/c)에 있으면 불러오는 데만 1분 가까이 걸린다."""
+    if settings.anthropic_api_key:
+        import threading
+
+        threading.Thread(target=lambda: __import__("anthropic"), daemon=True).start()
+
+
 def _client():
     if not settings.anthropic_api_key:
         raise LLMNotConfigured("ANTHROPIC_API_KEY가 없습니다")
@@ -151,7 +160,9 @@ def grade_essay(
     ]
     g = _parse(
         "대학 전공 과목 서술형 채점자. 사진 속 손글씨 답을 읽고, 주어진 배점표 항목별로만 채점한다. "
-        "배점표에 없는 기준으로 감점하지 않는다. 답 칸이 비어 있으면 0점. 한국어.",
+        "모범답안은 참고용이다: 표현·어순·용어가 달라도 뜻이 같고 같은 맥락이면 그 항목 점수를 준다. "
+        "맞춤법·띄어쓰기·글씨로 감점하지 않는다. 배점표에 없는 기준으로 감점하지 않는다. "
+        "틀린 내용이 섞여 있으면 그 항목만 깎는다. 답 칸이 비어 있으면 0점. 한국어.",
         content,
         EssayGrade,
     )

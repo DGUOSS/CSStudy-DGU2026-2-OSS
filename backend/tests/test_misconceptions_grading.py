@@ -201,3 +201,31 @@ def test_essay_unavailable_without_key(client, login, session, public_course):  
     assert t.essay_status == "unavailable" and t.essay_score is None
     r = client.get(f"/api/v1/takes/{take_id}/result").json()
     assert r["essay_pending"] is True and r["items"][-1]["score"] is None and r["summary"] is None
+
+
+def test_stuck_grading_resumes_on_result(client, login, session, public_course, monkeypatch):  # noqa: F811
+    """서버가 다시 켜져 채점이 끊긴 응시(pending인데 맡은 작업 없음)는 결과를 열 때 이어서 채점한다."""
+    from app.features.papers import grading
+
+    c = public_course
+    login("s2@dgu.ac.kr")
+    paper = _make_paper(client, c["course"].id, c["chapter"].id)
+    take_id, _ = _submit(client, session, paper)  # 키 없음 → unavailable
+    t = session.get(PaperTake, take_id)
+    t.essay_status = "pending"  # 채점 도중 서버가 꺼진 상태로 만든다
+    session.add(t)
+    session.commit()
+    monkeypatch.setattr(
+        llm,
+        "grade_essay",
+        lambda img, q, model, rubric, points: llm.EssayGrade(
+            transcription="x", items=[], total=3, feedback="좋아요"
+        ),
+    )
+    first = client.get(f"/api/v1/takes/{take_id}/result").json()
+    assert first["essay_status"] == "pending" and first["submitted_at"]
+    session.expire_all()
+    assert session.get(PaperTake, take_id).essay_status == "done"
+    r = client.get(f"/api/v1/takes/{take_id}/result").json()
+    assert r["items"][-1]["score"] == 3 and r["essay_pending"] is False
+    assert grading._running == set()

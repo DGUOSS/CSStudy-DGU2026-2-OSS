@@ -6686,6 +6686,18 @@
             "type": "string",
             "title": "Essay Status"
           },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
           "summary": {
             "anyOf": [
               {
@@ -6733,6 +6745,7 @@
           "elapsed_sec",
           "late",
           "essay_status",
+          "submitted_at",
           "summary",
           "rank",
           "takers",

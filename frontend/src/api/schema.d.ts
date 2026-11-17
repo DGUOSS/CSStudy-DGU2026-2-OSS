@@ -1972,6 +1972,8 @@ export interface components {
             late: boolean;
             /** Essay Status */
             essay_status: string;
+            /** Submitted At */
+            submitted_at: string | null;
             /** Summary */
             summary: string | null;
             /** Rank */
