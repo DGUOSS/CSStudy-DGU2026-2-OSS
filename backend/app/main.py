@@ -14,6 +14,7 @@ from app.features.materials.router import router as materials_router
 from app.features.misconceptions.router import router as misconceptions_router
 from app.features.papers.router import router as papers_router
 from app.features.problems.router import router as problems_router
+from app.features.reviews.router import router as reviews_router
 from app.services import llm
 
 
@@ -44,6 +45,7 @@ api.include_router(admin_router)
 api.include_router(enrollments_router)
 api.include_router(catalog_router)
 api.include_router(exams_router)
+api.include_router(reviews_router)
 api.include_router(papers_router)
 api.include_router(misconceptions_router)
 

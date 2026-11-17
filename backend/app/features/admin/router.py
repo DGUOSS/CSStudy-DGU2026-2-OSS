@@ -27,6 +27,7 @@ from app.models import (
     Concept,
     Course,
     CourseRequest,
+    CourseReview,
     Enrollment,
     ExamSelection,
     Material,
@@ -215,6 +216,9 @@ def _delete_all(session, rows) -> None:
 def _purge_course(session, course: Course) -> None:
     """강좌와 딸린 것 전부를 지운다(커밋은 부르는 쪽에서)."""
     cid = course.id
+    _delete_all(
+        session, session.exec(select(CourseReview).where(CourseReview.course_id == cid)).all()
+    )
     for r in session.exec(select(CourseRequest).where(CourseRequest.course_id == cid)).all():
         r.course_id = None
         session.add(r)

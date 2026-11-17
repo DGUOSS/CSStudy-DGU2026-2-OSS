@@ -7,6 +7,7 @@ import { MasteryTab } from '@/features/mastery/MasteryTab'
 import { MaterialsTab } from '@/features/materials/MaterialsTab'
 import { PapersTab } from '@/features/papers/PapersTab'
 import { ChaptersTab } from '@/features/problems/ChaptersTab'
+import { ReviewsTab } from '@/features/reviews/ReviewsTab'
 import { CourseInfoTab } from './CourseInfoTab'
 import { useCourse } from './queries'
 
@@ -16,6 +17,7 @@ const TABS = [
   { key: 'mastery', label: '숙련도' },
   { key: 'materials', label: '자료' },
   { key: 'info', label: '강좌 정보' },
+  { key: 'reviews', label: '강좌 후기' },
 ] as const
 
 type TabKey = (typeof TABS)[number]['key']
@@ -76,6 +78,7 @@ export function CoursePage() {
       {tab === 'mastery' && <MasteryTab courseId={courseId} />}
       {tab === 'materials' && <MaterialsTab courseId={courseId} />}
       {tab === 'info' && <CourseInfoTab course={c} />}
+      {tab === 'reviews' && <ReviewsTab key={courseId} courseId={courseId} />}
     </div>
   )
 }
