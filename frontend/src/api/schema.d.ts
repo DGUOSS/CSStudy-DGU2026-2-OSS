@@ -1364,6 +1364,20 @@ export interface components {
             /** Cpdivs */
             cpdivs: string[];
         };
+        /**
+         * Flow
+         * @description 틀린 객관식 하나가 이어지는 길: 문제 → 오개념 → 개념 → 다시 볼 교안 쪽(오답 흐름 차트).
+         */
+        Flow: {
+            /** No */
+            no: number;
+            /** Misconception */
+            misconception: string | null;
+            /** Concept */
+            concept: string | null;
+            /** Page */
+            page: string | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1874,10 +1888,8 @@ export interface components {
             review_pages: string[];
             /** Distribution */
             distribution: components["schemas"]["Dist"][];
-            /** Sankey Nodes */
-            sankey_nodes: components["schemas"]["SankeyNode"][];
-            /** Sankey Links */
-            sankey_links: components["schemas"]["SankeyLink"][];
+            /** Flows */
+            flows: components["schemas"]["Flow"][];
             /** Blank Nos */
             blank_nos: number[];
         };
@@ -1980,22 +1992,6 @@ export interface components {
             points: number;
             /** Reason */
             reason: string;
-        };
-        /** SankeyLink */
-        SankeyLink: {
-            /** Source */
-            source: string;
-            /** Target */
-            target: string;
-            /** Value */
-            value: number;
-        };
-        /** SankeyNode */
-        SankeyNode: {
-            /** Id */
-            id: string;
-            /** Kind */
-            kind: string;
         };
         /** ScanEssay */
         ScanEssay: {

@@ -159,12 +159,10 @@ def test_essay_graded_in_background_and_report(client, login, session, with_sour
     assert len(wrong) == 2 and rep["repeated"] == [{"label": "주소와 값 혼동", "count": 2}]
     assert rep["review_pages"] == ["교안 1 1쪽"]
     assert rep["blank_nos"] == []
-    assert {n["kind"] for n in rep["sankey_nodes"]} == {
-        "problem",
-        "misconception",
-        "concept",
-        "page",
-    }
+    assert [(f["misconception"], f["page"]) for f in rep["flows"]] == [
+        ("주소와 값 혼동", "교안 1 1쪽"),
+        ("주소와 값 혼동", "교안 1 1쪽"),
+    ]
     assert rep["chapters"][0]["title"] == "포인터" and rep["concepts"]
     assert rep["distribution"] == [{"rank": 1, "score": 3, "total_points": 6, "me": True}]
     assert r["rank"] == 1 and r["takers"] == 1

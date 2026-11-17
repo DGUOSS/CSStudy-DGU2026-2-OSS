@@ -695,6 +695,7 @@ function ResultView({ takeId, onBack }: { takeId: number; onBack: () => void }) 
         {r.items.map((i) => (
           <Card
             key={i.no}
+            id={`q-${i.no}`}
             className={cn(
               'flex flex-col gap-2 p-4 text-sm',
               i.correct === false && 'border-destructive/40',

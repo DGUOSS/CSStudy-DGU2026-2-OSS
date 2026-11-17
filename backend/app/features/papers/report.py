@@ -43,15 +43,13 @@ class Dist(BaseModel):
     me: bool
 
 
-class SankeyNode(BaseModel):
-    id: str  # '종류:이름'
-    kind: str  # problem | misconception | unknown(오개념 추정 없음) | concept | page
+class Flow(BaseModel):
+    """틀린 객관식 하나가 이어지는 길: 문제 → 오개념 → 개념 → 다시 볼 교안 쪽(오답 흐름 차트)."""
 
-
-class SankeyLink(BaseModel):
-    source: str
-    target: str
-    value: int
+    no: int
+    misconception: str | None  # None = 오개념 추정 없음
+    concept: str | None
+    page: str | None
 
 
 class ReportOut(BaseModel):
@@ -60,8 +58,7 @@ class ReportOut(BaseModel):
     repeated: list[LabelCount]  # 2문항 이상에서 나온 오개념
     review_pages: list[str]  # 다시 볼 교안 쪽(틀린 문제가 많이 가리키는 순)
     distribution: list[Dist]
-    sankey_nodes: list[SankeyNode]
-    sankey_links: list[SankeyLink]
+    flows: list[Flow]
     blank_nos: list[int]  # 빈칸으로 둔 객관식 번호(오답 흐름에서는 뺀다)
 
 
@@ -108,15 +105,8 @@ def build_report(
     concept_rows: dict[int, dict] = {}
     label_count: dict[str, int] = {}
     page_count: dict[str, int] = {}
-    nodes: dict[str, str] = {}
-    links: dict[tuple[str, str], int] = {}
+    flows: list[Flow] = []
     blank_nos: list[int] = []
-
-    def link(a: str, ka: str, b: str, kb: str) -> None:
-        # 노드 id는 '종류:이름'(같은 이름의 개념·오개념이 섞이지 않게). 화면에는 이름만 보인다
-        a, b = f"{ka}:{a}", f"{kb}:{b}"
-        nodes[a], nodes[b] = ka, kb
-        links[(a, b)] = links.get((a, b), 0) + 1
 
     for no, p in enumerate(probs, start=1):
         if p.qtype != "mcq":
@@ -151,13 +141,16 @@ def build_report(
                 row["pages"].add(page)
         if wrong and chosen is None:
             blank_nos.append(no)
-        elif wrong:  # 오답 흐름: 문제 → 오개념 → 개념 → 교안 쪽 (빈칸은 고른 보기가 없어 뺀다)
-            mid, mk = (m.label, "misconception") if m else ("추정 없음", "unknown")
-            link(f"{no}번", "problem", mid, mk)
-            for c in cmap.get(p.id, [])[:1] or []:
-                link(mid, mk, c.name, "concept")
-                if page:
-                    link(c.name, "concept", page, "page")
+        elif wrong:  # 오답 흐름(빈칸은 고른 보기가 없어 뺀다)
+            cs = cmap.get(p.id, [])
+            flows.append(
+                Flow(
+                    no=no,
+                    misconception=m.label if m else None,
+                    concept=cs[0].name if cs else None,
+                    page=page,
+                )
+            )
 
     concepts = [
         ConceptStat(
@@ -212,7 +205,6 @@ def build_report(
         ],
         review_pages=[k for k, _ in sorted(page_count.items(), key=lambda x: -x[1])],
         distribution=dist,
-        sankey_nodes=[SankeyNode(id=k, kind=v) for k, v in nodes.items()],
-        sankey_links=[SankeyLink(source=a, target=b, value=v) for (a, b), v in links.items()],
+        flows=flows,
         blank_nos=blank_nos,
     )

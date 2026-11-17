@@ -4785,6 +4785,56 @@
         ],
         "title": "FiltersOut"
       },
+      "Flow": {
+        "properties": {
+          "no": {
+            "type": "integer",
+            "title": "No"
+          },
+          "misconception": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Misconception"
+          },
+          "concept": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Concept"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page"
+          }
+        },
+        "type": "object",
+        "required": [
+          "no",
+          "misconception",
+          "concept",
+          "page"
+        ],
+        "title": "Flow",
+        "description": "틀린 객관식 하나가 이어지는 길: 문제 → 오개념 → 개념 → 다시 볼 교안 쪽(오답 흐름 차트)."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -6360,19 +6410,12 @@
             "type": "array",
             "title": "Distribution"
           },
-          "sankey_nodes": {
+          "flows": {
             "items": {
-              "$ref": "#/components/schemas/SankeyNode"
+              "$ref": "#/components/schemas/Flow"
             },
             "type": "array",
-            "title": "Sankey Nodes"
-          },
-          "sankey_links": {
-            "items": {
-              "$ref": "#/components/schemas/SankeyLink"
-            },
-            "type": "array",
-            "title": "Sankey Links"
+            "title": "Flows"
           },
           "blank_nos": {
             "items": {
@@ -6389,8 +6432,7 @@
           "repeated",
           "review_pages",
           "distribution",
-          "sankey_nodes",
-          "sankey_links",
+          "flows",
           "blank_nos"
         ],
         "title": "ReportOut"
@@ -6726,47 +6768,6 @@
           "reason"
         ],
         "title": "RubricOut"
-      },
-      "SankeyLink": {
-        "properties": {
-          "source": {
-            "type": "string",
-            "title": "Source"
-          },
-          "target": {
-            "type": "string",
-            "title": "Target"
-          },
-          "value": {
-            "type": "integer",
-            "title": "Value"
-          }
-        },
-        "type": "object",
-        "required": [
-          "source",
-          "target",
-          "value"
-        ],
-        "title": "SankeyLink"
-      },
-      "SankeyNode": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "kind": {
-            "type": "string",
-            "title": "Kind"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "kind"
-        ],
-        "title": "SankeyNode"
       },
       "ScanEssay": {
         "properties": {
