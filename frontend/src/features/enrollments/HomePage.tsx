@@ -1,3 +1,4 @@
+import { NoticesPanel } from '@/features/notices/NoticesPanel'
 import { ChevronRight, Lock, RefreshCw, Search } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
@@ -30,6 +31,7 @@ export function HomePage() {
             엔드림스 수강 기록을 가져오면 들었거나 듣고 있는 강좌가 자동으로 등록됩니다.
           </p>
         </div>
+        <NoticesPanel />
         <PublicCourses list={d.public} />
         <ImportPanel />
         {user?.role === 'admin' && (
@@ -62,6 +64,7 @@ export function HomePage() {
           </Button>
         </div>
       </div>
+      <NoticesPanel />
       {reimport && <ImportPanel compact />}
 
       <Section title="수강 중" empty="이번 학기에 열린 강좌가 없습니다.">
