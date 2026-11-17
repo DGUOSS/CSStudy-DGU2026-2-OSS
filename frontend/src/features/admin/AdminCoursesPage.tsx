@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useCourses, useSubjects } from '@/features/courses/queries'
 import { UploadForm } from '@/features/materials/MaterialsTab'
+import { MisconceptionAdmin } from '@/features/misconceptions/MisconceptionAdmin'
 import { resultText } from '@/features/materials/resultText'
 import { AdminNav } from './AdminNav'
 
@@ -386,6 +387,7 @@ function CourseRow({ course }: { course: Schemas['CourseOut'] }) {
       {open && (
         <div className="mt-3 flex flex-col gap-3">
           <MaterialsAdmin courseId={course.id} />
+          <MisconceptionAdmin courseId={course.id} />
           <CourseInfoAdmin course={course} />
           <UploadForm courseId={course.id} />
         </div>

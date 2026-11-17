@@ -5,12 +5,14 @@ import { isForbidden } from '@/features/enrollments/queries'
 import { cn } from '@/lib/utils'
 import { MasteryTab } from '@/features/mastery/MasteryTab'
 import { MaterialsTab } from '@/features/materials/MaterialsTab'
+import { PapersTab } from '@/features/papers/PapersTab'
 import { ChaptersTab } from '@/features/problems/ChaptersTab'
 import { CourseInfoTab } from './CourseInfoTab'
 import { useCourse } from './queries'
 
 const TABS = [
   { key: 'solve', label: '문제 풀이' },
+  { key: 'papers', label: '시험' },
   { key: 'mastery', label: '숙련도' },
   { key: 'materials', label: '자료' },
   { key: 'info', label: '강좌 정보' },
@@ -70,6 +72,7 @@ export function CoursePage() {
         ))}
       </nav>
       {tab === 'solve' && <ChaptersTab courseId={courseId} />}
+      {tab === 'papers' && <PapersTab courseId={courseId} />}
       {tab === 'mastery' && <MasteryTab courseId={courseId} />}
       {tab === 'materials' && <MaterialsTab courseId={courseId} />}
       {tab === 'info' && <CourseInfoTab course={c} />}

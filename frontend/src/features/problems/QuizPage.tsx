@@ -9,6 +9,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { pct } from '@/features/mastery/queries'
+import { Evidence } from './Evidence'
 import { cn } from '@/lib/utils'
 
 const COUNT = 5
@@ -189,53 +190,13 @@ function ProblemCard({
 }
 
 function Explanation({ result }: { result: Result }) {
-  const [showPage, setShowPage] = useState(false)
-  const source = result.source
-  const page = useQuery({
-    queryKey: ['material-page', source?.material_id, source?.page],
-    queryFn: () =>
-      unwrap(
-        api.GET('/api/v1/materials/{material_id}/pages/{page}', {
-          params: { path: { material_id: source!.material_id, page: source!.page! } },
-        }),
-      ),
-    enabled: showPage && !!source?.page,
-  })
-
   return (
     <div className="mt-2 flex flex-col gap-3 rounded-lg bg-muted p-4 text-sm">
       <div className={cn('font-semibold', result.correct ? 'text-success' : 'text-destructive')}>
         {result.correct ? '정답입니다' : `오답입니다 · 정답 ${result.answer_index + 1}번`}
       </div>
       <p className="whitespace-pre-wrap leading-relaxed">{result.explanation}</p>
-      {result.evidence && (
-        <blockquote className="border-l-2 border-primary pl-3 text-muted-foreground">
-          {result.evidence}
-          {source && (
-            <div className="mt-1 text-xs">
-              — {source.title}
-              {source.page && (
-                <>
-                  {' '}
-                  {source.page}쪽{' '}
-                  <button
-                    type="button"
-                    className="cursor-pointer text-primary underline"
-                    onClick={() => setShowPage((v) => !v)}
-                  >
-                    {showPage ? '접기' : '교안 보기'}
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-        </blockquote>
-      )}
-      {showPage && (
-        <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-md border bg-card p-3 text-xs">
-          {page.data?.text ?? '불러오는 중…'}
-        </pre>
-      )}
+      <Evidence evidence={result.evidence} source={result.source} />
       <div className="flex flex-col gap-1">
         {result.mastery.map((m) => (
           <div key={m.concept_id} className="flex justify-between text-xs">
