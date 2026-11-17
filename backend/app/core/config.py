@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     # 배포(https)에서는 true. 로컬 http 개발에서는 false여야 쿠키가 저장된다.
     cookie_secure: bool = False
     max_upload_mb: int = 30
+    # Claude API (오개념 만들기, 서술형 채점, 결과 요약). 없으면 그 기능만 꺼진다
+    anthropic_api_key: str = ""
+    llm_model: str = "claude-opus-5-5"
 
     @property
     def db_url(self) -> str:

@@ -31,6 +31,7 @@ from app.models import (
     ExamSelection,
     Material,
     MaterialVote,
+    Misconception,
     Paper,
     PaperEssayImage,
     PaperTake,
@@ -248,6 +249,10 @@ def _purge_course(session, course: Course) -> None:
     )
     p_ids = [p.id for p in problems]
     if p_ids:
+        _delete_all(
+            session,
+            session.exec(select(Misconception).where(Misconception.problem_id.in_(p_ids))).all(),  # type: ignore[attr-defined]
+        )
         _delete_all(
             session, session.exec(select(Attempt).where(Attempt.problem_id.in_(p_ids))).all()
         )  # type: ignore[attr-defined]

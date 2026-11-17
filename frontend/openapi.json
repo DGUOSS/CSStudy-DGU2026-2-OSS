@@ -3264,7 +3264,7 @@
           "papers"
         ],
         "summary": "Submit Take",
-        "description": "확인한 답을 제출해 채점한다. 객관식은 풀이 기록(Attempt)으로도 남겨 숙련도에 반영한다.",
+        "description": "확인한 답을 제출해 채점한다. 객관식은 바로 채점하고 풀이 기록(Attempt)으로 남겨 숙련도에 반영한다.\n서술형 채점과 결과 요약은 제출 뒤 백그라운드에서 Claude로 한다(grading.finish_take).",
         "operationId": "submit_take_api_v1_takes__take_id__submit_post",
         "parameters": [
           {
@@ -3427,6 +3427,253 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RankingOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/courses/{course_id}/misconceptions/generate": {
+      "post": {
+        "tags": [
+          "misconceptions"
+        ],
+        "summary": "Generate",
+        "description": "오개념이 없는 객관식 문제에 붙인다. 문제당 수 초, 백그라운드로 돈다.",
+        "operationId": "generate_api_v1_admin_courses__course_id__misconceptions_generate_post",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/courses/{course_id}/misconceptions/status": {
+      "get": {
+        "tags": [
+          "misconceptions"
+        ],
+        "summary": "Job Status",
+        "operationId": "job_status_api_v1_admin_courses__course_id__misconceptions_status_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/courses/{course_id}/misconceptions": {
+      "get": {
+        "tags": [
+          "misconceptions"
+        ],
+        "summary": "List Misconceptions",
+        "operationId": "list_misconceptions_api_v1_admin_courses__course_id__misconceptions_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MisconceptionAdminOut"
+                  },
+                  "title": "Response List Misconceptions Api V1 Admin Courses  Course Id  Misconceptions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/misconceptions/{misconception_id}": {
+      "patch": {
+        "tags": [
+          "misconceptions"
+        ],
+        "summary": "Set Status",
+        "operationId": "set_status_api_v1_admin_misconceptions__misconception_id__patch",
+        "parameters": [
+          {
+            "name": "misconception_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Misconception Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MisconceptionAdminOut"
                 }
               }
             }
@@ -3929,6 +4176,34 @@
         ],
         "title": "ChapterOut"
       },
+      "ChapterStat": {
+        "properties": {
+          "chapter_id": {
+            "type": "integer",
+            "title": "Chapter Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "before": {
+            "type": "number",
+            "title": "Before"
+          },
+          "after": {
+            "type": "number",
+            "title": "After"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapter_id",
+          "title",
+          "before",
+          "after"
+        ],
+        "title": "ChapterStat"
+      },
       "CollegeOut": {
         "properties": {
           "name": {
@@ -4000,6 +4275,60 @@
           "name"
         ],
         "title": "ConceptRef"
+      },
+      "ConceptStat": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "chapter": {
+            "type": "string",
+            "title": "Chapter"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "correct": {
+            "type": "integer",
+            "title": "Correct"
+          },
+          "before": {
+            "type": "number",
+            "title": "Before"
+          },
+          "after": {
+            "type": "number",
+            "title": "After"
+          },
+          "labels": {
+            "items": {
+              "$ref": "#/components/schemas/LabelCount"
+            },
+            "type": "array",
+            "title": "Labels"
+          },
+          "pages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "chapter",
+          "total",
+          "correct",
+          "before",
+          "after",
+          "labels",
+          "pages"
+        ],
+        "title": "ConceptStat"
       },
       "CourseAdminUpdate": {
         "properties": {
@@ -4309,6 +4638,34 @@
         "type": "object",
         "title": "CourseUpdate"
       },
+      "Dist": {
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "title": "Rank"
+          },
+          "score": {
+            "type": "integer",
+            "title": "Score"
+          },
+          "total_points": {
+            "type": "integer",
+            "title": "Total Points"
+          },
+          "me": {
+            "type": "boolean",
+            "title": "Me"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rank",
+          "score",
+          "total_points",
+          "me"
+        ],
+        "title": "Dist"
+      },
       "EssayIn": {
         "properties": {
           "problem_id": {
@@ -4530,6 +4887,79 @@
         ],
         "title": "ImportOut"
       },
+      "JobOut": {
+        "properties": {
+          "running": {
+            "type": "boolean",
+            "title": "Running"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "done": {
+            "type": "integer",
+            "title": "Done"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "problems": {
+            "type": "integer",
+            "title": "Problems"
+          },
+          "covered": {
+            "type": "integer",
+            "title": "Covered"
+          },
+          "misconceptions": {
+            "type": "integer",
+            "title": "Misconceptions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "running",
+          "total",
+          "done",
+          "failed",
+          "error",
+          "problems",
+          "covered",
+          "misconceptions"
+        ],
+        "title": "JobOut"
+      },
+      "LabelCount": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "count"
+        ],
+        "title": "LabelCount"
+      },
       "LoginIn": {
         "properties": {
           "email": {
@@ -4745,6 +5175,128 @@
           "submitted"
         ],
         "title": "MineOut"
+      },
+      "MisconceptionAdminOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "problem_id": {
+            "type": "integer",
+            "title": "Problem Id"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "choice": {
+            "type": "string",
+            "title": "Choice"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "hypothesis": {
+            "type": "string",
+            "title": "Hypothesis"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          },
+          "evidence_found": {
+            "type": "boolean",
+            "title": "Evidence Found"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "problem_id",
+          "question",
+          "choice",
+          "label",
+          "hypothesis",
+          "explanation",
+          "evidence",
+          "evidence_found",
+          "status",
+          "created_at"
+        ],
+        "title": "MisconceptionAdminOut"
+      },
+      "MisconceptionOut": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "hypothesis": {
+            "type": "string",
+            "title": "Hypothesis"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "hypothesis",
+          "explanation",
+          "evidence",
+          "source",
+          "status"
+        ],
+        "title": "MisconceptionOut"
       },
       "MyCourseOut": {
         "properties": {
@@ -5771,6 +6323,70 @@
         ],
         "title": "RejectIn"
       },
+      "ReportOut": {
+        "properties": {
+          "chapters": {
+            "items": {
+              "$ref": "#/components/schemas/ChapterStat"
+            },
+            "type": "array",
+            "title": "Chapters"
+          },
+          "concepts": {
+            "items": {
+              "$ref": "#/components/schemas/ConceptStat"
+            },
+            "type": "array",
+            "title": "Concepts"
+          },
+          "repeated": {
+            "items": {
+              "$ref": "#/components/schemas/LabelCount"
+            },
+            "type": "array",
+            "title": "Repeated"
+          },
+          "review_pages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Review Pages"
+          },
+          "distribution": {
+            "items": {
+              "$ref": "#/components/schemas/Dist"
+            },
+            "type": "array",
+            "title": "Distribution"
+          },
+          "sankey_nodes": {
+            "items": {
+              "$ref": "#/components/schemas/SankeyNode"
+            },
+            "type": "array",
+            "title": "Sankey Nodes"
+          },
+          "sankey_links": {
+            "items": {
+              "$ref": "#/components/schemas/SankeyLink"
+            },
+            "type": "array",
+            "title": "Sankey Links"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapters",
+          "concepts",
+          "repeated",
+          "review_pages",
+          "distribution",
+          "sankey_nodes",
+          "sankey_links"
+        ],
+        "title": "ReportOut"
+      },
       "RequestCreatedOut": {
         "properties": {
           "request_id": {
@@ -5919,6 +6535,52 @@
               }
             ],
             "title": "Model Answer"
+          },
+          "misconception": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MisconceptionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "transcription": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcription"
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback"
+          },
+          "rubric": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/RubricOut"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rubric"
           }
         },
         "type": "object",
@@ -5970,12 +6632,45 @@
             "type": "boolean",
             "title": "Late"
           },
+          "essay_status": {
+            "type": "string",
+            "title": "Essay Status"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank"
+          },
+          "takers": {
+            "type": "integer",
+            "title": "Takers"
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/ResultItem"
             },
             "type": "array",
             "title": "Items"
+          },
+          "report": {
+            "$ref": "#/components/schemas/ReportOut"
           }
         },
         "type": "object",
@@ -5987,9 +6682,83 @@
           "essay_pending",
           "elapsed_sec",
           "late",
-          "items"
+          "essay_status",
+          "summary",
+          "rank",
+          "takers",
+          "items",
+          "report"
         ],
         "title": "ResultOut"
+      },
+      "RubricOut": {
+        "properties": {
+          "item": {
+            "type": "string",
+            "title": "Item"
+          },
+          "max_points": {
+            "type": "integer",
+            "title": "Max Points"
+          },
+          "points": {
+            "type": "integer",
+            "title": "Points"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item",
+          "max_points",
+          "points",
+          "reason"
+        ],
+        "title": "RubricOut"
+      },
+      "SankeyLink": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          },
+          "value": {
+            "type": "integer",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "target",
+          "value"
+        ],
+        "title": "SankeyLink"
+      },
+      "SankeyNode": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind"
+        ],
+        "title": "SankeyNode"
       },
       "ScanEssay": {
         "properties": {
@@ -6198,6 +6967,24 @@
           "page"
         ],
         "title": "SourceOut"
+      },
+      "StatusIn": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "hidden",
+              "approved"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "StatusIn"
       },
       "SubjectIn": {
         "properties": {

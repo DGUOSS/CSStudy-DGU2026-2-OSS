@@ -11,6 +11,7 @@
       사용자 ─< 족보 평가(MaterialVote) >─ 자료(족보)
       사용자 ─< 족보 선택(ExamSelection) >─ 자료(족보)   (문제 생성 때 참고할 족보)
       강좌 ─< 시험지(Paper) ─< 응시(PaperTake) ─< 서술형 답 칸 이미지(PaperEssayImage)
+      문제 ─< 오개념(Misconception)   (틀린 보기마다 '왜 골랐을까'. Claude로 문제당 한 번 만든다)
 """
 
 from datetime import UTC, datetime
@@ -281,6 +282,11 @@ class PaperTake(SQLModel, table=True):
     paused_at: datetime | None = None
     paused_sec: int = Field(default=0, sa_column_kwargs={"server_default": "0"})
     pause_count: int = Field(default=0, sa_column_kwargs={"server_default": "0"})
+    # 서술형 채점 상태: none(서술형 없음) | pending(채점 중) | done | unavailable(키 없음·실패)
+    essay_status: str = Field(
+        default="none", max_length=20, sa_column_kwargs={"server_default": "none"}
+    )
+    summary: str | None = Field(default=None, sa_column=Column(Text))  # 결과 요약(Claude)
 
 
 class PaperEssayImage(SQLModel, table=True):
@@ -291,3 +297,32 @@ class PaperEssayImage(SQLModel, table=True):
     take_id: int = Field(foreign_key="paper_takes.id", index=True)
     problem_id: int = Field(foreign_key="problems.id")
     image: bytes = Field(sa_column=Column(LargeBinary, nullable=False))  # JPEG
+    score: int | None = None  # Claude 채점 점수(None = 아직)
+    transcription: str | None = Field(default=None, sa_column=Column(Text))
+    feedback: str | None = Field(default=None, sa_column=Column(Text))
+    rubric_detail: list[dict] | None = Field(default=None, sa_column=Column(JSON))
+    graded_at: datetime | None = None
+
+
+class Misconception(SQLModel, table=True):
+    """객관식 문제의 틀린 보기 하나에 대한 오개념 추정(Claude). 문제당 한 번 만들어 두고 풀 때는 꺼내 쓴다.
+
+    칸 이름은 오개념 실험실(박상혁, MisconceptionProbe)과 맞췄다: hypothesis, explanation, evidence, source_*, status.
+    status: auto(근거 확인되면 'AI 추정'으로 보임) | hidden(관리자가 숨김) | approved(관리자 확인)
+    """
+
+    __tablename__ = "misconceptions"
+    __table_args__ = (UniqueConstraint("problem_id", "wrong_choice_index"),)
+    id: int | None = Field(default=None, primary_key=True)
+    problem_id: int = Field(foreign_key="problems.id", index=True)
+    wrong_choice_index: int  # 0부터
+    label: str = Field(max_length=100)
+    hypothesis: str = Field(sa_column=Column(Text, nullable=False))
+    explanation: str = Field(sa_column=Column(Text, nullable=False))
+    evidence: str | None = Field(default=None, sa_column=Column(Text))
+    evidence_found: bool = False  # 근거 문장이 그 교안 쪽에 실제로 있는가
+    source_material_id: int | None = Field(default=None, foreign_key="materials.id")
+    source_page: int | None = None
+    status: str = Field(default="auto", max_length=20)
+    model: str = Field(default="", max_length=50)
+    created_at: datetime = Field(default_factory=_now)

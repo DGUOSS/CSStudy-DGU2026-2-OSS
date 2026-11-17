@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   Clock,
   Download,
+  Loader2,
   Maximize2,
   Minimize2,
   Pause,
@@ -11,10 +12,11 @@ import {
   Play,
   Printer,
   RotateCcw,
+  Sparkles,
   Trophy,
   X,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import type { Schemas } from '@/api/client'
 import { Empty, ErrorText, Loading } from '@/components/States'
@@ -40,6 +42,8 @@ import {
   useTakeResult,
 } from './queries'
 import { downloadSheetPngs } from './sheetImage'
+
+const ReportCharts = lazy(() => import('./Report'))
 
 /** 종이 시험: 인쇄 → [시험 시작] → 타이머 → 답안지 사진 → 인식 결과 확인 → 채점 → 등수 */
 export function PaperPage() {
@@ -604,34 +608,89 @@ function ResultView({ takeId, onBack }: { takeId: number; onBack: () => void }) 
   if (!result.data) return <ErrorText error={result.error} />
   const r = result.data
   const wrong = r.items.filter((i) => i.correct === false).length
+  const grading = r.essay_status === 'pending'
   return (
     <div className="flex flex-col gap-4">
-      <Card className="flex flex-wrap items-center gap-6 p-5">
-        <div>
-          <div className="text-sm text-muted-foreground">점수</div>
-          <div className="text-4xl font-bold">
-            {r.score}
-            <span className="text-lg text-muted-foreground">/{r.total_points}</span>
-          </div>
-        </div>
-        <div className="text-sm">
+      <Card className="flex flex-col gap-4 p-5">
+        <div className="flex flex-wrap items-center gap-6">
           <div>
-            걸린 시간 {mmss(r.elapsed_sec)}
-            {r.late && (
-              <Badge variant="outline" className="ml-2 border-destructive text-destructive">
-                시간 초과
-              </Badge>
+            <div className="text-sm text-muted-foreground">점수</div>
+            <div className="text-4xl font-bold tabular-nums">
+              {r.score}
+              <span className="text-lg text-muted-foreground">/{r.total_points}</span>
+            </div>
+          </div>
+          {r.rank != null && (
+            <div>
+              <div className="text-sm text-muted-foreground">등수</div>
+              <div className="text-2xl font-semibold tabular-nums">
+                {r.rank}
+                <span className="text-base text-muted-foreground">/{r.takers}명</span>
+              </div>
+            </div>
+          )}
+          <div className="text-sm">
+            <div>
+              걸린 시간 {mmss(r.elapsed_sec)}
+              {r.late && (
+                <Badge variant="outline" className="ml-2 border-destructive text-destructive">
+                  시간 초과
+                </Badge>
+              )}
+            </div>
+            <div>틀린 문제 {wrong}개</div>
+            {grading && (
+              <div className="flex items-center gap-1 text-amber-700">
+                <Loader2 className="size-3.5 animate-spin" /> 서술형 채점 중… (점수·등수에 곧 반영)
+              </div>
+            )}
+            {r.essay_status === 'unavailable' && (
+              <div className="text-amber-700">서술형은 채점 대기 중입니다(점수에 아직 안 들어감)</div>
             )}
           </div>
-          <div>틀린 문제 {wrong}개</div>
-          {r.essay_pending && (
-            <div className="text-amber-700">서술형은 채점 대기 중입니다(점수에 아직 안 들어감)</div>
-          )}
+          <Button variant="outline" size="sm" className="ml-auto" onClick={onBack}>
+            돌아가기
+          </Button>
         </div>
-        <Button variant="outline" size="sm" className="ml-auto" onClick={onBack}>
-          돌아가기
-        </Button>
+        {r.summary ? (
+          <div className="flex gap-2 rounded-lg bg-accent p-3 text-sm text-accent-foreground">
+            <Sparkles className="mt-0.5 size-4 shrink-0" />
+            <p>{r.summary}</p>
+          </div>
+        ) : (
+          r.essay_status !== 'unavailable' && (
+            <p className="text-xs text-muted-foreground">요약을 만드는 중…</p>
+          )
+        )}
+        {(r.report.repeated.length > 0 || r.report.review_pages.length > 0) && (
+          <div className="flex flex-col gap-1 text-sm">
+            {r.report.repeated.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-muted-foreground">반복된 오개념</span>
+                {r.report.repeated.map((l) => (
+                  <Badge key={l.label} variant="outline" className="border-destructive/50">
+                    {l.label} ×{l.count}
+                  </Badge>
+                ))}
+              </div>
+            )}
+            {r.report.review_pages.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-muted-foreground">다시 볼 교안</span>
+                {r.report.review_pages.slice(0, 5).map((p) => (
+                  <Badge key={p} variant="secondary">
+                    {p}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </Card>
+      <Suspense fallback={<Loading />}>
+        <ReportCharts report={r.report} />
+      </Suspense>
+      <h3 className="mt-2 font-semibold">문제별 결과</h3>
       <div className="flex flex-col gap-3">
         {r.items.map((i) => (
           <Card
@@ -659,13 +718,9 @@ function ResultView({ takeId, onBack }: { takeId: number; onBack: () => void }) 
                 번 ({i.choices[i.answer_index]})
               </div>
             ) : (
-              <div className="pl-7 text-muted-foreground">
-                서술형 · {i.score == null ? '채점 대기' : `${i.score}/${i.points}점`}
-                {i.model_answer && (
-                  <div className="mt-1 whitespace-pre-wrap">모범답안: {i.model_answer}</div>
-                )}
-              </div>
+              <EssayDetail item={i} grading={grading} />
             )}
+            {i.misconception && <MisconceptionBox m={i.misconception} />}
             {i.correct !== true && (
               <div className="ml-7 flex flex-col gap-2 rounded-lg bg-muted p-3">
                 <p className="whitespace-pre-wrap">{i.explanation}</p>
@@ -675,6 +730,70 @@ function ResultView({ takeId, onBack }: { takeId: number; onBack: () => void }) 
           </Card>
         ))}
       </div>
+    </div>
+  )
+}
+
+type ResultItem = Schemas['ResultItem']
+
+function MisconceptionBox({ m }: { m: NonNullable<ResultItem['misconception']> }) {
+  return (
+    <div className="ml-7 flex flex-col gap-1.5 rounded-lg border border-blue-600/30 bg-blue-600/5 p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="outline" className="border-blue-600/50 text-blue-700">
+          {m.status === 'approved' ? '확인된 오개념' : 'AI 추정'}
+        </Badge>
+        <b>{m.label}</b>
+      </div>
+      <p>{m.hypothesis}</p>
+      <p className="text-muted-foreground">{m.explanation}</p>
+      {m.evidence && <Evidence evidence={m.evidence} source={m.source} />}
+    </div>
+  )
+}
+
+function EssayDetail({ item: i, grading }: { item: ResultItem; grading: boolean }) {
+  return (
+    <div className="flex flex-col gap-2 pl-7">
+      <div className="text-muted-foreground">
+        서술형 ·{' '}
+        {i.score != null ? (
+          <b className="text-foreground">
+            {i.score}/{i.points}점
+          </b>
+        ) : grading ? (
+          '채점 중…'
+        ) : (
+          '채점 대기'
+        )}
+      </div>
+      {i.transcription != null && (
+        <div>
+          <span className="text-xs text-muted-foreground">읽은 답</span>
+          <p className="whitespace-pre-wrap rounded-md border bg-card px-2 py-1">
+            {i.transcription || '(비어 있음)'}
+          </p>
+        </div>
+      )}
+      {i.rubric && i.rubric.length > 0 && (
+        <ul className="flex flex-col gap-1">
+          {i.rubric.map((x) => (
+            <li key={x.item} className="flex gap-2">
+              <span className="w-12 shrink-0 tabular-nums font-medium">
+                {x.points}/{x.max_points}
+              </span>
+              <span>
+                {x.item}
+                <span className="text-muted-foreground"> — {x.reason}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {i.feedback && <p className="text-muted-foreground">💬 {i.feedback}</p>}
+      {i.model_answer && (
+        <div className="whitespace-pre-wrap text-muted-foreground">모범답안: {i.model_answer}</div>
+      )}
     </div>
   )
 }

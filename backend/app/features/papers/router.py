@@ -5,7 +5,7 @@ import binascii
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
@@ -13,8 +13,10 @@ from app.core.db import SessionDep
 from app.core.security import CurrentUser
 from app.features.courses.router import get_course_or_404
 from app.features.enrollments.service import require_course_access
+from app.features.misconceptions.service import visible_for
 from app.features.papers import omr
-from app.features.papers.grading import grade_essay, grade_mcq
+from app.features.papers.grading import finish_take, grade_mcq
+from app.features.papers.report import ReportOut, build_report, first_takes
 from app.features.papers.source import pick_for_paper
 from app.features.problems.router import SourceOut
 from app.models import Attempt, Material, Paper, PaperEssayImage, PaperTake, Problem, User
@@ -116,6 +118,22 @@ class SubmitIn(BaseModel):
     essays: list[EssayIn] = []
 
 
+class MisconceptionOut(BaseModel):
+    label: str
+    hypothesis: str
+    explanation: str
+    evidence: str | None
+    source: SourceOut | None
+    status: str  # auto = AI 추정, approved = 관리자 확인
+
+
+class RubricOut(BaseModel):
+    item: str
+    max_points: int
+    points: int
+    reason: str
+
+
 class ResultItem(BaseModel):
     no: int
     problem_id: int
@@ -131,6 +149,10 @@ class ResultItem(BaseModel):
     evidence: str | None
     source: SourceOut | None
     model_answer: str | None
+    misconception: MisconceptionOut | None = None  # 고른 오답의 오개념(미리 붙여 둔 것)
+    transcription: str | None = None  # 서술형: 읽은 답
+    feedback: str | None = None
+    rubric: list[RubricOut] | None = None
 
 
 class ResultOut(BaseModel):
@@ -141,7 +163,12 @@ class ResultOut(BaseModel):
     essay_pending: bool
     elapsed_sec: int
     late: bool
+    essay_status: str  # none | pending(채점 중) | done | unavailable
+    summary: str | None
+    rank: int | None
+    takers: int
     items: list[ResultItem]
+    report: ReportOut
 
 
 class MyTake(BaseModel):
@@ -458,19 +485,46 @@ def _source(session: Session, p: Problem) -> SourceOut | None:
     return SourceOut(material_id=m.id, title=m.title, page=p.source_page) if m else None
 
 
-def _result(
-    session: Session, take: PaperTake, paper: Paper, essay_scores: dict[int, int | None]
-) -> ResultOut:
+def _result(session: Session, take: PaperTake, paper: Paper) -> ResultOut:
     probs = _problems(session, paper)
     answers = dict(zip(paper.problem_ids, take.answers or [], strict=False))
+    mis = visible_for(session, [p.id for p in probs if p.qtype == "mcq"])
+    imgs = {
+        i.problem_id: i
+        for i in session.exec(
+            select(PaperEssayImage).where(PaperEssayImage.take_id == take.id)
+        ).all()
+    }
     items = []
     for i, p in enumerate(probs):
         chosen = answers.get(p.id)
+        extra: dict = {}
         if p.qtype == "mcq":
             ok = grade_mcq(p, chosen)
             correct, score = ok, (p.points if ok else 0)
+            m = mis.get((p.id, chosen)) if not ok and chosen is not None else None
+            if m:
+                extra["misconception"] = MisconceptionOut(
+                    label=m.label,
+                    hypothesis=m.hypothesis,
+                    explanation=m.explanation,
+                    evidence=m.evidence,
+                    source=_source_of(session, m.source_material_id, m.source_page),
+                    status=m.status,
+                )
         else:
-            score = essay_scores.get(p.id)
+            img = imgs.get(p.id)
+            if img is None:
+                score = 0 if take.status == "submitted" else None
+            else:
+                score = img.score
+                extra.update(
+                    transcription=img.transcription,
+                    feedback=img.feedback,
+                    rubric=[RubricOut(**r) for r in img.rubric_detail]
+                    if img.rubric_detail
+                    else None,
+                )
             correct = None if score is None else score >= p.points
         items.append(
             ResultItem(
@@ -488,23 +542,43 @@ def _result(
                 evidence=p.evidence,
                 source=_source(session, p),
                 model_answer=p.model_answer,
+                **extra,
             )
         )
+    ranking = first_takes(session, paper)
+    rank = next((i + 1 for i, t in enumerate(ranking) if t.id == take.id), None)
     return ResultOut(
         take_id=take.id,
         paper_id=paper.id,
         score=_score(take),
         total_points=take.total_points,
-        essay_pending=any(p.qtype != "mcq" for p in probs) and take.essay_score is None,
+        essay_pending=take.essay_status in ("pending", "unavailable"),
         elapsed_sec=take.elapsed_sec or 0,
         late=take.late,
+        essay_status=take.essay_status,
+        summary=take.summary,
+        rank=rank,
+        takers=len(ranking),
         items=items,
+        report=build_report(session, take, paper, probs),
     )
 
 
+def _source_of(session: Session, material_id: int | None, page: int | None) -> SourceOut | None:
+    m = session.get(Material, material_id) if material_id else None
+    return SourceOut(material_id=m.id, title=m.title, page=page) if m else None
+
+
 @router.post("/takes/{take_id}/submit")
-def submit_take(take_id: int, body: SubmitIn, session: SessionDep, user: CurrentUser) -> ResultOut:
-    """확인한 답을 제출해 채점한다. 객관식은 풀이 기록(Attempt)으로도 남겨 숙련도에 반영한다."""
+def submit_take(
+    take_id: int,
+    body: SubmitIn,
+    background: BackgroundTasks,
+    session: SessionDep,
+    user: CurrentUser,
+) -> ResultOut:
+    """확인한 답을 제출해 채점한다. 객관식은 바로 채점하고 풀이 기록(Attempt)으로 남겨 숙련도에 반영한다.
+    서술형 채점과 결과 요약은 제출 뒤 백그라운드에서 Claude로 한다(grading.finish_take)."""
     take, paper = _take_or_404(session, user, take_id)
     if take.status != "started":
         raise HTTPException(status.HTTP_409_CONFLICT, "이미 제출한 응시입니다")
@@ -517,7 +591,7 @@ def submit_take(take_id: int, body: SubmitIn, session: SessionDep, user: Current
         take.paused_sec += int((now - _utc(take.paused_at)).total_seconds())
         take.paused_at = None
     answers: list[int | None] = []
-    mcq_score, essay_scores = 0, {}
+    mcq_score = 0
     for p in probs:
         if p.qtype == "mcq":
             c = chosen.get(p.id)
@@ -536,21 +610,13 @@ def submit_take(take_id: int, body: SubmitIn, session: SessionDep, user: Current
                 jpeg = base64.b64decode(raw, validate=True)
             except (binascii.Error, ValueError):
                 jpeg = None
-        if jpeg and len(jpeg) <= 2 * 1024 * 1024:
+        if jpeg and len(jpeg) <= 2 * 1024 * 1024:  # 답 칸이 없으면 0점(채점할 때)
             session.add(PaperEssayImage(take_id=take.id, problem_id=p.id, image=jpeg))
-            essay_scores[p.id] = grade_essay(jpeg, p)
-        else:
-            essay_scores[p.id] = 0  # 답 칸이 없으면 0점
     essays = [p for p in probs if p.qtype != "mcq"]
     take.answers = answers
     take.mcq_score = mcq_score
-    take.essay_score = (
-        sum(essay_scores[p.id] or 0 for p in essays)
-        if all(essay_scores.get(p.id) is not None for p in essays)
-        else None
-    )
-    if not essays:
-        take.essay_score = 0
+    take.essay_score = None if essays else 0
+    take.essay_status = "pending" if essays else "none"
     take.total_points = sum(p.points for p in probs)
     take.elapsed_sec = int(min(spent, paper.time_limit_min * 60))
     take.late = spent > (paper.time_limit_min + GRACE_MIN) * 60
@@ -559,7 +625,8 @@ def submit_take(take_id: int, body: SubmitIn, session: SessionDep, user: Current
     session.add(take)
     session.commit()
     session.refresh(take)
-    return _result(session, take, paper, essay_scores)
+    background.add_task(finish_take, session.get_bind(), take.id)
+    return _result(session, take, paper)
 
 
 @router.get("/takes/{take_id}/result")
@@ -567,7 +634,7 @@ def get_result(take_id: int, session: SessionDep, user: CurrentUser) -> ResultOu
     take, paper = _take_or_404(session, user, take_id)
     if take.status != "submitted":
         raise HTTPException(status.HTTP_409_CONFLICT, "아직 제출하지 않았습니다")
-    return _result(session, take, paper, {})
+    return _result(session, take, paper)
 
 
 @router.get("/papers/{paper_id}/ranking")

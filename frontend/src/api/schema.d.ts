@@ -879,7 +879,8 @@ export interface paths {
         put?: never;
         /**
          * Submit Take
-         * @description 확인한 답을 제출해 채점한다. 객관식은 풀이 기록(Attempt)으로도 남겨 숙련도에 반영한다.
+         * @description 확인한 답을 제출해 채점한다. 객관식은 바로 채점하고 풀이 기록(Attempt)으로 남겨 숙련도에 반영한다.
+         *     서술형 채점과 결과 요약은 제출 뒤 백그라운드에서 Claude로 한다(grading.finish_take).
          */
         post: operations["submit_take_api_v1_takes__take_id__submit_post"];
         delete?: never;
@@ -923,6 +924,77 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/courses/{course_id}/misconceptions/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate
+         * @description 오개념이 없는 객관식 문제에 붙인다. 문제당 수 초, 백그라운드로 돈다.
+         */
+        post: operations["generate_api_v1_admin_courses__course_id__misconceptions_generate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/courses/{course_id}/misconceptions/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Job Status */
+        get: operations["job_status_api_v1_admin_courses__course_id__misconceptions_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/courses/{course_id}/misconceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Misconceptions */
+        get: operations["list_misconceptions_api_v1_admin_courses__course_id__misconceptions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/misconceptions/{misconception_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Set Status */
+        patch: operations["set_status_api_v1_admin_misconceptions__misconception_id__patch"];
         trace?: never;
     };
 }
@@ -1076,6 +1148,17 @@ export interface components {
             /** Essay Count */
             essay_count: number;
         };
+        /** ChapterStat */
+        ChapterStat: {
+            /** Chapter Id */
+            chapter_id: number;
+            /** Title */
+            title: string;
+            /** Before */
+            before: number;
+            /** After */
+            after: number;
+        };
         /** CollegeOut */
         CollegeOut: {
             /** Name */
@@ -1102,6 +1185,25 @@ export interface components {
             id: number;
             /** Name */
             name: string;
+        };
+        /** ConceptStat */
+        ConceptStat: {
+            /** Name */
+            name: string;
+            /** Chapter */
+            chapter: string;
+            /** Total */
+            total: number;
+            /** Correct */
+            correct: number;
+            /** Before */
+            before: number;
+            /** After */
+            after: number;
+            /** Labels */
+            labels: components["schemas"]["LabelCount"][];
+            /** Pages */
+            pages: string[];
         };
         /** CourseAdminUpdate */
         CourseAdminUpdate: {
@@ -1209,6 +1311,17 @@ export interface components {
             /** Exam Info */
             exam_info?: string | null;
         };
+        /** Dist */
+        Dist: {
+            /** Rank */
+            rank: number;
+            /** Score */
+            score: number;
+            /** Total Points */
+            total_points: number;
+            /** Me */
+            me: boolean;
+        };
         /** EssayIn */
         EssayIn: {
             /** Problem Id */
@@ -1283,6 +1396,32 @@ export interface components {
             /** Added */
             added: number;
         };
+        /** JobOut */
+        JobOut: {
+            /** Running */
+            running: boolean;
+            /** Total */
+            total: number;
+            /** Done */
+            done: number;
+            /** Failed */
+            failed: number;
+            /** Error */
+            error: string | null;
+            /** Problems */
+            problems: number;
+            /** Covered */
+            covered: number;
+            /** Misconceptions */
+            misconceptions: number;
+        };
+        /** LabelCount */
+        LabelCount: {
+            /** Label */
+            label: string;
+            /** Count */
+            count: number;
+        };
         /** LoginIn */
         LoginIn: {
             /** Email */
@@ -1353,6 +1492,48 @@ export interface components {
             open_take: components["schemas"]["TakeOut"] | null;
             /** Submitted */
             submitted: components["schemas"]["MyTake"][];
+        };
+        /** MisconceptionAdminOut */
+        MisconceptionAdminOut: {
+            /** Id */
+            id: number;
+            /** Problem Id */
+            problem_id: number;
+            /** Question */
+            question: string;
+            /** Choice */
+            choice: string;
+            /** Label */
+            label: string;
+            /** Hypothesis */
+            hypothesis: string;
+            /** Explanation */
+            explanation: string;
+            /** Evidence */
+            evidence: string | null;
+            /** Evidence Found */
+            evidence_found: boolean;
+            /** Status */
+            status: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** MisconceptionOut */
+        MisconceptionOut: {
+            /** Label */
+            label: string;
+            /** Hypothesis */
+            hypothesis: string;
+            /** Explanation */
+            explanation: string;
+            /** Evidence */
+            evidence: string | null;
+            source: components["schemas"]["SourceOut"] | null;
+            /** Status */
+            status: string;
         };
         /** MyCourseOut */
         MyCourseOut: {
@@ -1681,6 +1862,23 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** ReportOut */
+        ReportOut: {
+            /** Chapters */
+            chapters: components["schemas"]["ChapterStat"][];
+            /** Concepts */
+            concepts: components["schemas"]["ConceptStat"][];
+            /** Repeated */
+            repeated: components["schemas"]["LabelCount"][];
+            /** Review Pages */
+            review_pages: string[];
+            /** Distribution */
+            distribution: components["schemas"]["Dist"][];
+            /** Sankey Nodes */
+            sankey_nodes: components["schemas"]["SankeyNode"][];
+            /** Sankey Links */
+            sankey_links: components["schemas"]["SankeyLink"][];
+        };
         /** RequestCreatedOut */
         RequestCreatedOut: {
             /** Request Id */
@@ -1734,6 +1932,13 @@ export interface components {
             source: components["schemas"]["SourceOut"] | null;
             /** Model Answer */
             model_answer: string | null;
+            misconception?: components["schemas"]["MisconceptionOut"] | null;
+            /** Transcription */
+            transcription?: string | null;
+            /** Feedback */
+            feedback?: string | null;
+            /** Rubric */
+            rubric?: components["schemas"]["RubricOut"][] | null;
         };
         /** ResultOut */
         ResultOut: {
@@ -1751,8 +1956,44 @@ export interface components {
             elapsed_sec: number;
             /** Late */
             late: boolean;
+            /** Essay Status */
+            essay_status: string;
+            /** Summary */
+            summary: string | null;
+            /** Rank */
+            rank: number | null;
+            /** Takers */
+            takers: number;
             /** Items */
             items: components["schemas"]["ResultItem"][];
+            report: components["schemas"]["ReportOut"];
+        };
+        /** RubricOut */
+        RubricOut: {
+            /** Item */
+            item: string;
+            /** Max Points */
+            max_points: number;
+            /** Points */
+            points: number;
+            /** Reason */
+            reason: string;
+        };
+        /** SankeyLink */
+        SankeyLink: {
+            /** Source */
+            source: string;
+            /** Target */
+            target: string;
+            /** Value */
+            value: number;
+        };
+        /** SankeyNode */
+        SankeyNode: {
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
         };
         /** ScanEssay */
         ScanEssay: {
@@ -1820,6 +2061,14 @@ export interface components {
             title: string;
             /** Page */
             page: number | null;
+        };
+        /** StatusIn */
+        StatusIn: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "auto" | "hidden" | "approved";
         };
         /** SubjectIn */
         SubjectIn: {
@@ -3896,6 +4145,142 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RankingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_api_v1_admin_courses__course_id__misconceptions_generate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    job_status_api_v1_admin_courses__course_id__misconceptions_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_misconceptions_api_v1_admin_courses__course_id__misconceptions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MisconceptionAdminOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_status_api_v1_admin_misconceptions__misconception_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                misconception_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StatusIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MisconceptionAdminOut"];
                 };
             };
             /** @description Validation Error */
