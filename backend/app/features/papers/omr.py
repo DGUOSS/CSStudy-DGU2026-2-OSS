@@ -172,7 +172,10 @@ class SheetError(ValueError):
 def _decode(data: bytes) -> np.ndarray:
     img = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
     if img is None:
-        raise SheetError("사진을 읽을 수 없습니다")
+        raise SheetError(
+            "이미지 파일이 아닙니다. 사진 원본(.jpg, .png)을 올려 주세요. "
+            "디스코드·카톡에서 끌어다 놓아 생긴 바로가기(.url) 파일은 읽을 수 없습니다"
+        )
     h, w = img.shape[:2]
     scale = 2400 / max(h, w)
     if scale < 1:
@@ -235,7 +238,8 @@ def read_sheet(images: list[bytes], lay: Layout) -> dict:
         ratios = {s.no: [_fill_ratio(dark, cx, cy) for cx, cy in s.bubbles] for s in slots}
         flat = sorted(r for rs in ratios.values() for r in rs)
         base = flat[len(flat) // 2] if flat else 0.0  # 대부분은 빈 동그라미
-        cut = max(0.38, base + 0.25)
+        # 실물 테스트(11/17): 꽉 칠함 1.0, 반만 칠함 0.6, 테두리 덧그림 0.38, V 표시 0.26 → 0.45부터 칠한 것으로
+        cut = max(0.45, base + 0.3)
         for s in slots:
             rs = ratios[s.no]
             filled = [j for j, r in enumerate(rs) if r >= cut]

@@ -422,9 +422,19 @@ function ScanReview({
   const [review, setReview] = useState<Review | null>(null)
   const byId = new Map(paper.problems.map((q) => [q.id, q]))
 
+  const [fileError, setFileError] = useState('')
   const onFiles = (files: FileList | null) => {
     if (!files?.length) return
-    scan.mutate(Array.from(files), {
+    const list = Array.from(files)
+    const bad = list.filter((f) => !f.type.startsWith('image/'))
+    if (bad.length) {
+      setFileError(
+        `${bad.map((f) => f.name).join(', ')}: 사진 파일이 아닙니다. 디스코드·카톡에서 끌어다 놓으면 바로가기(.url)가 생길 수 있으니, 사진을 '다른 이름으로 저장'한 뒤 올려 주세요.`,
+      )
+      return
+    }
+    setFileError('')
+    scan.mutate(list, {
       onSuccess: (r) => setReview({ mcq: r.mcq, essays: r.essays, missing: r.missing_pages }),
     })
   }
@@ -493,6 +503,7 @@ function ScanReview({
           }}
         />
       </label>
+      {fileError && <p className="text-sm text-destructive">{fileError}</p>}
       <ErrorText error={scan.error} />
       {!review && (
         <button
