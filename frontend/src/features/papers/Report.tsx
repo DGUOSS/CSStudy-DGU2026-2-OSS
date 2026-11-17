@@ -1,6 +1,6 @@
 // 시험 결과 학습 리포트: 챕터 숙련도(전/후), 응시자 중 내 위치, 오답 흐름(Sankey), 개념별 상태 표.
 // 데이터는 백엔드 report(build_report)가 다 계산해서 준다. 여기서는 그리기만 한다.
-import { ResponsiveSankey } from '@nivo/sankey'
+import { type CustomSankeyLayerProps, ResponsiveSankey } from '@nivo/sankey'
 import {
   Bar,
   BarChart,
@@ -30,10 +30,13 @@ const KIND_COLOR: Record<string, string> = {
   misconception: '#2563eb',
   concept: '#a16207',
   page: '#7c3aed',
+  unknown: '#9ca3af', // 오개념 추정 없음
 }
+const LINK_GRAY = '#9ca3af'
 const KIND_LABEL: Record<string, string> = {
   problem: '틀린 문제',
   misconception: '의심 오개념',
+  unknown: '의심 오개념',
   concept: '개념',
   page: '다시 볼 교안',
 }
@@ -158,64 +161,143 @@ export function Distribution({ dist }: { dist: ReportT['distribution'] }) {
   )
 }
 
+type FlowNode = { id: string; kind: string }
+type FlowLink = { source: string; target: string; value: number; startColor: string; endColor: string }
+
+// 교안 제목 앞의 과목명은 줄인다: '기초프로그래밍 교안 1 54쪽' → '교안 1 · 54쪽'
+const shortName = (id: string) => nameOf(id).replace(/^\S+\s(?=(교안|족보|자료))/, '').replace(/ (\d+쪽)$/, ' · $1')
+
+// 열 머리글과 이름표. 이름표는 바탕색 테두리를 둘러 띠 위에서도 읽히게 한다
+function FlowLabels({
+  nodes,
+  width,
+  currentNode,
+}: CustomSankeyLayerProps<FlowNode, FlowLink>) {
+  const cols = new Map<string, number>()
+  for (const n of nodes) cols.set(n.kind === 'unknown' ? 'misconception' : n.kind, (n.x0 + n.x1) / 2)
+  const near = currentNode
+    ? new Set([
+        currentNode.id,
+        ...currentNode.sourceLinks.map((l) => l.target.id),
+        ...currentNode.targetLinks.map((l) => l.source.id),
+      ])
+    : null
+  return (
+    <g>
+      {[...cols].map(([k, x], i, arr) => (
+        <text
+          key={k}
+          x={x}
+          y={-14}
+          textAnchor={i === 0 ? 'start' : i === arr.length - 1 ? 'end' : 'middle'}
+          dx={i === 0 ? -6 : i === arr.length - 1 ? 6 : 0}
+          style={{ fontSize: 11, fontWeight: 600, fill: 'var(--muted-foreground)' }}
+        >
+          {KIND_LABEL[k]}
+        </text>
+      ))}
+      {nodes.map((n) => {
+        const last = n.x1 >= width - 1
+        const first = n.x0 <= 1
+        const x = last ? n.x0 - 8 : n.x1 + 8
+        return (
+          <text
+            key={n.id}
+            x={first ? n.x0 - 8 : x}
+            y={(n.y0 + n.y1) / 2}
+            dominantBaseline="central"
+            textAnchor={first || last ? 'end' : 'start'}
+            paintOrder="stroke"
+            stroke="var(--card)"
+            strokeWidth={4}
+            strokeLinejoin="round"
+            opacity={near && !near.has(n.id) ? 0.25 : 1}
+            style={{
+              fontSize: 12,
+              fontWeight: n.kind === 'problem' ? 600 : 500,
+              fill: n.kind === 'unknown' ? 'var(--muted-foreground)' : 'var(--foreground)',
+              pointerEvents: 'none',
+            }}
+          >
+            {shortName(n.id)}
+            {n.kind === 'concept' && n.value > 1 ? ` ×${n.value}` : ''}
+          </text>
+        )
+      })}
+    </g>
+  )
+}
+
 export function WrongFlow({ report }: { report: ReportT }) {
-  if (report.sankey_links.length === 0) return null
-  const data = {
-    nodes: report.sankey_nodes.map((n) => ({ id: n.id, kind: n.kind })),
-    links: report.sankey_links,
+  const blankNos = report.blank_nos
+  if (report.sankey_links.length === 0)
+    return blankNos.length > 0 ? (
+      <Section title="오답 흐름">
+        <p className="text-sm text-muted-foreground">
+          고른 오답이 없어 흐름이 없습니다. 빈칸 {blankNos.join(', ')}번.
+        </p>
+      </Section>
+    ) : null
+  const nodes: FlowNode[] = report.sankey_nodes.map((n) => ({ id: n.id, kind: n.kind }))
+  const links: FlowLink[] = report.sankey_links.map((l) => ({
+    ...l,
+    startColor: LINK_GRAY,
+    endColor: LINK_GRAY,
+  }))
+  const perCol = new Map<string, number>()
+  for (const n of nodes) {
+    const k = n.kind === 'unknown' ? 'misconception' : n.kind
+    perCol.set(k, (perCol.get(k) ?? 0) + 1)
   }
-  const rows = new Set(report.sankey_nodes.map((n) => n.id)).size
+  const tallest = Math.max(...perCol.values())
   return (
     <Section
       title="오답 흐름"
-      hint="틀린 문제 → 의심되는 오개념 → 개념 → 다시 볼 교안 쪽. 띠가 굵을수록 여러 문제가 몰린 약점"
+      hint="틀린 문제가 어떤 오개념 → 개념 → 교안 쪽으로 이어지는지. 띠가 굵을수록 여러 문제가 몰린 곳, 항목에 마우스를 올리면 그 흐름만 보입니다"
     >
-      <div className="flex flex-wrap gap-3 text-xs">
-        {Object.entries(KIND_LABEL).map(([k, v]) => (
-          <span key={k} className="flex items-center gap-1">
-            <span className="size-2.5 rounded-sm" style={{ background: KIND_COLOR[k] }} />
-            {v}
-          </span>
-        ))}
-      </div>
       <div className="w-full overflow-x-auto">
-        <div style={{ height: Math.max(220, rows * 22), minWidth: 640 }}>
-          <ResponsiveSankey
-            data={data}
-            margin={{ top: 8, right: 150, bottom: 8, left: 64 }}
+        <div style={{ height: tallest * 40 + 40, minWidth: 720 }}>
+          <ResponsiveSankey<FlowNode, FlowLink>
+            data={{ nodes, links }}
+            margin={{ top: 28, right: 130, bottom: 8, left: 56 }}
             align="justify"
-            sort="input"
+            sort="auto"
             animate={false}
-            colors={(n: { kind?: string }) => KIND_COLOR[n.kind ?? 'page']}
+            colors={(n) => KIND_COLOR[n.kind]}
             nodeOpacity={1}
-            nodeThickness={12}
-            nodeSpacing={14}
+            nodeHoverOthersOpacity={0.25}
+            nodeThickness={10}
+            nodeSpacing={22}
+            nodeInnerPadding={0}
             nodeBorderWidth={0}
-            nodeBorderRadius={2}
+            nodeBorderRadius={3}
             linkOpacity={0.35}
-            linkHoverOpacity={0.6}
+            linkHoverOpacity={0.75}
+            linkHoverOthersOpacity={0.08}
+            linkContract={2}
             linkBlendMode="normal"
             enableLinkGradient
-            label={(n) => nameOf(String(n.id))}
-            labelPosition="outside"
-            labelPadding={8}
-            labelTextColor="var(--foreground)"
-            theme={{ labels: { text: { fontSize: 11 } }, tooltip: { container: { fontSize: 12 } } }}
+            enableLabels={false}
+            layers={['links', 'nodes', FlowLabels]}
             nodeTooltip={({ node }) => (
-              <div className="rounded-md border bg-card px-2 py-1 text-xs shadow">
-                {KIND_LABEL[(node as unknown as { kind: string }).kind]} · {nameOf(String(node.id))} (
-                {node.value}문항)
+              <div className="whitespace-nowrap rounded-md border bg-card px-2 py-1 text-xs shadow">
+                {KIND_LABEL[node.kind]} · {nameOf(node.id)} ({node.value}문항)
               </div>
             )}
             linkTooltip={({ link }) => (
-              <div className="rounded-md border bg-card px-2 py-1 text-xs shadow">
-                {nameOf(String(link.source.id))} → {nameOf(String(link.target.id))} ({link.value}
-                문항)
+              <div className="whitespace-nowrap rounded-md border bg-card px-2 py-1 text-xs shadow">
+                {nameOf(link.source.id)} → {nameOf(link.target.id)} ({link.value}문항)
               </div>
             )}
           />
         </div>
       </div>
+      {blankNos.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          빈칸으로 둔 {blankNos.join(', ')}번은 고른 보기가 없어 흐름에서 뺐습니다. 아래 문제별 결과에서
+          해설을 확인하세요.
+        </p>
+      )}
     </Section>
   )
 }

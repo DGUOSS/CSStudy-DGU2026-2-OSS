@@ -1878,6 +1878,8 @@ export interface components {
             sankey_nodes: components["schemas"]["SankeyNode"][];
             /** Sankey Links */
             sankey_links: components["schemas"]["SankeyLink"][];
+            /** Blank Nos */
+            blank_nos: number[];
         };
         /** RequestCreatedOut */
         RequestCreatedOut: {

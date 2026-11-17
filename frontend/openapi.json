@@ -6373,6 +6373,13 @@
             },
             "type": "array",
             "title": "Sankey Links"
+          },
+          "blank_nos": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Blank Nos"
           }
         },
         "type": "object",
@@ -6383,7 +6390,8 @@
           "review_pages",
           "distribution",
           "sankey_nodes",
-          "sankey_links"
+          "sankey_links",
+          "blank_nos"
         ],
         "title": "ReportOut"
       },

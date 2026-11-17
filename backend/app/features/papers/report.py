@@ -45,7 +45,7 @@ class Dist(BaseModel):
 
 class SankeyNode(BaseModel):
     id: str  # '종류:이름'
-    kind: str  # problem | misconception | concept | page
+    kind: str  # problem | misconception | unknown(오개념 추정 없음) | concept | page
 
 
 class SankeyLink(BaseModel):
@@ -62,6 +62,7 @@ class ReportOut(BaseModel):
     distribution: list[Dist]
     sankey_nodes: list[SankeyNode]
     sankey_links: list[SankeyLink]
+    blank_nos: list[int]  # 빈칸으로 둔 객관식 번호(오답 흐름에서는 뺀다)
 
 
 def page_label(session: Session, material_id: int | None, page: int | None) -> str | None:
@@ -109,6 +110,7 @@ def build_report(
     page_count: dict[str, int] = {}
     nodes: dict[str, str] = {}
     links: dict[tuple[str, str], int] = {}
+    blank_nos: list[int] = []
 
     def link(a: str, ka: str, b: str, kb: str) -> None:
         # 노드 id는 '종류:이름'(같은 이름의 개념·오개념이 섞이지 않게). 화면에는 이름만 보인다
@@ -147,12 +149,13 @@ def build_report(
                 row["labels"][m.label] = row["labels"].get(m.label, 0) + 1
             if page:
                 row["pages"].add(page)
-        if wrong:  # 오답 흐름: 문제 → 오개념 → 개념 → 교안 쪽
-            q = f"{no}번" + (" (빈칸)" if chosen is None else "")
-            mid = m.label if m else ("답 안 함" if chosen is None else "오개념 추정 없음")
-            link(q, "problem", mid, "misconception")
+        if wrong and chosen is None:
+            blank_nos.append(no)
+        elif wrong:  # 오답 흐름: 문제 → 오개념 → 개념 → 교안 쪽 (빈칸은 고른 보기가 없어 뺀다)
+            mid, mk = (m.label, "misconception") if m else ("추정 없음", "unknown")
+            link(f"{no}번", "problem", mid, mk)
             for c in cmap.get(p.id, [])[:1] or []:
-                link(mid, "misconception", c.name, "concept")
+                link(mid, mk, c.name, "concept")
                 if page:
                     link(c.name, "concept", page, "page")
 
@@ -211,4 +214,5 @@ def build_report(
         distribution=dist,
         sankey_nodes=[SankeyNode(id=k, kind=v) for k, v in nodes.items()],
         sankey_links=[SankeyLink(source=a, target=b, value=v) for (a, b), v in links.items()],
+        blank_nos=blank_nos,
     )
