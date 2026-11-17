@@ -10,6 +10,14 @@ from app.main import app
 from app.models import Chapter, Concept, Course, Problem, ProblemConcept, Professor, Subject
 
 
+@pytest.fixture(autouse=True)
+def _no_real_llm(monkeypatch):
+    """테스트는 실제 Claude API를 절대 부르지 않는다(.env에 키가 있어도). 필요한 테스트는 llm 함수를 가짜로 바꾼다."""
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "anthropic_api_key", "")
+
+
 @pytest.fixture
 def session():
     engine = create_engine(

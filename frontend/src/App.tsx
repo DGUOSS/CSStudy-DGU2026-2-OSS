@@ -11,6 +11,8 @@ import { SubjectCoursesPage } from '@/features/courses/SubjectCoursesPage'
 import { CatalogPage } from '@/features/catalog/CatalogPage'
 import { HomePage } from '@/features/enrollments/HomePage'
 import { ReceivePage } from '@/features/enrollments/ReceivePage'
+import { PaperPage } from '@/features/papers/PaperPage'
+import { PrintPage } from '@/features/papers/PrintPage'
 import { QuizPage } from '@/features/problems/QuizPage'
 
 // 새 화면은 여기에 경로를 한 줄 추가한다
@@ -26,6 +28,8 @@ const router = createBrowserRouter([
       { path: '/subjects/:subjectId', element: <SubjectCoursesPage /> },
       { path: '/courses/:courseId', element: <CoursePage /> },
       { path: '/courses/:courseId/chapters/:chapterId/quiz', element: <QuizPage /> },
+      { path: '/papers/:paperId', element: <PaperPage /> },
+      { path: '/papers/:paperId/print', element: <PrintPage /> },
       { path: '/requests', element: <MyRequestsPage /> },
       { path: '/requests/new', element: <RequestCoursePage /> },
       { path: '/admin/courses', element: <AdminCoursesPage /> },
