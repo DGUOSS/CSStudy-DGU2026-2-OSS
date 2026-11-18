@@ -57,3 +57,18 @@
     @apply bg-background text-foreground antialiased;
   }
 }
+
+/* 홈 화면(features/home) 전용 색. 기존 shadcn 토큰은 건드리지 않고 추가만 한다. */
+@theme {
+  --color-navy: #1f3a6e;
+  --color-navy-deep: #172c57;
+  --color-navy-tint: #e6ebf5;
+  --color-gold: #e3b55b;
+  --color-gold-soft: #f6e7c5;
+  --color-home-bg: #f4f5f8;
+  --color-home-line: #e1e5ee;
+  --color-ink-2: #566075;
+  --color-tone-blue: #dde5f5;
+  --color-tone-gold: #f3e7cc;
+  --color-tone-gray: #d9dee8;
+}
