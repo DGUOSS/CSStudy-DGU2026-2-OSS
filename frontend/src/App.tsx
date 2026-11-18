@@ -12,6 +12,8 @@ import { CatalogPage } from '@/features/catalog/CatalogPage'
 import { HomePage } from '@/features/enrollments/HomePage'
 import { ReceivePage } from '@/features/enrollments/ReceivePage'
 import { HomePage as DesignHomePage } from '@/features/home/HomePage'
+import { PaperPage } from '@/features/papers/PaperPage'
+import { PrintPage } from '@/features/papers/PrintPage'
 import { QuizPage } from '@/features/problems/QuizPage'
 import { CourseChaptersPage } from '@/features/study/CourseChaptersPage'
 import { FindPage } from '@/features/study/FindPage'
@@ -41,6 +43,8 @@ const router = createBrowserRouter([
       { path: '/subjects/:subjectId', element: <SubjectCoursesPage /> },
       { path: '/courses/:courseId', element: <CoursePage /> },
       { path: '/courses/:courseId/chapters/:chapterId/quiz', element: <QuizPage /> },
+      { path: '/papers/:paperId', element: <PaperPage /> },
+      { path: '/papers/:paperId/print', element: <PrintPage /> },
       { path: '/requests', element: <MyRequestsPage /> },
       { path: '/requests/new', element: <RequestCoursePage /> },
       { path: '/admin/courses', element: <AdminCoursesPage /> },

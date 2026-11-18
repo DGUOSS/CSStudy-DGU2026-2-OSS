@@ -27,10 +27,15 @@ from app.models import (
     Concept,
     Course,
     CourseRequest,
+    CourseReview,
     Enrollment,
     ExamSelection,
     Material,
     MaterialVote,
+    Misconception,
+    Paper,
+    PaperEssayImage,
+    PaperTake,
     Problem,
     ProblemConcept,
     Professor,
@@ -211,6 +216,9 @@ def _delete_all(session, rows) -> None:
 def _purge_course(session, course: Course) -> None:
     """강좌와 딸린 것 전부를 지운다(커밋은 부르는 쪽에서)."""
     cid = course.id
+    _delete_all(
+        session, session.exec(select(CourseReview).where(CourseReview.course_id == cid)).all()
+    )
     for r in session.exec(select(CourseRequest).where(CourseRequest.course_id == cid)).all():
         r.course_id = None
         session.add(r)
@@ -218,6 +226,24 @@ def _purge_course(session, course: Course) -> None:
     for e in session.exec(select(Enrollment).where(Enrollment.course_id == cid)).all():
         e.course_id = None
         session.add(e)
+    # 종이 시험지와 응시 기록(서술형 답 칸 이미지 포함)
+    papers = session.exec(select(Paper).where(Paper.course_id == cid)).all()
+    if papers:
+        takes = session.exec(
+            select(PaperTake).where(PaperTake.paper_id.in_([x.id for x in papers]))  # type: ignore[attr-defined]
+        ).all()
+        if takes:
+            _delete_all(
+                session,
+                session.exec(
+                    select(PaperEssayImage).where(
+                        PaperEssayImage.take_id.in_([t.id for t in takes])
+                    )  # type: ignore[attr-defined]
+                ).all(),
+            )
+        _delete_all(session, takes)
+        _delete_all(session, papers)
+        session.flush()
     chapters = session.exec(select(Chapter).where(Chapter.course_id == cid)).all()
     ch_ids = [c.id for c in chapters]
     problems = (
@@ -227,6 +253,10 @@ def _purge_course(session, course: Course) -> None:
     )
     p_ids = [p.id for p in problems]
     if p_ids:
+        _delete_all(
+            session,
+            session.exec(select(Misconception).where(Misconception.problem_id.in_(p_ids))).all(),  # type: ignore[attr-defined]
+        )
         _delete_all(
             session, session.exec(select(Attempt).where(Attempt.problem_id.in_(p_ids))).all()
         )  # type: ignore[attr-defined]

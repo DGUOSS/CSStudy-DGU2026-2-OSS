@@ -11,7 +11,9 @@
                                   ├ 자료: 교안 / 족보 / 시험 정보 탭별 PDF 목록과 올리기
                                   └ 강좌 정보: 수업 방식·평가 비율 등 공용 안내(관리자만 수정). 시험 정보는 자료 탭 '시험 정보'로
 ```
-- **수강 기록**(11/12~): 엔드림스 수강 기록을 즐겨찾기 버튼으로 가져와, 기록이 있는 강좌(과목+교수)에만 들어간다. 구조·규칙은 `docs/NDRIMS.md`. **공용 강좌**(`is_public`, 관리자가 켬)는 기록이 없어도 누구나 들어간다(팀 시험·공개 자료용). 아래 '내 과목' 설명은 그 전 방식이다.
+- **수강 기록**(11/12~): 엔드림스 수강 기록을 즐겨찾기 버튼으로 가져와, 기록이 있는 강좌(과목+교수)에만 들어간다. 구조·규칙은 `docs/NDRIMS.md`. **공용 강좌**(`is_public`, 관리자가 켬)는 기록이 없어도 누구나 들어간다(팀 시험·공개 자료용).
+- **종이 시험**(11/13~): 강좌 '시험' 탭에서 시험지를 만들어 인쇄하고, [시험 시작] → 제한 시간 → 답안지 사진 제출 → 인식 결과 확인 → 채점 → 같은 시험지 등수. 답안지 배치·인식은 `backend/app/features/papers/omr.py` 한 곳. 제출하면 객관식은 바로, 서술형은 뒤에서 Claude가 답 칸 사진을 읽고 배점표대로 채점한다(`grading.finish_take`, 키가 없으면 채점 대기). 결과 화면은 학습 리포트: 요약 한 줄(Claude, 채점 끝날 때 한 번), 챕터 숙련도 전·후(레이더), 응시자 중 내 위치, 오답 흐름(문제→오개념→개념→교안 쪽, Sankey), 개념별 상태 표, 틀린 보기의 오개념. 아래 '내 과목' 설명은 그 전 방식이다.
+- **오개념**(11/17~): 객관식 틀린 보기마다 '왜 골랐을까'(라벨·가설·해설·교안 근거)를 Claude로 문제당 한 번 만들어 `misconceptions`에 둔다. 관리 → 자료 관리 → [오개념 만들기]. 근거 문장이 교안 쪽에 실제로 있는 것만 학생에게 'AI 추정'으로 보이고, 관리자가 숨길 수 있다. 문제 생성기를 붙이면 새 문제 저장 직후 `misconceptions.service.attach_misconceptions`만 부르면 된다. LLM 호출은 전부 `app/services/llm.py`(키: `ANTHROPIC_API_KEY`).
 - **내 과목**: 수강 중이거나 수강했던 과목만 들어갈 수 있다. 지금은 전체 과목 목록에서 사용자가 직접 '내 과목에 추가'를 누른다(`user_subjects.source = manual`, 수강 중/수강함은 화면에서 나누지 않는다). 엔드림스 수강 내역 가져오기는 나중에 같은 테이블에 `source = ndrims`로 넣는다.
   - 내 과목이 아닌 과목의 강좌·자료·챕터·문제·숙련도·족보 API는 403. 과목 목록(`GET /subjects`)은 고르기 위해 누구나 본다. 관리자는 모든 과목에 들어간다.
 - **족보 고르기**: 문제 풀이 탭 위에서 그 강좌의 족보(자료 종류 exam, 최신판)를 고른다. 고른 족보는 문제 생성 때 출제 스타일 예시로 넘긴다(`features/exams/router.py`의 `exam_style_examples` → `services/llm.generate_problems`). 문제 생성 연결은 아직 전이다.
@@ -91,6 +93,15 @@
 | GET | /catalog/terms, /catalog/filters, /catalog/search | 필요 | 개설 목록(엔드림스 종합강의시간표) 찾기 |
 | POST | /catalog/request | 필요 | 개설 목록의 강좌 열기 요청(메모 선택). 요청 번호를 돌려준다 |
 | POST | /course-requests/{id}/files | 요청자·관리자 | 요청에 교안 붙이기(교안이 있어야 승인) |
+| POST·GET | /courses/{id}/papers | 수강 | 종이 시험지 만들기(챕터, 객관식·서술형 문항 수, 제한 시간. 챕터를 돌아가며 골고루) / 목록 |
+| GET | /papers/{id}, /papers/{id}/sheet | 수강 | 문제(정답 없음), 인쇄용 답안지(쪽별 SVG, 네 귀퉁이 ArUco 표시) |
+| POST | /papers/{id}/takes | 수강 | [시험 시작]. 시작 시각은 서버가 기록, 열린 응시가 있으면 이어 감 |
+| POST | /takes/{id}/pause, /resume, /abandon | 본인 | 일시정지(멈춘 동안 시간 안 흐름, 등수표에 표시)·계속·처음부터 다시(이번 응시를 버리고 시작 전으로, 기록 안 됨) |
+| GET | /papers/{id}/mine, /papers/{id}/ranking | 수강 | 내 응시 / 같은 시험지 등수(첫 응시, 점수→시간, 익명) |
+| POST | /takes/{id}/scan | 본인 | 답안지 사진 인식(OpenCV). 결과만 돌려주고 사진은 저장하지 않음 |
+| POST | /takes/{id}/submit, GET /takes/{id}/result | 본인 | 확인한 답 제출·채점(객관식은 바로·풀이 기록으로 숙련도 반영, 서술형·요약은 뒤에서 Claude) / 결과(essay_status, 문항별 오개념·서술형 채점 내용, report) |
+| POST·GET | /admin/courses/{id}/misconceptions/generate, …/status, …/misconceptions | 관리자 | 오개념 없는 객관식에 오개념 만들기(백그라운드) / 진행 / 목록 |
+| PATCH | /admin/misconceptions/{id} | 관리자 | status: auto / hidden / approved |
 | POST | /admin/catalog/import | 관리자 | 개설 목록 저장(강좌는 만들지 않음) |
 
 전체 명세는 서버 실행 후 http://localhost:8000/docs

@@ -679,6 +679,410 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/courses/{course_id}/reviews/terms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Review Terms */
+        get: operations["review_terms_api_v1_courses__course_id__reviews_terms_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/courses/{course_id}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Reviews */
+        get: operations["list_reviews_api_v1_courses__course_id__reviews_get"];
+        put?: never;
+        /** Create Review */
+        post: operations["create_review_api_v1_courses__course_id__reviews_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews/{review_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Review */
+        delete: operations["delete_review_api_v1_reviews__review_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/courses/{course_id}/papers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Papers */
+        get: operations["list_papers_api_v1_courses__course_id__papers_get"];
+        put?: never;
+        /** Create Paper */
+        post: operations["create_paper_api_v1_courses__course_id__papers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/papers/{paper_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Paper
+         * @description 시험지 문제(정답 없음). 인쇄 화면에서 쓴다.
+         */
+        get: operations["get_paper_api_v1_papers__paper_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/papers/{paper_id}/sheet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Sheet
+         * @description 인쇄용 답안지(쪽별 SVG).
+         */
+        get: operations["get_sheet_api_v1_papers__paper_id__sheet_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/papers/{paper_id}/takes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Take
+         * @description [시험 시작]. 시작 시각은 서버가 기록한다. 끝나지 않은 응시가 있으면 그것을 이어 간다.
+         */
+        post: operations["start_take_api_v1_papers__paper_id__takes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/takes/{take_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pause Take
+         * @description 일시정지. 멈춘 동안은 시간이 흐르지 않는다.
+         */
+        post: operations["pause_take_api_v1_takes__take_id__pause_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/takes/{take_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume Take */
+        post: operations["resume_take_api_v1_takes__take_id__resume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/takes/{take_id}/abandon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Abandon Take
+         * @description 처음부터 다시(그만두기): 이 응시는 버리고 시작 전 상태로. 기록·등수에 들어가지 않는다.
+         */
+        post: operations["abandon_take_api_v1_takes__take_id__abandon_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/papers/{paper_id}/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My Takes */
+        get: operations["my_takes_api_v1_papers__paper_id__mine_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/takes/{take_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Take */
+        get: operations["get_take_api_v1_takes__take_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/takes/{take_id}/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Scan Sheet
+         * @description 답안지 사진(쪽마다 한 장)을 읽어 결과만 돌려준다. 사진은 저장하지 않는다.
+         */
+        post: operations["scan_sheet_api_v1_takes__take_id__scan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/takes/{take_id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Take
+         * @description 확인한 답을 제출해 채점한다. 객관식은 바로 채점하고 풀이 기록(Attempt)으로 남겨 숙련도에 반영한다.
+         *     서술형 채점과 결과 요약은 제출 뒤 백그라운드에서 Claude로 한다(grading.finish_take).
+         */
+        post: operations["submit_take_api_v1_takes__take_id__submit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/takes/{take_id}/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Result */
+        get: operations["get_result_api_v1_takes__take_id__result_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/papers/{paper_id}/ranking": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ranking
+         * @description 같은 시험지를 본 사람끼리. 사람마다 첫 응시만, 점수 높은 순 → 걸린 시간 짧은 순. 다른 사람은 익명.
+         */
+        get: operations["ranking_api_v1_papers__paper_id__ranking_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/courses/{course_id}/misconceptions/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate
+         * @description 오개념이 없는 객관식 문제에 붙인다. 문제당 수 초, 백그라운드로 돈다.
+         */
+        post: operations["generate_api_v1_admin_courses__course_id__misconceptions_generate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/courses/{course_id}/misconceptions/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Job Status */
+        get: operations["job_status_api_v1_admin_courses__course_id__misconceptions_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/courses/{course_id}/misconceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Misconceptions */
+        get: operations["list_misconceptions_api_v1_admin_courses__course_id__misconceptions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/misconceptions/{misconception_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Set Status */
+        patch: operations["set_status_api_v1_admin_misconceptions__misconception_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/notices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Notices */
+        get: operations["list_notices_api_v1_notices_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notices/{notice_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Notice */
+        get: operations["get_notice_api_v1_notices__notice_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -690,6 +1094,13 @@ export interface components {
             created: boolean;
             /** Uploads */
             uploads: components["schemas"]["UploadOut"][];
+        };
+        /** AnswerIn */
+        AnswerIn: {
+            /** Problem Id */
+            problem_id: number;
+            /** Chosen */
+            chosen?: number | null;
         };
         /**
          * ApproveIn
@@ -762,6 +1173,11 @@ export interface components {
             /** Files */
             files?: string[] | null;
         };
+        /** Body_scan_sheet_api_v1_takes__take_id__scan_post */
+        Body_scan_sheet_api_v1_takes__take_id__scan_post: {
+            /** Files */
+            files: string[];
+        };
         /** Body_upload_material_api_v1_courses__course_id__materials_post */
         Body_upload_material_api_v1_courses__course_id__materials_post: {
             /** File */
@@ -815,6 +1231,19 @@ export interface components {
             concepts: string[];
             /** Problem Count */
             problem_count: number;
+            /** Essay Count */
+            essay_count: number;
+        };
+        /** ChapterStat */
+        ChapterStat: {
+            /** Chapter Id */
+            chapter_id: number;
+            /** Title */
+            title: string;
+            /** Before */
+            before: number;
+            /** After */
+            after: number;
         };
         /** CollegeOut */
         CollegeOut: {
@@ -842,6 +1271,25 @@ export interface components {
             id: number;
             /** Name */
             name: string;
+        };
+        /** ConceptStat */
+        ConceptStat: {
+            /** Name */
+            name: string;
+            /** Chapter */
+            chapter: string;
+            /** Total */
+            total: number;
+            /** Correct */
+            correct: number;
+            /** Before */
+            before: number;
+            /** After */
+            after: number;
+            /** Labels */
+            labels: components["schemas"]["LabelCount"][];
+            /** Pages */
+            pages: string[];
         };
         /** CourseAdminUpdate */
         CourseAdminUpdate: {
@@ -949,6 +1397,24 @@ export interface components {
             /** Exam Info */
             exam_info?: string | null;
         };
+        /** Dist */
+        Dist: {
+            /** Rank */
+            rank: number;
+            /** Score */
+            score: number;
+            /** Total Points */
+            total_points: number;
+            /** Me */
+            me: boolean;
+        };
+        /** EssayIn */
+        EssayIn: {
+            /** Problem Id */
+            problem_id: number;
+            /** Image */
+            image?: string | null;
+        };
         /** ExamOut */
         ExamOut: {
             /** Id */
@@ -984,6 +1450,20 @@ export interface components {
             /** Cpdivs */
             cpdivs: string[];
         };
+        /**
+         * Flow
+         * @description 틀린 객관식 하나가 이어지는 길: 문제 → 오개념 → 개념 → 다시 볼 교안 쪽(오답 흐름 차트).
+         */
+        Flow: {
+            /** No */
+            no: number;
+            /** Misconception */
+            misconception: string | null;
+            /** Concept */
+            concept: string | null;
+            /** Page */
+            page: string | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1015,6 +1495,32 @@ export interface components {
             received: number;
             /** Added */
             added: number;
+        };
+        /** JobOut */
+        JobOut: {
+            /** Running */
+            running: boolean;
+            /** Total */
+            total: number;
+            /** Done */
+            done: number;
+            /** Failed */
+            failed: number;
+            /** Error */
+            error: string | null;
+            /** Problems */
+            problems: number;
+            /** Covered */
+            covered: number;
+            /** Misconceptions */
+            misconceptions: number;
+        };
+        /** LabelCount */
+        LabelCount: {
+            /** Label */
+            label: string;
+            /** Count */
+            count: number;
         };
         /** LoginIn */
         LoginIn: {
@@ -1081,6 +1587,54 @@ export interface components {
             /** Kind */
             kind?: ("lecture" | "exam" | "note") | null;
         };
+        /** MineOut */
+        MineOut: {
+            open_take: components["schemas"]["TakeOut"] | null;
+            /** Submitted */
+            submitted: components["schemas"]["MyTake"][];
+        };
+        /** MisconceptionAdminOut */
+        MisconceptionAdminOut: {
+            /** Id */
+            id: number;
+            /** Problem Id */
+            problem_id: number;
+            /** Question */
+            question: string;
+            /** Choice */
+            choice: string;
+            /** Label */
+            label: string;
+            /** Hypothesis */
+            hypothesis: string;
+            /** Explanation */
+            explanation: string;
+            /** Evidence */
+            evidence: string | null;
+            /** Evidence Found */
+            evidence_found: boolean;
+            /** Status */
+            status: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** MisconceptionOut */
+        MisconceptionOut: {
+            /** Label */
+            label: string;
+            /** Hypothesis */
+            hypothesis: string;
+            /** Explanation */
+            explanation: string;
+            /** Evidence */
+            evidence: string | null;
+            source: components["schemas"]["SourceOut"] | null;
+            /** Status */
+            status: string;
+        };
         /** MyCourseOut */
         MyCourseOut: {
             /** Course Id */
@@ -1114,6 +1668,26 @@ export interface components {
              */
             public?: components["schemas"]["PublicCourseOut"][];
         };
+        /** MyTake */
+        MyTake: {
+            /** Take Id */
+            take_id: number;
+            /** Score */
+            score: number;
+            /** Total Points */
+            total_points: number;
+            /** Elapsed Sec */
+            elapsed_sec: number;
+            /** Late */
+            late: boolean;
+            /** Essay Pending */
+            essay_pending: boolean;
+            /**
+             * Submitted At
+             * Format: date-time
+             */
+            submitted_at: string;
+        };
         /** NoteIn */
         NoteIn: {
             /**
@@ -1121,6 +1695,70 @@ export interface components {
              * @default
              */
             note?: string;
+        };
+        /** Notice */
+        Notice: {
+            /** Id */
+            id: number;
+            /** Title */
+            title: string;
+            /** Category */
+            category: string;
+            /** Date */
+            date: string;
+            /** Pinned */
+            pinned: boolean;
+            /** Url */
+            url: string;
+        };
+        /** NoticeDetail */
+        NoticeDetail: {
+            /** Id */
+            id: number;
+            /** Text */
+            text: string;
+            /** Url */
+            url: string;
+            /**
+             * Fetched At
+             * Format: date-time
+             */
+            fetched_at: string;
+            /**
+             * Stale
+             * @default false
+             */
+            stale?: boolean;
+        };
+        /** NoticeList */
+        NoticeList: {
+            /**
+             * Total
+             * @default 0
+             */
+            total?: number;
+            /**
+             * Page
+             * @default 1
+             */
+            page?: number;
+            /**
+             * Query
+             * @default
+             */
+            query?: string;
+            /** Items */
+            items: components["schemas"]["Notice"][];
+            /**
+             * Fetched At
+             * Format: date-time
+             */
+            fetched_at: string;
+            /**
+             * Stale
+             * @default false
+             */
+            stale?: boolean;
         };
         /**
          * OfferingGroupOut
@@ -1210,6 +1848,83 @@ export interface components {
             /** Plan Url */
             plan_url?: string | null;
         };
+        /** PaperIn */
+        PaperIn: {
+            /** Title */
+            title: string;
+            /** Chapter Ids */
+            chapter_ids: number[];
+            /**
+             * Mcq Count
+             * @default 0
+             */
+            mcq_count?: number;
+            /**
+             * Essay Count
+             * @default 0
+             */
+            essay_count?: number;
+            /** Time Limit Min */
+            time_limit_min: number;
+        };
+        /** PaperOut */
+        PaperOut: {
+            /** Id */
+            id: number;
+            /** Course Id */
+            course_id: number;
+            /** Title */
+            title: string;
+            /** Time Limit Min */
+            time_limit_min: number;
+            /** Total Points */
+            total_points: number;
+            /** Problems */
+            problems: components["schemas"]["PaperProblemOut"][];
+        };
+        /** PaperProblemOut */
+        PaperProblemOut: {
+            /** No */
+            no: number;
+            /** Id */
+            id: number;
+            /** Qtype */
+            qtype: string;
+            /** Question */
+            question: string;
+            /** Choices */
+            choices: string[];
+            /** Points */
+            points: number;
+        };
+        /** PaperSummary */
+        PaperSummary: {
+            /** Id */
+            id: number;
+            /** Title */
+            title: string;
+            /** N Questions */
+            n_questions: number;
+            /** N Essay */
+            n_essay: number;
+            /** Time Limit Min */
+            time_limit_min: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By Me */
+            created_by_me: boolean;
+            /** Takers */
+            takers: number;
+            /** My Best */
+            my_best: number | null;
+            /** Total Points */
+            total_points: number;
+            /** My Open Take Id */
+            my_open_take_id: number | null;
+        };
         /**
          * ProblemOut
          * @description 풀이 화면용. 정답은 넣지 않는다.
@@ -1236,6 +1951,32 @@ export interface components {
             subject_name: string;
             /** Professor Name */
             professor_name: string;
+        };
+        /** RankEntry */
+        RankEntry: {
+            /** Rank */
+            rank: number;
+            /** Label */
+            label: string;
+            /** Me */
+            me: boolean;
+            /** Score */
+            score: number;
+            /** Total Points */
+            total_points: number;
+            /** Elapsed Sec */
+            elapsed_sec: number;
+            /** Late */
+            late: boolean;
+            /** Paused */
+            paused: boolean;
+        };
+        /** RankingOut */
+        RankingOut: {
+            /** Entries */
+            entries: components["schemas"]["RankEntry"][];
+            /** Essay Pending */
+            essay_pending: boolean;
         };
         /**
          * RecordIn
@@ -1285,6 +2026,23 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** ReportOut */
+        ReportOut: {
+            /** Chapters */
+            chapters: components["schemas"]["ChapterStat"][];
+            /** Concepts */
+            concepts: components["schemas"]["ConceptStat"][];
+            /** Repeated */
+            repeated: components["schemas"]["LabelCount"][];
+            /** Review Pages */
+            review_pages: string[];
+            /** Distribution */
+            distribution: components["schemas"]["Dist"][];
+            /** Flows */
+            flows: components["schemas"]["Flow"][];
+            /** Blank Nos */
+            blank_nos: number[];
+        };
         /** RequestCreatedOut */
         RequestCreatedOut: {
             /** Request Id */
@@ -1309,6 +2067,161 @@ export interface components {
              */
             note?: string;
         };
+        /** ResultItem */
+        ResultItem: {
+            /** No */
+            no: number;
+            /** Problem Id */
+            problem_id: number;
+            /** Qtype */
+            qtype: string;
+            /** Question */
+            question: string;
+            /** Choices */
+            choices: string[];
+            /** Points */
+            points: number;
+            /** Chosen */
+            chosen: number | null;
+            /** Answer Index */
+            answer_index: number;
+            /** Correct */
+            correct: boolean | null;
+            /** Score */
+            score: number | null;
+            /** Explanation */
+            explanation: string;
+            /** Evidence */
+            evidence: string | null;
+            source: components["schemas"]["SourceOut"] | null;
+            /** Model Answer */
+            model_answer: string | null;
+            misconception?: components["schemas"]["MisconceptionOut"] | null;
+            /** Transcription */
+            transcription?: string | null;
+            /** Feedback */
+            feedback?: string | null;
+            /** Rubric */
+            rubric?: components["schemas"]["RubricOut"][] | null;
+        };
+        /** ResultOut */
+        ResultOut: {
+            /** Take Id */
+            take_id: number;
+            /** Paper Id */
+            paper_id: number;
+            /** Score */
+            score: number;
+            /** Total Points */
+            total_points: number;
+            /** Essay Pending */
+            essay_pending: boolean;
+            /** Elapsed Sec */
+            elapsed_sec: number;
+            /** Late */
+            late: boolean;
+            /** Essay Status */
+            essay_status: string;
+            /** Submitted At */
+            submitted_at: string | null;
+            /** Summary */
+            summary: string | null;
+            /** Rank */
+            rank: number | null;
+            /** Takers */
+            takers: number;
+            /** Items */
+            items: components["schemas"]["ResultItem"][];
+            report: components["schemas"]["ReportOut"];
+        };
+        /** ReviewCreate */
+        ReviewCreate: {
+            /** Recommendation */
+            recommendation: number;
+            /** Difficulty */
+            difficulty: number;
+            /** Workload */
+            workload: number;
+            /** Content */
+            content: string;
+            /** Enrollment Id */
+            enrollment_id: number;
+        };
+        /** ReviewOut */
+        ReviewOut: {
+            /** Recommendation */
+            recommendation: number;
+            /** Difficulty */
+            difficulty: number;
+            /** Workload */
+            workload: number;
+            /** Content */
+            content: string;
+            /** Id */
+            id: number;
+            /** Year */
+            year: string;
+            /** Sem Cd */
+            sem_cd: string;
+            /** Term */
+            term: string;
+            /** Is Mine */
+            is_mine: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** ReviewTerm */
+        ReviewTerm: {
+            /** Enrollment Id */
+            enrollment_id: number;
+            /** Term */
+            term: string;
+            /** Review Id */
+            review_id: number | null;
+        };
+        /** RubricOut */
+        RubricOut: {
+            /** Item */
+            item: string;
+            /** Max Points */
+            max_points: number;
+            /** Points */
+            points: number;
+            /** Reason */
+            reason: string;
+        };
+        /** ScanEssay */
+        ScanEssay: {
+            /** No */
+            no: number;
+            /** Problem Id */
+            problem_id: number;
+            /** Image */
+            image: string | null;
+        };
+        /** ScanMcq */
+        ScanMcq: {
+            /** No */
+            no: number;
+            /** Problem Id */
+            problem_id: number;
+            /** Chosen */
+            chosen: number | null;
+            /** Status */
+            status: string;
+        };
+        /** ScanOut */
+        ScanOut: {
+            /** Mcq */
+            mcq: components["schemas"]["ScanMcq"][];
+            /** Essays */
+            essays: components["schemas"]["ScanEssay"][];
+            /** Missing Pages */
+            missing_pages: number[];
+        };
         /** SearchOut */
         SearchOut: {
             /** Total */
@@ -1320,6 +2233,11 @@ export interface components {
         SelectionIn: {
             /** Material Ids */
             material_ids: number[];
+        };
+        /** SheetOut */
+        SheetOut: {
+            /** Pages */
+            pages: string[];
         };
         /** SignupIn */
         SignupIn: {
@@ -1341,6 +2259,14 @@ export interface components {
             title: string;
             /** Page */
             page: number | null;
+        };
+        /** StatusIn */
+        StatusIn: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "auto" | "hidden" | "approved";
         };
         /** SubjectIn */
         SubjectIn: {
@@ -1366,6 +2292,40 @@ export interface components {
             name?: string | null;
             /** Code */
             code?: string | null;
+        };
+        /** SubmitIn */
+        SubmitIn: {
+            /** Answers */
+            answers: components["schemas"]["AnswerIn"][];
+            /**
+             * Essays
+             * @default []
+             */
+            essays?: components["schemas"]["EssayIn"][];
+        };
+        /** TakeOut */
+        TakeOut: {
+            /** Id */
+            id: number;
+            /** Paper Id */
+            paper_id: number;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Status */
+            status: string;
+            /** Paused */
+            paused: boolean;
+            /** Pause Count */
+            pause_count: number;
+            /** Time Limit Sec */
+            time_limit_sec: number;
+            /** Spent Sec */
+            spent_sec: number;
+            /** Remaining Sec */
+            remaining_sec: number;
         };
         /** TermOut */
         TermOut: {
@@ -2909,6 +3869,819 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExamOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_terms_api_v1_courses__course_id__reviews_terms_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewTerm"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_reviews_api_v1_courses__course_id__reviews_get: {
+        parameters: {
+            query?: {
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_review_api_v1_courses__course_id__reviews_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_review_api_v1_reviews__review_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                review_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_papers_api_v1_courses__course_id__papers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaperSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_paper_api_v1_courses__course_id__papers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaperIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaperOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_paper_api_v1_papers__paper_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                paper_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaperOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_sheet_api_v1_papers__paper_id__sheet_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                paper_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SheetOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_take_api_v1_papers__paper_id__takes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                paper_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TakeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pause_take_api_v1_takes__take_id__pause_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                take_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TakeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resume_take_api_v1_takes__take_id__resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                take_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TakeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    abandon_take_api_v1_takes__take_id__abandon_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                take_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TakeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_takes_api_v1_papers__paper_id__mine_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                paper_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MineOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_take_api_v1_takes__take_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                take_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TakeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scan_sheet_api_v1_takes__take_id__scan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                take_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_scan_sheet_api_v1_takes__take_id__scan_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScanOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_take_api_v1_takes__take_id__submit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                take_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_result_api_v1_takes__take_id__result_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                take_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ranking_api_v1_papers__paper_id__ranking_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                paper_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RankingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_api_v1_admin_courses__course_id__misconceptions_generate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    job_status_api_v1_admin_courses__course_id__misconceptions_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_misconceptions_api_v1_admin_courses__course_id__misconceptions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MisconceptionAdminOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_status_api_v1_admin_misconceptions__misconception_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                misconception_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StatusIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MisconceptionAdminOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notices_api_v1_notices_get: {
+        parameters: {
+            query?: {
+                q?: string;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoticeList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_notice_api_v1_notices__notice_id__get: {
+        parameters: {
+            query?: {
+                q?: string;
+                page?: number;
+            };
+            header?: never;
+            path: {
+                notice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoticeDetail"];
                 };
             };
             /** @description Validation Error */
