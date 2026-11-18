@@ -33,7 +33,7 @@ class Page:
     has_figure: bool = False
     figure_heavy: bool = False
     low_text: bool = False
-    image_path: str | None = None  # PNG로 남긴 경우 경로
+    image_path: str | None = None  # PNG로 남긴 경우 경로 (image_base가 있으면 그 기준 상대 경로, '/' 구분)
 
     @property
     def needs_image(self) -> bool:
@@ -87,8 +87,19 @@ def _largest_font_title(page, max_len: int = 80) -> str:
     return " ".join(p[3] for p in parts)[:max_len].strip()
 
 
-def parse_pdf(path: Path, render_dir: Path | None = None, dpi: int = 110) -> ParseReport:
-    """PDF를 쪽별로 읽는다. render_dir가 있으면 그림 위주·글자 부족 쪽을 PNG로 저장한다."""
+def rel_path(path: Path, base: Path | None) -> str:
+    """base 기준 상대 경로('/' 구분). 다른 컴퓨터·서버로 옮겨도 맞도록 절대 경로를 저장하지 않는다."""
+    if base is None:
+        return path.as_posix()
+    return Path(path).resolve().relative_to(Path(base).resolve()).as_posix()
+
+
+def parse_pdf(path: Path, render_dir: Path | None = None, dpi: int = 110,
+              image_base: Path | None = None) -> ParseReport:
+    """PDF를 쪽별로 읽는다. render_dir가 있으면 그림 위주·글자 부족 쪽을 PNG로 저장한다.
+
+    image_base: image_path를 이 폴더 기준 상대 경로로 남긴다 (보통 과목 폴더 data/<과목>/).
+    """
     import pymupdf
 
     report = ParseReport(file=path.name)
@@ -108,7 +119,7 @@ def parse_pdf(path: Path, render_dir: Path | None = None, dpi: int = 110) -> Par
                 render_dir.mkdir(parents=True, exist_ok=True)
                 out = render_dir / f"{path.stem}-p{i}.png"
                 pg.get_pixmap(dpi=dpi).save(out)
-                p.image_path = str(out)
+                p.image_path = rel_path(out, image_base)
             report.pages.append(p)
     return report
 
@@ -126,7 +137,7 @@ def parse_text(path: Path) -> ParseReport:
 SUPPORTED = (".pdf", ".md", ".txt")
 
 
-def parse_file(path: Path, render_dir: Path | None = None) -> ParseReport:
+def parse_file(path: Path, render_dir: Path | None = None, image_base: Path | None = None) -> ParseReport:
     if path.suffix.lower() == ".pdf":
-        return parse_pdf(path, render_dir=render_dir)
+        return parse_pdf(path, render_dir=render_dir, image_base=image_base)
     return parse_text(path)

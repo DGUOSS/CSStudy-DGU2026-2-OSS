@@ -11,7 +11,7 @@ from pathlib import Path
 from ..schemas import Chunk
 from .chunker import chunk_pages, title_of
 from .index import BM25, EmbeddingIndex, Retriever, default_index_dir, fingerprint, st_encoder
-from .pdf_parser import SUPPORTED, Page, ParseReport, parse_file
+from .pdf_parser import SUPPORTED, Page, ParseReport, parse_file, rel_path
 
 __all__ = [
     "BM25", "EmbeddingIndex", "Page", "ParseReport", "Retriever", "chunk_pages", "default_index_dir",
@@ -31,7 +31,7 @@ def parse_lectures(course_dir: Path, render_dir: Path | None = None, verbose: bo
             if verbose and f.is_file():
                 print(f"[ingest] 지원하지 않는 형식이라 건너뜀: {f.name} (지원: {', '.join(SUPPORTED)})")
             continue
-        r = parse_file(f, render_dir=render_dir)
+        r = parse_file(f, render_dir=render_dir, image_base=course_dir)  # image_path = 과목 폴더 기준 상대 경로
         if verbose:
             for w in r.warnings:
                 print(f"[ingest] 경고: {w}")
@@ -49,7 +49,7 @@ def load_chunks(course_dir: Path, render_dir: Path | None = None, verbose: bool 
             if p.image_path is None and p.needs_image:
                 png = pages_dir / f"{Path(p.file).stem}-p{p.page}.png"
                 if png.exists():
-                    p.image_path = str(png)
+                    p.image_path = rel_path(png, course_dir)
             pages.append(p)
     return chunk_pages(pages, course_dir.name)
 

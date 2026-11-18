@@ -47,11 +47,15 @@ def test_flags_and_warnings(tmp_path):
 
 
 def test_render_only_pages_that_need_image(tmp_path):
-    out = tmp_path / "pages"
-    rep = parse_pdf(_make_pdf(tmp_path / "lec.pdf"), render_dir=out)
+    out = tmp_path / "index" / "pages"
+    rep = parse_pdf(_make_pdf(tmp_path / "lec.pdf"), render_dir=out, image_base=tmp_path)
     rendered = {p.page for p in rep.pages if p.image_path}
     assert rendered == {2, 3}
-    assert all(Path(p.image_path).exists() for p in rep.pages if p.image_path)
+    for p in rep.pages:
+        if p.image_path:
+            # 과목 폴더 기준 상대 경로, '/' 구분 → 다른 컴퓨터·서버에서도 같은 값
+            assert p.image_path.startswith("index/pages/") and not Path(p.image_path).is_absolute()
+            assert (tmp_path / p.image_path).exists()
 
 
 def test_title_is_largest_font_not_page_number(tmp_path):

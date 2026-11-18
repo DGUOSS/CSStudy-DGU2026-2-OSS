@@ -104,7 +104,7 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
             hist.append("실패")
             print("  ✗ 검증 실패 — 시험지에서 제외")
         item_sec[item.item_id] = round(time.time() - t_item, 1)
-        print(f"  ⏱ {item_sec[item.item_id]}s")
+        print(f"  소요 {item_sec[item.item_id]}s")
     phase_sec["items"] = round(time.time() - t_phase, 1)
 
     # 4) 저장/렌더

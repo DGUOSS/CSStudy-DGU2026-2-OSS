@@ -15,7 +15,7 @@ class Chunk(BaseModel):
     source: SourceRef
     has_figure: bool = False
     has_formula: bool = False
-    image_path: str | None = None  # 그림 위주·글자 부족 쪽을 PNG로 남긴 경우 (build_index 때 생성)
+    image_path: str | None = None  # 그림 위주·글자 부족 쪽 PNG. 과목 폴더(data/<과목>/) 기준 상대 경로 (build_index 때 생성)
     title: str = ""  # 슬라이드 제목 (Planner 주제 목록에 씀)
 
 
