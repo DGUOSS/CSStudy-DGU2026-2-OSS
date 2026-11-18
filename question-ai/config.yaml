@@ -1,12 +1,14 @@
 # 비용 원칙(2026-11-14): 유료 회사는 저가 모델로 고정 — OpenAI는 mini, Claude는 haiku.
-# 배치: 만드는 쪽 = Gemini(무료) / 검증(solver) = OpenAI / 최종 평가(judge) = Claude
+# 배치: 만드는 쪽 = Gemini(무료) / 풀이 검증(solver) = OpenAI / 검토(reviewer)·최종 평가(judge) = Claude
 models:
   analyst:   "gemini/gemini-3-flash-preview"
   planner:   "gemini/gemini-flash-lite-latest"
   generator: "gemini/gemini-3-flash-preview"
   solver:    "openai/gpt-5.4-mini"              # generator와 다른 회사 → 교차 검증
-  reviewer:  "gemini/gemini-3-flash-preview"    # 무료 유지. 실험 변수로 바꿀 수 있음
-  # 최종 품질 평가자 (M5). 생성에 쓰는 회사와 겹치지 않아야 함 (명세 §7, §10)
+  # 2026-11-18 Gemini → Claude haiku. demo 측정: 속도 비슷(호출당 5.9s → 6.8s), 근거 밖 내용을 더 엄격히 잡음(수정 증가), 유료
+  reviewer:  "anthropic/claude-haiku-5-5"
+  # 최종 품질 평가자 (M5). 생성에 쓰는 모델과 겹치지 않아야 함 (명세 §7, §10)
+  # TODO(M5): reviewer가 haiku라 judge와 같은 모델 → M5 실험 전에 judge를 다른 모델로 바꿀 것
   judge:     "anthropic/claude-haiku-5-5"
 
 retrieval:
