@@ -29,6 +29,8 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
     notes_f = course_dir / "notes.md"
     notes = notes_f.read_text(encoding="utf-8") if notes_f.exists() else ""
     print(f"[ingest] 강의자료 청크 {len(chunks)}개, 기출 {len(past)}자")
+    phase_sec: dict[str, float] = {"ingest": round(time.time() - t0, 1)}
+    t_phase = time.time()
 
     # 1) Analyst — 과목 공용 profile.json (사용자가 직접 수정 가능, 있으면 재사용)
     prof_f = ROOT / "outputs" / course / "profile.json"
@@ -40,6 +42,8 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
         prof_f.write_text(profile.model_dump_json(indent=2), encoding="utf-8")
         print(f"[analyst] 프로필 생성 → {prof_f}")
     (out / "profile.json").write_text(profile.model_dump_json(indent=2), encoding="utf-8")
+    phase_sec["analyst"] = round(time.time() - t_phase, 1)
+    t_phase = time.time()
 
     # 2) Planner
     n = cfg.get("num_questions_override") or profile.num_questions
@@ -50,12 +54,16 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
         plan = agents.planner(profile, topic_list(chunks), n)
         plan_f.write_text(plan.model_dump_json(indent=2), encoding="utf-8")
     print(f"[planner] {len(plan.items)}문항: " + ", ".join(f"{i.qtype}/{i.topic}" for i in plan.items))
+    phase_sec["planner"] = round(time.time() - t_phase, 1)
+    t_phase = time.time()
+    item_sec: dict[str, float] = {}
 
     # 3) 문항별 생성 → 규칙검사 → 블라인드 풀이 → 검토 → 수정 루프
     accepted: dict[str, Question] = {}
     history: dict[str, list[str]] = {}
     trace = []
     for item in plan.items:
+        t_item = time.time()
         print(f"\n[item {item.item_id}] {item.qtype} | {item.topic}")
         hist = history.setdefault(item.item_id, [])
         ctx = retriever.search(f"{item.topic} {item.bloom_level}", k=cfg["retrieval_top_k"])
@@ -89,13 +97,17 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
         if item.item_id not in accepted:
             hist.append("실패")
             print("  ✗ 검증 실패 — 시험지에서 제외")
+        item_sec[item.item_id] = round(time.time() - t_item, 1)
+        print(f"  ⏱ {item_sec[item.item_id]}s")
+    phase_sec["items"] = round(time.time() - t_phase, 1)
 
     # 4) 저장/렌더
     (out / "exam.json").write_text(json.dumps({k: v.model_dump() for k, v in accepted.items()}, ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "trace.json").write_text(json.dumps(trace, ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "exam.md").write_text(render_exam(profile.course, plan, accepted), encoding="utf-8")
     (out / "answers.md").write_text(render_answers(profile.course, plan, accepted, history), encoding="utf-8")
-    summary = {**llm.stats(), "accepted": len(accepted), "planned": len(plan.items), "sec": round(time.time() - t0, 1)}
+    summary = {**llm.stats(), "accepted": len(accepted), "planned": len(plan.items), "sec": round(time.time() - t0, 1),
+               "phase_sec": phase_sec, "item_sec": item_sec}
     (out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\n[done] {summary}\n→ {out}")
     return out

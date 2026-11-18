@@ -68,16 +68,19 @@ def _call_kwargs(model: str, temperature: float) -> dict:
     return kw
 
 
-def _raw_call(model: str, messages: list[dict], temperature: float) -> tuple[str, int]:
+def _raw_call(model: str, messages: list[dict], temperature: float) -> tuple[str, int, float]:
+    """반환: (응답 글, 토큰 수, 기다린 초). 기다린 초 = 회사별 호출 간격 대기 + 일시 오류 백오프."""
     import litellm
 
     p = _provider(model)
     interval = CFG["pipeline"].get("min_interval_sec", {})
     interval = interval.get(p, 0) if isinstance(interval, dict) else interval
+    waited = 0.0
     for attempt in range(6):
         wait = interval - (time.time() - _state["last_call"].get(p, 0.0))
         if wait > 0:
             time.sleep(wait)
+            waited += wait
         _state["last_call"][p] = time.time()
         try:
             r = litellm.completion(
@@ -91,7 +94,7 @@ def _raw_call(model: str, messages: list[dict], temperature: float) -> tuple[str
             usage = getattr(r, "usage", None)
             tokens = getattr(usage, "total_tokens", 0) or 0
             _state["tokens"] += tokens
-            return r.choices[0].message.content or "", tokens
+            return r.choices[0].message.content or "", tokens, waited
         except Exception as e:  # rate limit / 일시 오류 → 지수 백오프
             name = type(e).__name__
             transient = any(s in name for s in ("RateLimit", "ServiceUnavailable", "InternalServer", "Timeout", "APIConnection"))
@@ -100,6 +103,7 @@ def _raw_call(model: str, messages: list[dict], temperature: float) -> tuple[str
             backoff = 10 * 2**attempt
             print(f"    [llm] {name} → {backoff}s 대기 후 재시도")
             time.sleep(backoff)
+            waited += backoff
     raise RuntimeError("unreachable")
 
 
@@ -132,13 +136,16 @@ def call(role: str, prompt: str, schema: type[T], seed: int = 0) -> T:
     last_err = ""
     for attempt in range(3):  # 최초 + 검증 실패 시 2회 재요청
         t0 = time.time()
-        content, tokens = _raw_call(model, messages, temperature)
+        content, tokens, waited = _raw_call(model, messages, temperature)
+        sec = time.time() - t0
+        # sec = 전체, wait_sec = 간격 대기·백오프, api_sec = 실제 모델 응답 시간
+        timing = {"sec": round(sec, 2), "wait_sec": round(waited, 2), "api_sec": round(sec - waited, 2)}
         try:
             data = _parse_json(content)
             obj = schema.model_validate(data)
         except (json.JSONDecodeError, ValidationError) as e:
             last_err = str(e)[:1500]
-            _log({"role": role, "model": model, "error": last_err, "attempt": attempt})
+            _log({"role": role, "model": model, "error": last_err, "attempt": attempt, "tokens": tokens, **timing})
             messages = messages + [
                 {"role": "assistant", "content": content},
                 {"role": "user", "content": f"출력이 스키마 검증에 실패했다. 오류:\n{last_err}\n수정한 JSON만 다시 출력하라."},
@@ -147,7 +154,7 @@ def call(role: str, prompt: str, schema: type[T], seed: int = 0) -> T:
         CACHE_DIR.mkdir(exist_ok=True)
         cache_file.write_text(obj.model_dump_json(), encoding="utf-8")
         _log({"role": role, "model": model, "cached": False, "schema": schema.__name__,
-              "tokens": tokens, "sec": round(time.time() - t0, 2)})
+              "tokens": tokens, **timing})
         return obj
     raise RuntimeError(f"{role}: JSON 검증 3회 실패: {last_err}")
 
