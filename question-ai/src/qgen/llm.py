@@ -1,6 +1,7 @@
 """모든 LLM 호출의 단일 진입점: 캐시 → 호출(속도 제한·재시도) → JSON 파싱/검증 → 로그."""
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import re
@@ -115,7 +116,32 @@ def _parse_json(text: str) -> object:
     return json.loads(text)
 
 
-def call(role: str, prompt: str, schema: type[T], seed: int = 0) -> T:
+def image_part(data: bytes, mime: str = "image/jpeg") -> dict:
+    """LiteLLM 공통 이미지 형식 (Gemini·OpenAI·Claude 모두 받음)."""
+    return {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{base64.b64encode(data).decode()}"}}
+
+
+def user_content(prompt: str, images: list[tuple[bytes, str]] | None) -> str | list[dict]:
+    if not images:
+        return prompt
+    return [{"type": "text", "text": prompt}, *(image_part(d, m) for d, m in images)]
+
+
+def _cache_view(messages: list[dict]) -> list[dict]:
+    """캐시 키 계산용: 이미지 base64 대신 해시만 넣는다 (키 계산이 무거워지지 않게)."""
+    out = []
+    for m in messages:
+        c = m["content"]
+        if isinstance(c, list):
+            c = [p if p.get("type") != "image_url"
+                 else {"image_sha256": hashlib.sha256(p["image_url"]["url"].encode()).hexdigest()} for p in c]
+        out.append({**m, "content": c})
+    return out
+
+
+def call(role: str, prompt: str, schema: type[T], seed: int = 0,
+         images: list[tuple[bytes, str]] | None = None) -> T:
+    """images: (바이트, MIME) 목록. 주면 프롬프트 뒤에 이미지를 붙여 보낸다 (예: 사진 기출)."""
     model = CFG["models"][role]
     temps = CFG["pipeline"]["temperature"]
     temperature = temps.get(role, temps["others"])
@@ -124,9 +150,10 @@ def call(role: str, prompt: str, schema: type[T], seed: int = 0) -> T:
         "설명 문장이나 코드블록 없이 JSON만. 모든 텍스트는 한국어, 수식은 LaTeX($...$).\n"
         f"스키마({schema.__name__}):\n{json.dumps(schema.model_json_schema(), ensure_ascii=False)}"
     )
-    messages = [{"role": "system", "content": system}, {"role": "user", "content": prompt}]
+    messages = [{"role": "system", "content": system}, {"role": "user", "content": user_content(prompt, images)}]
 
-    key = hashlib.sha256(json.dumps([model, messages, temperature, schema.__name__, seed], ensure_ascii=False).encode()).hexdigest()
+    key = hashlib.sha256(json.dumps([model, _cache_view(messages), temperature, schema.__name__, seed],
+                                    ensure_ascii=False).encode()).hexdigest()
     cache_file = CACHE_DIR / f"{key}.json"
     if _state["use_cache"] and cache_file.exists():
         data = json.loads(cache_file.read_text(encoding="utf-8"))

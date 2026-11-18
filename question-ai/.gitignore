@@ -25,3 +25,5 @@ data/*/lectures/*.pdf
 data/*/past_exams/*.pdf
 data/*/past_exams/*.png
 data/*/past_exams/*.jpg
+data/*/past_exams/*.jpeg
+data/*/past_exams/*.webp

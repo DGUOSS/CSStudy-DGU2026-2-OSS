@@ -4,10 +4,10 @@ import json
 import time
 from pathlib import Path
 
-from . import agents, checks, llm
+from . import agents, checks, exam_profile, llm
 from .ingest import MAX_SOURCE_TITLES, Retriever, load_chunks, load_text_dir, search_queries, topic_list
 from .render import render_answers, render_exam
-from .schemas import ExamPlan, ExamProfile, Question
+from .schemas import ExamPlan, Question
 
 ROOT = llm.ROOT
 
@@ -25,22 +25,13 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
     if not chunks:
         raise SystemExit(f"{course_dir/'lectures'}에 강의자료(.pdf/.md/.txt)가 없습니다.")
     retriever = Retriever(chunks)
-    past = load_text_dir(course_dir / "past_exams")
-    notes_f = course_dir / "notes.md"
-    notes = notes_f.read_text(encoding="utf-8") if notes_f.exists() else ""
+    past = load_text_dir(course_dir / "past_exams")  # Generator 예시용 (글자 기출만)
     print(f"[ingest] 강의자료 청크 {len(chunks)}개, 기출 {len(past)}자")
     phase_sec: dict[str, float] = {"ingest": round(time.time() - t0, 1)}
     t_phase = time.time()
 
-    # 1) Analyst — 과목 공용 profile.json (사용자가 직접 수정 가능, 있으면 재사용)
-    prof_f = ROOT / "outputs" / course / "profile.json"
-    if prof_f.exists() and not new_profile:
-        profile = ExamProfile.model_validate_json(prof_f.read_text(encoding="utf-8"))
-        print(f"[analyst] 기존 프로필 재사용: {prof_f}")
-    else:
-        profile = agents.analyst(course, past, notes)
-        prof_f.write_text(profile.model_dump_json(indent=2), encoding="utf-8")
-        print(f"[analyst] 프로필 생성 → {prof_f}")
+    # 1) Analyst — 과목 공용 profile.json (사용자가 직접 수정 가능, 있으면 재사용). 기출·메모가 없으면 기본 프로필
+    profile = exam_profile.load_or_make(course_dir, course, new=new_profile)
     (out / "profile.json").write_text(profile.model_dump_json(indent=2), encoding="utf-8")
     phase_sec["analyst"] = round(time.time() - t_phase, 1)
     t_phase = time.time()

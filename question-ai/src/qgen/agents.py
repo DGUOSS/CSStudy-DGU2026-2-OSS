@@ -1,13 +1,20 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from . import llm
+
+if TYPE_CHECKING:
+    from .exam_profile import AnalystInput
 from .ingest import format_chunks
 from .schemas import Chunk, ExamPlan, ExamProfile, PlannedItem, Question, Review, SolverOutput
 
 
-def analyst(course: str, past_exams: str, notes: str) -> ExamProfile:
-    p = llm.render_prompt("analyst", course=course, past_exams=past_exams or "(없음)", notes=notes or "(없음)")
-    return llm.call("analyst", p, ExamProfile)
+def analyst(course: str, inp: "AnalystInput") -> ExamProfile:
+    """inp: exam_profile.build_input() 결과 (번호 붙인 기출·메모 + 이미지)."""
+    p = llm.render_prompt("analyst", course=course, past_exams=inp.past_text or "(없음)",
+                          notes=inp.notes_text or "(없음)", images=inp.image_list)
+    return llm.call("analyst", p, ExamProfile, images=inp.images or None)
 
 
 def type_counts(ratio: dict[str, float], n: int) -> dict[str, int]:
