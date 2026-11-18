@@ -1,4 +1,4 @@
-import { NoticesPanel } from '@/features/notices/NoticesPanel'
+import { NoticesPanel } from '@/features/department_notices/NoticesPanel'
 import { ChevronRight, Lock, RefreshCw, Search } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'

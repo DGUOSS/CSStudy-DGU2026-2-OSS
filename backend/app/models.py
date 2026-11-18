@@ -343,3 +343,11 @@ class Misconception(SQLModel, table=True):
     status: str = Field(default="auto", max_length=20)
     model: str = Field(default="", max_length=50)
     created_at: datetime = Field(default_factory=_now)
+
+
+class NoticePreference(SQLModel, table=True):
+    """공지 구독 설정. 학과 소속/수강 인증과 무관하다."""
+
+    __tablename__ = "notice_preferences"
+    user_id: int = Field(foreign_key="users.id", primary_key=True)
+    department_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
