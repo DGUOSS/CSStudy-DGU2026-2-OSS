@@ -69,11 +69,13 @@ export function NoticesPanel() {
           {matchedDepartments.filter(d => d.college === college).map(d => {
             const checked = draft.includes(d.id)
             const unavailable = !d.source_ids.length
-            return <label key={d.id} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-home-line p-3 text-sm ${checked ? 'border-navy bg-navy-tint' : 'bg-white'} ${unavailable ? 'opacity-50' : ''}`}>
-              <input type="checkbox" checked={checked} disabled={save.isPending || unavailable || (!checked && draft.length >= maxFavorites)} onChange={() => setDraft(checked ? draft.filter(id => id !== d.id) : [...draft, d.id])} />
-              <Star aria-hidden="true" className={`size-4 shrink-0 ${checked ? 'fill-gold text-navy' : 'text-ink-2'}`} />
+            return <button key={d.id} type="button" aria-pressed={checked}
+              disabled={save.isPending || unavailable || (!checked && draft.length >= maxFavorites)}
+              onClick={() => setDraft(checked ? draft.filter(id => id !== d.id) : [...draft, d.id])}
+              className={`flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-xl border p-3 text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy disabled:cursor-not-allowed disabled:opacity-50 ${checked ? 'border-navy bg-navy-tint' : 'border-home-line bg-white hover:bg-home-bg'}`}>
+              <Star aria-hidden="true" className={`size-5 shrink-0 ${checked ? 'fill-gold text-gold' : 'text-ink-2'}`} />
               <span>{d.name}{unavailable && <span className="block text-xs">{d.note}</span>}</span>
-            </label>
+            </button>
           })}
         </div></fieldset>)}
         {!matchedDepartments.length && <p className="py-4 text-sm">찾는 학과가 없습니다.</p>}
