@@ -7,6 +7,7 @@ from app.features.auth.router import router as auth_router
 from app.features.catalog.router import router as catalog_router
 from app.features.course_requests.router import router as course_requests_router
 from app.features.courses.router import router as courses_router
+from app.features.department_notices.router import router as department_notices_router
 from app.features.enrollments.router import router as enrollments_router
 from app.features.exams.router import router as exams_router
 from app.features.mastery.router import router as mastery_router
@@ -51,5 +52,7 @@ api.include_router(papers_router)
 api.include_router(misconceptions_router)
 
 api.include_router(notices_router)
+
+api.include_router(department_notices_router)
 
 app.include_router(api)

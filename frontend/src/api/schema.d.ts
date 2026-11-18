@@ -1083,6 +1083,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/department-notices/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Catalog */
+        get: operations["catalog_api_v1_department_notices_catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/department-notices/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preferences */
+        get: operations["preferences_api_v1_department_notices_preferences_get"];
+        /** Save Preferences */
+        put: operations["save_preferences_api_v1_department_notices_preferences_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/department-notices/feed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Feed */
+        get: operations["feed_api_v1_department_notices_feed_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/department-notices/sources/{source_id}/items/{notice_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detail */
+        get: operations["detail_api_v1_department_notices_sources__source_id__items__notice_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1132,6 +1201,33 @@ export interface components {
             source: components["schemas"]["SourceOut"] | null;
             /** Mastery */
             mastery: components["schemas"]["MasteryChange"][];
+        };
+        /** BoardPage */
+        BoardPage: {
+            /** Items */
+            items: components["schemas"]["Item"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Has Next */
+            has_next: boolean;
+            /** Source Id */
+            source_id: string;
+            /** Source Name */
+            source_name: string;
+            /** Source Url */
+            source_url: string;
+            /**
+             * Fetched At
+             * Format: date-time
+             */
+            fetched_at: string;
+            /**
+             * Stale
+             * @default false
+             */
+            stale?: boolean;
         };
         /** Body_admin_create_course_api_v1_admin_courses_post */
         Body_admin_create_course_api_v1_admin_courses_post: {
@@ -1207,6 +1303,13 @@ export interface components {
             professors_linked: number;
             /** Records Linked */
             records_linked: number;
+        };
+        /** CatalogOut */
+        CatalogOut: {
+            /** Departments */
+            departments: components["schemas"]["DepartmentOut"][];
+            /** Max Favorites */
+            max_favorites: number;
         };
         /** ChapterMasteryOut */
         ChapterMasteryOut: {
@@ -1397,6 +1500,36 @@ export interface components {
             /** Exam Info */
             exam_info?: string | null;
         };
+        /** DepartmentOut */
+        DepartmentOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** College */
+            college: string;
+            /** Source Ids */
+            source_ids: string[];
+            /** Note */
+            note: string;
+        };
+        /** DetailOut */
+        DetailOut: {
+            /** Text */
+            text: string;
+            /** Url */
+            url: string;
+            /**
+             * Fetched At
+             * Format: date-time
+             */
+            fetched_at: string;
+            /**
+             * Stale
+             * @default false
+             */
+            stale?: boolean;
+        };
         /** Dist */
         Dist: {
             /** Rank */
@@ -1442,6 +1575,26 @@ export interface components {
             my_vote: number;
             /** Selected */
             selected: boolean;
+        };
+        /** FailedSource */
+        FailedSource: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Url */
+            url: string;
+        };
+        /** FeedOut */
+        FeedOut: {
+            /** Items */
+            items: components["schemas"]["Item"][];
+            /** Boards */
+            boards: components["schemas"]["BoardPage"][];
+            /** Failed Sources */
+            failed_sources: components["schemas"]["FailedSource"][];
+            /** Combined */
+            combined: boolean;
         };
         /** FiltersOut */
         FiltersOut: {
@@ -1495,6 +1648,23 @@ export interface components {
             received: number;
             /** Added */
             added: number;
+        };
+        /** Item */
+        Item: {
+            /** Id */
+            id: number;
+            /** Source Id */
+            source_id: string;
+            /** Source Name */
+            source_name: string;
+            /** Title */
+            title: string;
+            /** Date */
+            date: string;
+            /** Pinned */
+            pinned: boolean;
+            /** Url */
+            url: string;
         };
         /** JobOut */
         JobOut: {
@@ -1924,6 +2094,16 @@ export interface components {
             total_points: number;
             /** My Open Take Id */
             my_open_take_id: number | null;
+        };
+        /** PreferencesIn */
+        PreferencesIn: {
+            /** Department Ids */
+            department_ids: string[];
+        };
+        /** PreferencesOut */
+        PreferencesOut: {
+            /** Department Ids */
+            department_ids: string[];
         };
         /**
          * ProblemOut
@@ -4682,6 +4862,164 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NoticeDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    catalog_api_v1_department_notices_catalog_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogOut"];
+                };
+            };
+        };
+    };
+    preferences_api_v1_department_notices_preferences_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreferencesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_preferences_api_v1_department_notices_preferences_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreferencesIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreferencesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    feed_api_v1_department_notices_feed_get: {
+        parameters: {
+            query?: {
+                source?: string;
+                q?: string;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    detail_api_v1_department_notices_sources__source_id__items__notice_id__get: {
+        parameters: {
+            query?: {
+                q?: string;
+                page?: number;
+            };
+            header?: never;
+            path: {
+                source_id: string;
+                notice_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailOut"];
                 };
             };
             /** @description Validation Error */

@@ -50,3 +50,8 @@ cd backend
 uv run alembic upgrade head
 uv run python scripts/seed.py      # 교안 PDF가 data/raw/basic-programming-kang/에 있으면 근거 쪽수까지 연결
 ```
+
+
+## notice_preferences (관심 학과 공지)
+
+사용자별 공지 즐겨찾기. `user_id` INTEGER PRIMARY KEY REFERENCES users(id), `department_ids` JSON NOT NULL. 최대 8개 선택을 API에서 검증한다. 수강 이력/권한과 독립적이다. 마이그레이션 `a90dc6c4db81`이 테이블 하나만 추가한다. 자세한 내용은 [DEPARTMENT_NOTICES.md](DEPARTMENT_NOTICES.md) 참고.

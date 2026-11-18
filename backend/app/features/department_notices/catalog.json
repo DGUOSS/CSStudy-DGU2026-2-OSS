@@ -1,0 +1,927 @@
+{
+  "checked_at": "2026-11-18",
+  "departments": [
+    {
+      "id": "bs",
+      "name": "불교학부",
+      "college": "불교대학",
+      "source_ids": [
+        "bs"
+      ],
+      "note": ""
+    },
+    {
+      "id": "ch",
+      "name": "문화유산학과",
+      "college": "불교대학",
+      "source_ids": [
+        "ch"
+      ],
+      "note": ""
+    },
+    {
+      "id": "kor-cre",
+      "name": "국어국문문예창작학부",
+      "college": "문과대학",
+      "source_ids": [
+        "kor-cre"
+      ],
+      "note": ""
+    },
+    {
+      "id": "english",
+      "name": "영어영문학부",
+      "college": "문과대학",
+      "source_ids": [
+        "english"
+      ],
+      "note": ""
+    },
+    {
+      "id": "dj",
+      "name": "일본학과",
+      "college": "문과대학",
+      "source_ids": [
+        "dj"
+      ],
+      "note": ""
+    },
+    {
+      "id": "china",
+      "name": "중어중문학과",
+      "college": "문과대학",
+      "source_ids": [
+        "china"
+      ],
+      "note": ""
+    },
+    {
+      "id": "sophia",
+      "name": "철학과",
+      "college": "문과대학",
+      "source_ids": [
+        "sophia"
+      ],
+      "note": ""
+    },
+    {
+      "id": "history",
+      "name": "사학과",
+      "college": "문과대학",
+      "source_ids": [
+        "history"
+      ],
+      "note": ""
+    },
+    {
+      "id": "math",
+      "name": "수학과",
+      "college": "이과대학",
+      "source_ids": [
+        "math"
+      ],
+      "note": ""
+    },
+    {
+      "id": "chem",
+      "name": "화학과",
+      "college": "이과대학",
+      "source_ids": [
+        "chem"
+      ],
+      "note": ""
+    },
+    {
+      "id": "stat",
+      "name": "통계학과",
+      "college": "이과대학",
+      "source_ids": [
+        "stat"
+      ],
+      "note": ""
+    },
+    {
+      "id": "physemi",
+      "name": "물리반도체과학부",
+      "college": "이과대학",
+      "source_ids": [
+        "physemi"
+      ],
+      "note": ""
+    },
+    {
+      "id": "physics",
+      "name": "물리학과",
+      "college": "이과대학",
+      "source_ids": [
+        "physics"
+      ],
+      "note": ""
+    },
+    {
+      "id": "law",
+      "name": "법학과",
+      "college": "법과대학",
+      "source_ids": [
+        "law"
+      ],
+      "note": ""
+    },
+    {
+      "id": "politics",
+      "name": "정치외교학전공",
+      "college": "사회과학대학",
+      "source_ids": [
+        "politics"
+      ],
+      "note": ""
+    },
+    {
+      "id": "pa",
+      "name": "행정학전공",
+      "college": "사회과학대학",
+      "source_ids": [
+        "pa"
+      ],
+      "note": ""
+    },
+    {
+      "id": "nk",
+      "name": "북한학전공",
+      "college": "사회과학대학",
+      "source_ids": [
+        "nk"
+      ],
+      "note": ""
+    },
+    {
+      "id": "econ",
+      "name": "경제학과",
+      "college": "사회과학대학",
+      "source_ids": [
+        "econ"
+      ],
+      "note": ""
+    },
+    {
+      "id": "itrade",
+      "name": "국제통상학과",
+      "college": "사회과학대학",
+      "source_ids": [
+        "itrade"
+      ],
+      "note": ""
+    },
+    {
+      "id": "sociology",
+      "name": "사회학전공",
+      "college": "사회과학대학",
+      "source_ids": [
+        "sociology"
+      ],
+      "note": ""
+    },
+    {
+      "id": "comm",
+      "name": "미디어커뮤니케이션학전공",
+      "college": "사회과학대학",
+      "source_ids": [
+        "comm"
+      ],
+      "note": ""
+    },
+    {
+      "id": "foodindus",
+      "name": "식품산업관리학과",
+      "college": "사회과학대학",
+      "source_ids": [
+        "foodindus"
+      ],
+      "note": ""
+    },
+    {
+      "id": "dguadpr",
+      "name": "광고홍보학과",
+      "college": "사회과학대학",
+      "source_ids": [
+        "dguadpr"
+      ],
+      "note": ""
+    },
+    {
+      "id": "welfare",
+      "name": "사회복지학과",
+      "college": "사회과학대학",
+      "source_ids": [
+        "welfare"
+      ],
+      "note": ""
+    },
+    {
+      "id": "police",
+      "name": "경찰행정학부",
+      "college": "경찰사법대학",
+      "source_ids": [
+        "police"
+      ],
+      "note": ""
+    },
+    {
+      "id": "mgt",
+      "name": "경영학과",
+      "college": "경영대학",
+      "source_ids": [
+        "mgt"
+      ],
+      "note": ""
+    },
+    {
+      "id": "acc",
+      "name": "회계학과",
+      "college": "경영대학",
+      "source_ids": [
+        "acc"
+      ],
+      "note": ""
+    },
+    {
+      "id": "mis",
+      "name": "경영정보학과",
+      "college": "경영대학",
+      "source_ids": [
+        "mis"
+      ],
+      "note": ""
+    },
+    {
+      "id": "env",
+      "name": "융합환경과학과",
+      "college": "바이오시스템대학",
+      "source_ids": [
+        "env"
+      ],
+      "note": ""
+    },
+    {
+      "id": "lifescience",
+      "name": "생명과학과",
+      "college": "바이오시스템대학",
+      "source_ids": [
+        "lifescience"
+      ],
+      "note": ""
+    },
+    {
+      "id": "food",
+      "name": "식품바이오융합공학과",
+      "college": "바이오시스템대학",
+      "source_ids": [
+        "food"
+      ],
+      "note": ""
+    },
+    {
+      "id": "mbt",
+      "name": "의생명공학과",
+      "college": "바이오시스템대학",
+      "source_ids": [
+        "mbt"
+      ],
+      "note": ""
+    },
+    {
+      "id": "dee",
+      "name": "전자전기공학부",
+      "college": "공과대학",
+      "source_ids": [
+        "dee"
+      ],
+      "note": ""
+    },
+    {
+      "id": "ice",
+      "name": "정보통신공학과",
+      "college": "공과대학",
+      "source_ids": [
+        "ice"
+      ],
+      "note": ""
+    },
+    {
+      "id": "civil",
+      "name": "건설환경공학과",
+      "college": "공과대학",
+      "source_ids": [
+        "civil"
+      ],
+      "note": ""
+    },
+    {
+      "id": "chembioeng",
+      "name": "화공생물공학과",
+      "college": "공과대학",
+      "source_ids": [
+        "chembioeng"
+      ],
+      "note": ""
+    },
+    {
+      "id": "mecha",
+      "name": "기계로봇에너지공학과",
+      "college": "공과대학",
+      "source_ids": [
+        "mecha"
+      ],
+      "note": ""
+    },
+    {
+      "id": "archi",
+      "name": "건축공학부",
+      "college": "공과대학",
+      "source_ids": [
+        "archi"
+      ],
+      "note": ""
+    },
+    {
+      "id": "ise",
+      "name": "산업시스템공학과",
+      "college": "공과대학",
+      "source_ids": [
+        "ise"
+      ],
+      "note": ""
+    },
+    {
+      "id": "me",
+      "name": "에너지신소재공학과",
+      "college": "공과대학",
+      "source_ids": [
+        "me"
+      ],
+      "note": ""
+    },
+    {
+      "id": "cs",
+      "name": "컴퓨터·AI학부",
+      "college": "첨단융합대학",
+      "source_ids": [
+        "cs"
+      ],
+      "note": ""
+    },
+    {
+      "id": "semicon",
+      "name": "시스템반도체학부",
+      "college": "첨단융합대학",
+      "source_ids": [
+        "semicon"
+      ],
+      "note": ""
+    },
+    {
+      "id": "medai",
+      "name": "의료인공지능공학과",
+      "college": "첨단융합대학",
+      "source_ids": [
+        "medai"
+      ],
+      "note": ""
+    },
+    {
+      "id": "dinc",
+      "name": "지능형네트워크융합학과",
+      "college": "첨단융합대학",
+      "source_ids": [
+        "dinc"
+      ],
+      "note": ""
+    },
+    {
+      "id": "unavailable-44",
+      "name": "지능IoT학과",
+      "college": "첨단융합대학",
+      "source_ids": [],
+      "note": "공지 게시판 확인 중"
+    },
+    {
+      "id": "education",
+      "name": "교육학과",
+      "college": "사범대학",
+      "source_ids": [
+        "education"
+      ],
+      "note": ""
+    },
+    {
+      "id": "duce",
+      "name": "국어교육과",
+      "college": "사범대학",
+      "source_ids": [
+        "duce"
+      ],
+      "note": ""
+    },
+    {
+      "id": "historyedu",
+      "name": "역사교육과",
+      "college": "사범대학",
+      "source_ids": [
+        "historyedu"
+      ],
+      "note": ""
+    },
+    {
+      "id": "geoedu",
+      "name": "지리교육과",
+      "college": "사범대학",
+      "source_ids": [
+        "geoedu"
+      ],
+      "note": ""
+    },
+    {
+      "id": "dume",
+      "name": "수학교육과",
+      "college": "사범대학",
+      "source_ids": [
+        "dume"
+      ],
+      "note": ""
+    },
+    {
+      "id": "homeedu",
+      "name": "가정교육과",
+      "college": "사범대학",
+      "source_ids": [
+        "homeedu"
+      ],
+      "note": ""
+    },
+    {
+      "id": "pe",
+      "name": "체육교육과",
+      "college": "사범대학",
+      "source_ids": [
+        "pe"
+      ],
+      "note": ""
+    },
+    {
+      "id": "aart",
+      "name": "미술학부",
+      "college": "예술대학",
+      "source_ids": [
+        "aart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "theatre",
+      "name": "연극학부",
+      "college": "예술대학",
+      "source_ids": [
+        "theatre"
+      ],
+      "note": ""
+    },
+    {
+      "id": "movie",
+      "name": "영화영상학과",
+      "college": "예술대학",
+      "source_ids": [
+        "movie"
+      ],
+      "note": ""
+    },
+    {
+      "id": "unavailable-55",
+      "name": "스포츠문화학과",
+      "college": "예술대학",
+      "source_ids": [],
+      "note": "공지 게시판 확인 중"
+    },
+    {
+      "id": "kmart",
+      "name": "한국음악과",
+      "college": "예술대학",
+      "source_ids": [
+        "kmart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "pharm",
+      "name": "약학과",
+      "college": "약학대학",
+      "source_ids": [
+        "pharm"
+      ],
+      "note": ""
+    },
+    {
+      "id": "criminology",
+      "name": "범죄학과",
+      "college": "미래융합대학",
+      "source_ids": [
+        "criminology"
+      ],
+      "note": ""
+    },
+    {
+      "id": "dswc",
+      "name": "사회복지상담학과",
+      "college": "미래융합대학",
+      "source_ids": [
+        "dswc"
+      ],
+      "note": ""
+    },
+    {
+      "id": "globalcommerce",
+      "name": "글로벌무역학과",
+      "college": "미래융합대학",
+      "source_ids": [
+        "globalcommerce"
+      ],
+      "note": ""
+    },
+    {
+      "id": "open",
+      "name": "열린전공학부",
+      "college": "열린전공학부",
+      "source_ids": [
+        "open"
+      ],
+      "note": ""
+    }
+  ],
+  "sources": [
+    {
+      "id": "school",
+      "name": "학교 공통",
+      "url": "https://www.dongguk.edu/article/HAKSANOTICE/list",
+      "kind": "school"
+    },
+    {
+      "id": "bs",
+      "name": "불교학부",
+      "url": "https://bs.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "ch",
+      "name": "문화유산학과",
+      "url": "https://ch.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "kor-cre",
+      "name": "국어국문문예창작학부",
+      "url": "https://kor-cre.dongguk.edu/article/notice2/list",
+      "kind": "standard"
+    },
+    {
+      "id": "english",
+      "name": "영어영문학부",
+      "url": "https://english.dongguk.edu/article/notice1/list",
+      "kind": "standard"
+    },
+    {
+      "id": "dj",
+      "name": "일본학과",
+      "url": "https://dj.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "china",
+      "name": "중어중문학과",
+      "url": "https://china.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "sophia",
+      "name": "철학과",
+      "url": "https://sophia.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "history",
+      "name": "사학과",
+      "url": "https://history.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "math",
+      "name": "수학과",
+      "url": "https://math.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "chem",
+      "name": "화학과",
+      "url": "https://chem.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "stat",
+      "name": "통계학과",
+      "url": "https://stat.dongguk.edu/article/board1/list",
+      "kind": "standard"
+    },
+    {
+      "id": "physemi",
+      "name": "물리반도체과학부",
+      "url": "https://physemi.dongguk.edu/article/notice1/list",
+      "kind": "standard"
+    },
+    {
+      "id": "physics",
+      "name": "물리학과",
+      "url": "https://physics.dongguk.edu/article/notice1/list",
+      "kind": "standard"
+    },
+    {
+      "id": "law",
+      "name": "법학과",
+      "url": "https://law.dongguk.edu/article/notice1/list",
+      "kind": "standard"
+    },
+    {
+      "id": "politics",
+      "name": "정치외교학전공",
+      "url": "https://politics.dongguk.edu/article/notice2/list",
+      "kind": "standard"
+    },
+    {
+      "id": "pa",
+      "name": "행정학전공",
+      "url": "https://pa.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "nk",
+      "name": "북한학전공",
+      "url": "https://nk.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "econ",
+      "name": "경제학과",
+      "url": "https://econ.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "itrade",
+      "name": "국제통상학과",
+      "url": "https://itrade.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "sociology",
+      "name": "사회학전공",
+      "url": "https://sociology.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "comm",
+      "name": "미디어커뮤니케이션학전공",
+      "url": "https://comm.dongguk.edu/article/notice1/list",
+      "kind": "standard"
+    },
+    {
+      "id": "foodindus",
+      "name": "식품산업관리학과",
+      "url": "https://foodindus.dongguk.edu/article/notice1/list",
+      "kind": "standard"
+    },
+    {
+      "id": "dguadpr",
+      "name": "광고홍보학과",
+      "url": "http://dguadpr.kr/bbs/board.php?bo_table=table31",
+      "kind": "gnu"
+    },
+    {
+      "id": "welfare",
+      "name": "사회복지학과",
+      "url": "https://welfare.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "police",
+      "name": "경찰행정학부",
+      "url": "https://police.dongguk.edu/article/notice1/list",
+      "kind": "standard"
+    },
+    {
+      "id": "mgt",
+      "name": "경영학과",
+      "url": "https://mgt.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "acc",
+      "name": "회계학과",
+      "url": "https://acc.dongguk.edu/article/notice1/list",
+      "kind": "standard"
+    },
+    {
+      "id": "mis",
+      "name": "경영정보학과",
+      "url": "https://mis.dongguk.edu/article/news/list",
+      "kind": "standard"
+    },
+    {
+      "id": "env",
+      "name": "융합환경과학과",
+      "url": "https://env.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "lifescience",
+      "name": "생명과학과",
+      "url": "https://lifescience.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "food",
+      "name": "식품바이오융합공학과",
+      "url": "https://food.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "mbt",
+      "name": "의생명공학과",
+      "url": "https://mbt.dongguk.edu/article/notice1/list",
+      "kind": "standard"
+    },
+    {
+      "id": "dee",
+      "name": "전자전기공학부",
+      "url": "https://dee.dongguk.edu/article/notice1/list",
+      "kind": "standard"
+    },
+    {
+      "id": "ice",
+      "name": "정보통신공학과",
+      "url": "https://ice.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "civil",
+      "name": "건설환경공학과",
+      "url": "https://civil.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "chembioeng",
+      "name": "화공생물공학과",
+      "url": "https://chembioeng.dongguk.edu/article/notice1/list",
+      "kind": "standard"
+    },
+    {
+      "id": "mecha",
+      "name": "기계로봇에너지공학과",
+      "url": "https://mecha.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "archi",
+      "name": "건축공학부",
+      "url": "https://archi.dongguk.edu/article/info1/list",
+      "kind": "standard"
+    },
+    {
+      "id": "ise",
+      "name": "산업시스템공학과",
+      "url": "https://ise.dongguk.edu/article/notice1/list",
+      "kind": "standard"
+    },
+    {
+      "id": "me",
+      "name": "에너지신소재공학과",
+      "url": "https://me.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "cs",
+      "name": "컴퓨터·AI학부",
+      "url": "https://cs.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "semicon",
+      "name": "시스템반도체학부",
+      "url": "https://semicon.dongguk.edu/article/notice1/list",
+      "kind": "standard"
+    },
+    {
+      "id": "medai",
+      "name": "의료인공지능공학과",
+      "url": "https://medai.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "dinc",
+      "name": "지능형네트워크융합학과",
+      "url": "https://dinc.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "education",
+      "name": "교육학과",
+      "url": "https://education.dongguk.edu/article/news2/list",
+      "kind": "standard"
+    },
+    {
+      "id": "duce",
+      "name": "국어교육과",
+      "url": "https://duce.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "historyedu",
+      "name": "역사교육과",
+      "url": "https://historyedu.dongguk.edu/article/notice2/list",
+      "kind": "standard"
+    },
+    {
+      "id": "geoedu",
+      "name": "지리교육과",
+      "url": "https://geoedu.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "dume",
+      "name": "수학교육과",
+      "url": "https://dume.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "homeedu",
+      "name": "가정교육과",
+      "url": "https://homeedu.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "pe",
+      "name": "체육교육과",
+      "url": "https://pe.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "aart",
+      "name": "미술학부",
+      "url": "https://aart.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "theatre",
+      "name": "연극학부",
+      "url": "https://theatre.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "movie",
+      "name": "영화영상학과",
+      "url": "https://movie.dongguk.edu/movie23_1_3_1",
+      "kind": "gnu"
+    },
+    {
+      "id": "kmart",
+      "name": "한국음악과",
+      "url": "https://kmart.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "pharm",
+      "name": "약학과",
+      "url": "https://pharm.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "criminology",
+      "name": "범죄학과",
+      "url": "https://criminology.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "dswc",
+      "name": "사회복지상담학과",
+      "url": "https://dswc.dongguk.edu/article/notice02/list",
+      "kind": "standard"
+    },
+    {
+      "id": "globalcommerce",
+      "name": "글로벌무역학과",
+      "url": "https://globalcommerce.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    },
+    {
+      "id": "open",
+      "name": "열린전공학부",
+      "url": "https://open.dongguk.edu/article/notice/list",
+      "kind": "standard"
+    }
+  ]
+}

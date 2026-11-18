@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ErrorText } from '@/components/States'
 import { useAuth } from '@/features/auth/useAuth'
+import { NoticesPanel } from '@/features/department_notices/NoticesPanel'
 import { AppShell } from './AppShell'
 import { Calendar } from './Calendar'
 import { Hero } from './Hero'
@@ -47,6 +48,7 @@ function HomeContent() {
           <Upcoming items={deadlines.data} now={today} />
         </div>
       </div>
+      <NoticesPanel />
     </>
   )
 }

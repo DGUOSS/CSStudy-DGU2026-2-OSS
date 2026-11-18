@@ -4077,6 +4077,308 @@
           }
         }
       }
+    },
+    "/api/v1/department-notices/catalog": {
+      "get": {
+        "tags": [
+          "department-notices"
+        ],
+        "summary": "Catalog",
+        "operationId": "catalog_api_v1_department_notices_catalog_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/department-notices/preferences": {
+      "get": {
+        "tags": [
+          "department-notices"
+        ],
+        "summary": "Preferences",
+        "operationId": "preferences_api_v1_department_notices_preferences_get",
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferencesOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "department-notices"
+        ],
+        "summary": "Save Preferences",
+        "operationId": "save_preferences_api_v1_department_notices_preferences_put",
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferencesIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferencesOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/department-notices/feed": {
+      "get": {
+        "tags": [
+          "department-notices"
+        ],
+        "summary": "Feed",
+        "operationId": "feed_api_v1_department_notices_feed_get",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 80,
+              "default": "all",
+              "title": "Source"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100,
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 10000,
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/department-notices/sources/{source_id}/items/{notice_id}": {
+      "get": {
+        "tags": [
+          "department-notices"
+        ],
+        "summary": "Detail",
+        "operationId": "detail_api_v1_department_notices_sources__source_id__items__notice_id__get",
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source Id"
+            }
+          },
+          {
+            "name": "notice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 999999999,
+              "exclusiveMinimum": 0,
+              "title": "Notice Id"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100,
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 10000,
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4241,6 +4543,63 @@
           "mastery"
         ],
         "title": "AttemptResult"
+      },
+      "BoardPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "has_next": {
+            "type": "boolean",
+            "title": "Has Next"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "source_name": {
+            "type": "string",
+            "title": "Source Name"
+          },
+          "source_url": {
+            "type": "string",
+            "title": "Source Url"
+          },
+          "fetched_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Fetched At"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "has_next",
+          "source_id",
+          "source_name",
+          "source_url",
+          "fetched_at"
+        ],
+        "title": "BoardPage"
       },
       "Body_admin_create_course_api_v1_admin_courses_post": {
         "properties": {
@@ -4490,6 +4849,27 @@
           "records_linked"
         ],
         "title": "CatalogImportOut"
+      },
+      "CatalogOut": {
+        "properties": {
+          "departments": {
+            "items": {
+              "$ref": "#/components/schemas/DepartmentOut"
+            },
+            "type": "array",
+            "title": "Departments"
+          },
+          "max_favorites": {
+            "type": "integer",
+            "title": "Max Favorites"
+          }
+        },
+        "type": "object",
+        "required": [
+          "departments",
+          "max_favorites"
+        ],
+        "title": "CatalogOut"
       },
       "ChapterMasteryOut": {
         "properties": {
@@ -5025,6 +5405,71 @@
         "type": "object",
         "title": "CourseUpdate"
       },
+      "DepartmentOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "college": {
+            "type": "string",
+            "title": "College"
+          },
+          "source_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Source Ids"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "college",
+          "source_ids",
+          "note"
+        ],
+        "title": "DepartmentOut"
+      },
+      "DetailOut": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "fetched_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Fetched At"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "url",
+          "fetched_at"
+        ],
+        "title": "DetailOut"
+      },
       "Dist": {
         "properties": {
           "rank": {
@@ -5147,6 +5592,66 @@
           "selected"
         ],
         "title": "ExamOut"
+      },
+      "FailedSource": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "url"
+        ],
+        "title": "FailedSource"
+      },
+      "FeedOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "boards": {
+            "items": {
+              "$ref": "#/components/schemas/BoardPage"
+            },
+            "type": "array",
+            "title": "Boards"
+          },
+          "failed_sources": {
+            "items": {
+              "$ref": "#/components/schemas/FailedSource"
+            },
+            "type": "array",
+            "title": "Failed Sources"
+          },
+          "combined": {
+            "type": "boolean",
+            "title": "Combined"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "boards",
+          "failed_sources",
+          "combined"
+        ],
+        "title": "FeedOut"
       },
       "FiltersOut": {
         "properties": {
@@ -5323,6 +5828,49 @@
           "added"
         ],
         "title": "ImportOut"
+      },
+      "Item": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "source_name": {
+            "type": "string",
+            "title": "Source Name"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "pinned": {
+            "type": "boolean",
+            "title": "Pinned"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source_id",
+          "source_name",
+          "title",
+          "date",
+          "pinned",
+          "url"
+        ],
+        "title": "Item"
       },
       "JobOut": {
         "properties": {
@@ -6588,6 +7136,39 @@
           "my_open_take_id"
         ],
         "title": "PaperSummary"
+      },
+      "PreferencesIn": {
+        "properties": {
+          "department_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Department Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "department_ids"
+        ],
+        "title": "PreferencesIn"
+      },
+      "PreferencesOut": {
+        "properties": {
+          "department_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Department Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "department_ids"
+        ],
+        "title": "PreferencesOut"
       },
       "ProblemOut": {
         "properties": {
