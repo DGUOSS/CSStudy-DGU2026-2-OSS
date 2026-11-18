@@ -3,7 +3,6 @@
 새 디자인 화면(`/home`, `/study/*`)을 프론트에서 구현·수정할 때 참고하는 문서다.
 값은 모두 현재 코드(`frontend/src/index.css`, `frontend/src/features/home`, `frontend/src/features/study`)에서 확인한 것이다. 코드를 바꾸면 이 문서도 같이 고친다.
 
-- Figma: (링크 추가 필요)
 - 기능 명세는 `docs/SPEC.md`, DB는 `docs/DB.md`를 본다.
 
 ## 1. 적용 범위와 켜는 법
@@ -125,8 +124,14 @@ Tailwind 클래스는 `bg-navy`, `text-ink-2`, `border-home-line`처럼 쓴다.
 위에서 아래로, 큰 화면(`lg`)에서는 본문과 오른쪽 열(`360px`)로 나뉜다.
 
 1. **Hero** (`bg-navy-deep`, `rounded-3xl`, `p-8`): 왼쪽에 인사 문구 + 「학습하러 가기」 버튼, 오른쪽에 내 과목 카드 최대 3개. 카드 바탕은 `tone-blue → tone-gold → tone-gray` 순서로 돈다. 카드 안: 아이콘, 과목명, `강좌 N개 | 숙련도 N%`, 진행 막대.
-2. 왼쪽 열: **Stats**(요약 수치), **WeekDeadlines**(이번 주 일정)
-3. 오른쪽 열: **Calendar**(일정 있는 날 표시), **Upcoming**(다가오는 일정)
+2. 왼쪽 열
+   - **Stats** 「학습 현황」: 카드 3개(3열). 숫자는 `text-4xl font-bold`, 아래에 `text-sm text-ink-2` 라벨. 항목은 `푼 문제 (누적)`, `정답률`(없으면 `-`), `틀린 횟수 (누적)`.
+   - **WeekDeadlines** 「이번 주 시험 과제」: 오늘부터 7일 안의 일정 목록. 한 줄 구성은 아이콘 상자(`size-11`, `tone-blue`) + 제목·과목명 + `M월 D일` + D-day 태그(`gold-soft`). D-day 표기는 `D-Day`, `D-3`, 지난 일정은 `D+2`. 없으면 `Empty` 문구.
+3. 오른쪽 열 (`lg`에서 360px)
+   - **Calendar**: `rounded-[20px]` 카드, 월 이동 버튼(`이전 달`/`다음 달`), 일요일 시작 7열. 오늘은 `bg-navy` 흰 글자, 이번 달이 아닌 날은 흐리게(`text-ink-2/50`), 일정이 있는 날은 숫자 아래에 `bg-gold` 점(5px).
+   - **Upcoming** 「다가오는 일정」: 오늘 이후 일정 중 가까운 순 3개. 아이콘 상자(`size-12`, `bg-navy` + 금색 아이콘), 위에 `M월 D일 · HH:MM`, 아래에 제목. 없으면 `Empty` 문구.
+- 섹션 제목은 `SectionHeader`(`text-xl font-bold`)를 쓴다.
+- 목록 카드는 `overflow-hidden rounded-2xl border border-home-line bg-white`, 행 사이 구분선 `border-b border-home-line`(마지막 행 제외).
 
 - 과목이 없으면 히어로에 안내 문구를, 불러오는 중에는 `과목 불러오는 중…`을 보인다.
 - 데이터는 모두 기존 API(내 과목·강좌·숙련도)에서 온다 (`home/queries.ts`).
@@ -148,15 +153,18 @@ Tailwind 클래스는 `bg-navy`, `text-ink-2`, `border-home-line`처럼 쓴다.
 
 ### 챕터 `/study/courses/:courseId` (`study/CourseChaptersPage`)
 
-- 챕터 카드 목록. 카드마다 숙련도 막대(`navy`)와 펼친 영역(`bg-home-bg`)의 세부 막대(`gold`)가 있다.
+- 챕터(단원) 카드 목록. 카드마다 숙련도 막대(`navy`)와 펼친 영역(`bg-home-bg`)의 세부 막대(`gold`)가 있다. 단원을 골라서 퀴즈를 푼다.
 - 접이식 「참고할 족보 고르기」(`details`).
-- 화면 아래에 **고정 바**(`fixed bottom-0`, `bg-white/95 backdrop-blur`, 큰 화면에서 `md:left-60`로 사이드바 폭만큼 띄움)가 있고 퀴즈 시작 버튼이 있다. 이 때문에 본문 아래쪽에 고정 바만큼 여백이 필요하다.
+- 화면 아래에 **고정 바**(`fixed bottom-0`, `bg-white/95 backdrop-blur`, 큰 화면에서 `md:left-60`로 사이드바 폭만큼 띄움)가 있다. 왼쪽에 `N개 단원 선택 · 문제 최대 8개`(고르지 않았으면 `단원을 선택해 주세요`), 오른쪽에 「퀴즈 시작」 기본 버튼(단원을 고르기 전에는 비활성). 문제 수 8은 `QUIZ_TOTAL` 상수다.
+- 고정 바가 본문을 가리지 않도록 본문 아래쪽에 여백이 필요하다.
 
 ### 퀴즈 풀이 `/study/courses/:courseId/quiz` (`study/QuizSolve`)
 
+- 위쪽: 제목 「퀴즈 풀이」와 `현재 / 전체` 번호, 오른쪽에 「결과 보기」 윤곽선 버튼(`border-navy`). 모든 문제를 풀거나 건너뛰기 전에는 비활성이고, 마우스를 올리면 `모든 문제를 풀거나 건너뛰면 결과를 볼 수 있어요`가 보인다.
 - 문제 번호 `nav`(`aria-label="문제 번호"`): 문제마다 상태가 있다. `correct`(정답) / `wrong`(오답) / `skipped`(건너뜀) / `open`(안 푼 문제). 번호로 아무 문제나 오갈 수 있다.
-- 하단 버튼: 이전 / 정답 확인 / 건너뛰기 / 다음 문제. 마지막 문제에서 모두 풀었거나 건너뛰었으면 「결과 보기」로 바뀐다.
-- 모든 문제를 풀거나 건너뛰기 전에는 결과를 볼 수 없다.
+- 보기 버튼: 선택한 보기는 `border-navy bg-navy-tint`, 정답은 초록 테두리·배경(`#2e8b6a` / `#e8f4ef`)과 체크 아이콘, 고른 오답은 빨강 테두리·배경(`#c8453f` / `#fbeceb`)과 X 아이콘. 보기 번호는 `size-6` 원형 배지, 보기 글자는 `font-mono`.
+- 아래 버튼 줄: 왼쪽에 「이전」(첫 문제에서는 비활성), 오른쪽은 채점 전에는 「건너뛰기」(`bg-gold-soft`)와 「정답 확인」(기본 버튼), 채점 후에는 「다음 문제」. 마지막 문제에서 모두 끝났으면 「다음 문제」 대신 「결과 보기」가 뜬다.
+- 「정답 확인」은 보기를 고르기 전에는 비활성이고, 채점 중에는 `채점 중…`으로 바뀐다. 채점 후에는 해설이 보기 아래에 나온다.
 - 채점은 「정답 확인」을 눌러야 서버에 기록된다. 건너뛴 문제는 기록되지 않는다.
 
 ### 퀴즈 결과 (`study/QuizResult`)
@@ -177,4 +185,4 @@ Tailwind 클래스는 `bg-navy`, `text-ink-2`, `border-home-line`처럼 쓴다.
 
 - 모바일 사이드바(`md` 미만에서 숨기기만 함), 다크 모드(새 디자인 색은 라이트 값만 있음)
 - 생활·학교 메뉴(준비 중)
-- Figma 링크, 화면 캡처
+- 화면 캡처
