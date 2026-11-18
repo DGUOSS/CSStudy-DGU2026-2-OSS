@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider } from 'react-router'
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router'
 import { Layout } from '@/components/Layout'
 import { AdminCatalogPage } from '@/features/admin/AdminCatalogPage'
 import { AdminCoursesPage } from '@/features/admin/AdminCoursesPage'
@@ -19,6 +19,9 @@ import { ImportPage } from '@/features/study/ImportPage'
 import { StudyQuizPage } from '@/features/study/QuizPage'
 import { StudyPage } from '@/features/study/StudyPage'
 
+// 내 컴퓨터에서만(.env.local에 VITE_DESIGN=on) 첫 화면을 새 디자인으로 연다. 끄면 기존 화면 그대로
+const designFirst = import.meta.env.VITE_DESIGN === 'on'
+
 // 새 화면은 여기에 경로를 한 줄 추가한다
 const router = createBrowserRouter([
   { path: '/login', element: <AuthPage mode="login" /> },
@@ -32,7 +35,7 @@ const router = createBrowserRouter([
   {
     element: <Layout />,
     children: [
-      { path: '/', element: <HomePage /> },
+      { path: '/', element: designFirst ? <Navigate to="/home" replace /> : <HomePage /> },
       { path: '/find', element: <CatalogPage /> },
       { path: '/ndrims', element: <ReceivePage /> },
       { path: '/subjects/:subjectId', element: <SubjectCoursesPage /> },
