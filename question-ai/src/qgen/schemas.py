@@ -59,8 +59,9 @@ class Question(BaseModel):
 
 class SolverOutput(BaseModel):
     item_id: str
-    answer: str
+    # reasoning을 answer보다 먼저 둔다: 모델이 JSON을 앞에서부터 쓰므로, 먼저 풀고 나서 답을 쓰게 하기 위함
     reasoning: str
+    answer: str
     confidence: float
     is_ambiguous: bool
 
