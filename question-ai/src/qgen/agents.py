@@ -20,10 +20,10 @@ def type_counts(ratio: dict[str, float], n: int) -> dict[str, int]:
     return {k: v for k, v in counts.items() if v > 0}
 
 
-def planner(profile: ExamProfile, topics: list[str], n: int) -> ExamPlan:
+def planner(profile: ExamProfile, topics: list[str], n: int, max_titles: int = 3) -> ExamPlan:
     counts = type_counts(profile.format_ratio, n)
     p = llm.render_prompt("planner", profile=profile.model_dump(), topics="\n".join(f"- {t}" for t in topics),
-                          counts=counts, n=str(n))
+                          counts=counts, n=str(n), max_titles=str(max_titles))
     return llm.call("planner", p, ExamPlan)
 
 

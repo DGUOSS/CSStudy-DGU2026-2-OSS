@@ -15,6 +15,8 @@ class Chunk(BaseModel):
     source: SourceRef
     has_figure: bool = False
     has_formula: bool = False
+    image_path: str | None = None  # 그림 위주·글자 부족 쪽을 PNG로 남긴 경우 (build_index 때 생성)
+    title: str = ""  # 슬라이드 제목 (Planner 주제 목록에 씀)
 
 
 class ExamProfile(BaseModel):
@@ -35,6 +37,9 @@ class PlannedItem(BaseModel):
     item_id: str
     qtype: Literal["객관식", "단답형", "서술형", "계산형"]
     topic: str
+    # 강의자료 주제 목록의 제목(1~최대 3개)을 번역 없이 그대로 복사한 것. 제목마다 검색해 결과를 번갈아 합친다
+    # (교안 언어와 검색어 언어를 맞추기 위해). 예전 plan.json에는 없으므로 기본값은 빈 목록 → 그때는 topic으로 검색
+    source_titles: list[str] = []
     bloom_level: Literal["기억", "이해", "적용", "분석", "평가", "창안"]
     difficulty: Literal["쉬움", "보통", "어려움"]
     points: int

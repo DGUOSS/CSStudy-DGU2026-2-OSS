@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 
 from . import agents, checks, llm
-from .ingest import Retriever, load_chunks, load_text_dir, topic_list
+from .ingest import MAX_SOURCE_TITLES, Retriever, load_chunks, load_text_dir, search_queries, topic_list
 from .render import render_answers, render_exam
 from .schemas import ExamPlan, ExamProfile, Question
 
@@ -47,7 +47,7 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
     if plan_f.exists():
         plan = ExamPlan.model_validate_json(plan_f.read_text(encoding="utf-8"))
     else:
-        plan = agents.planner(profile, topic_list(chunks), n)
+        plan = agents.planner(profile, topic_list(chunks), n, cfg.get("max_source_titles") or MAX_SOURCE_TITLES)
         plan_f.write_text(plan.model_dump_json(indent=2), encoding="utf-8")
     print(f"[planner] {len(plan.items)}문항: " + ", ".join(f"{i.qtype}/{i.topic}" for i in plan.items))
 
@@ -58,7 +58,13 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
     for item in plan.items:
         print(f"\n[item {item.item_id}] {item.qtype} | {item.topic}")
         hist = history.setdefault(item.item_id, [])
-        ctx = retriever.search(f"{item.topic} {item.bloom_level}", k=cfg["retrieval_top_k"])
+        # 검색어 = 교안 원래 제목들 (교안 언어 그대로, 최대 max_source_titles개). Bloom 수준은 검색과 무관해 넣지 않는다
+        queries, warns = search_queries(item.topic, item.source_titles, chunks,
+                                        cfg.get("max_source_titles") or MAX_SOURCE_TITLES)
+        for w in warns:
+            print(f"  [retrieval] {w}")
+        print(f"  [retrieval] 검색어: {queries}")
+        ctx = retriever.search_many(queries, k=cfg["retrieval_top_k"])
         q = agents.generator(item, ctx, profile, past[:3000])
         regens = 0
         for attempt in range(cfg["max_revisions"] + 1):
