@@ -30,8 +30,8 @@ const designFirst = import.meta.env.VITE_DESIGN === 'on'
 const router = createBrowserRouter([
   { path: '/login', element: <AuthPage mode="login" /> },
   { path: '/signup', element: <AuthPage mode="signup" /> },
-  { path: '/study/groups/:groupId', element: <StudySpacePage /> },
-  { path: '/study/subjects/:subjectId/groups', element: <StudyGroupsPage /> },
+  { path: '/study/groups/:groupId', element: <StudySpacePage design /> },
+  { path: '/study/subjects/:subjectId/groups', element: <StudyGroupsPage design /> },
   { path: '/home', element: <DesignHomePage /> },
   { path: '/study', element: <StudyPage /> },
   { path: '/study/find', element: <FindPage /> },
@@ -41,6 +41,8 @@ const router = createBrowserRouter([
   {
     element: <Layout />,
     children: [
+      { path: "/subjects/:subjectId/groups", element: <StudyGroupsPage /> },
+      { path: "/groups/:groupId", element: <StudySpacePage /> },
       { path: '/', element: designFirst ? <Navigate to="/home" replace /> : <HomePage /> },
       { path: '/find', element: <CatalogPage /> },
       { path: '/ndrims', element: <ReceivePage /> },
