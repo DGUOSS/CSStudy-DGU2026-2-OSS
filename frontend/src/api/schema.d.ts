@@ -1152,6 +1152,126 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/subjects/{subject_id}/study-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Groups */
+        get: operations["list_groups_api_v1_subjects__subject_id__study_groups_get"];
+        put?: never;
+        /** Create Group */
+        post: operations["create_group_api_v1_subjects__subject_id__study_groups_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subjects/{subject_id}/study-groups/{group_id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close Group */
+        post: operations["close_group_api_v1_subjects__subject_id__study_groups__group_id__close_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subjects/{subject_id}/study-groups/{group_id}/applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Applications */
+        get: operations["applications_api_v1_subjects__subject_id__study_groups__group_id__applications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subjects/{subject_id}/study-groups/{group_id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply */
+        post: operations["apply_api_v1_subjects__subject_id__study_groups__group_id__apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subjects/{subject_id}/study-groups/{group_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel */
+        post: operations["cancel_api_v1_subjects__subject_id__study_groups__group_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subjects/{subject_id}/study-groups/{group_id}/applications/{application_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide */
+        post: operations["decide_api_v1_subjects__subject_id__study_groups__group_id__applications__application_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/study-groups/{group_id}/space": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Study Space */
+        get: operations["study_space_api_v1_study_groups__group_id__space_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1170,6 +1290,23 @@ export interface components {
             problem_id: number;
             /** Chosen */
             chosen?: number | null;
+        };
+        /** ApplicationOut */
+        ApplicationOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "rejected" | "cancelled";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /**
          * ApproveIn
@@ -1500,6 +1637,14 @@ export interface components {
             /** Exam Info */
             exam_info?: string | null;
         };
+        /** DecisionIn */
+        DecisionIn: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "approved" | "rejected";
+        };
         /** DepartmentOut */
         DepartmentOut: {
             /** Id */
@@ -1807,6 +1952,8 @@ export interface components {
         };
         /** MyCourseOut */
         MyCourseOut: {
+            /** Subject Id */
+            subject_id: number;
             /** Course Id */
             course_id: number;
             /** Subject Name */
@@ -2125,6 +2272,8 @@ export interface components {
         };
         /** PublicCourseOut */
         PublicCourseOut: {
+            /** Subject Id */
+            subject_id: number;
             /** Course Id */
             course_id: number;
             /** Subject Name */
@@ -2447,6 +2596,83 @@ export interface components {
              * @enum {string}
              */
             status: "auto" | "hidden" | "approved";
+        };
+        /** StudyCreate */
+        StudyCreate: {
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            /** Capacity */
+            capacity: number;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "online" | "offline" | "hybrid";
+            /** Schedule */
+            schedule: string;
+            /** Location */
+            location: string;
+        };
+        /** StudyList */
+        StudyList: {
+            /** Items */
+            items: components["schemas"]["StudyOut"][];
+            /** Total */
+            total: number;
+        };
+        /** StudyOut */
+        StudyOut: {
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            /** Capacity */
+            capacity: number;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "online" | "offline" | "hybrid";
+            /** Schedule */
+            schedule: string;
+            /** Location */
+            location: string;
+            /** Id */
+            id: number;
+            /** Subject Id */
+            subject_id: number;
+            /** Owner Name */
+            owner_name: string;
+            /** Is Mine */
+            is_mine: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Closed At */
+            closed_at: string | null;
+            /** Participant Count */
+            participant_count: number;
+            /** Pending Count */
+            pending_count: number | null;
+            /** My Application */
+            my_application: ("pending" | "approved" | "rejected" | "cancelled") | null;
+        };
+        /** StudySpaceOut */
+        StudySpaceOut: {
+            /** Id */
+            id: number;
+            /** Subject Id */
+            subject_id: number;
+            /** Subject Name */
+            subject_name: string;
+            /** Title */
+            title: string;
+            /** Is Owner */
+            is_owner: boolean;
         };
         /** SubjectIn */
         SubjectIn: {
@@ -5020,6 +5246,294 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_groups_api_v1_subjects__subject_id__study_groups_get: {
+        parameters: {
+            query?: {
+                state?: "all" | "open" | "closed";
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                subject_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudyList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_group_api_v1_subjects__subject_id__study_groups_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subject_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StudyCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    close_group_api_v1_subjects__subject_id__study_groups__group_id__close_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subject_id: number;
+                group_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    applications_api_v1_subjects__subject_id__study_groups__group_id__applications_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subject_id: number;
+                group_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_api_v1_subjects__subject_id__study_groups__group_id__apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subject_id: number;
+                group_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_api_v1_subjects__subject_id__study_groups__group_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subject_id: number;
+                group_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_api_v1_subjects__subject_id__study_groups__group_id__applications__application_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subject_id: number;
+                group_id: number;
+                application_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    study_space_api_v1_study_groups__group_id__space_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudySpaceOut"];
                 };
             };
             /** @description Validation Error */

@@ -1,4 +1,6 @@
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router'
+import { StudySpacePage } from '@/features/study_groups/StudySpacePage'
+import { StudyGroupsPage } from '@/features/study_groups/StudyGroupsPage'
 import { Layout } from '@/components/Layout'
 import { AdminCatalogPage } from '@/features/admin/AdminCatalogPage'
 import { AdminCoursesPage } from '@/features/admin/AdminCoursesPage'
@@ -28,6 +30,8 @@ const designFirst = import.meta.env.VITE_DESIGN === 'on'
 const router = createBrowserRouter([
   { path: '/login', element: <AuthPage mode="login" /> },
   { path: '/signup', element: <AuthPage mode="signup" /> },
+  { path: '/study/groups/:groupId', element: <StudySpacePage /> },
+  { path: '/study/subjects/:subjectId/groups', element: <StudyGroupsPage /> },
   { path: '/home', element: <DesignHomePage /> },
   { path: '/study', element: <StudyPage /> },
   { path: '/study/find', element: <FindPage /> },

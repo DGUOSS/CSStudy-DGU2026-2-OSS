@@ -351,3 +351,31 @@ class NoticePreference(SQLModel, table=True):
     __tablename__ = "notice_preferences"
     user_id: int = Field(foreign_key="users.id", primary_key=True)
     department_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
+
+
+class StudyGroup(SQLModel, table=True):
+    """과목별 모집 게시글. 참여 신청/인원 집계는 별도 기능으로 추가한다."""
+
+    __tablename__ = "study_groups"
+    id: int | None = Field(default=None, primary_key=True)
+    subject_id: int = Field(foreign_key="subjects.id", index=True)
+    owner_id: int = Field(foreign_key="users.id", index=True)
+    title: str = Field(max_length=100)
+    description: str = Field(sa_column=Column(Text, nullable=False))
+    capacity: int
+    mode: str = Field(max_length=20)
+    schedule: str = Field(max_length=200)
+    location: str = Field(max_length=200)
+    created_at: datetime = Field(default_factory=_now)
+    closed_at: datetime | None = None
+
+
+class StudyApplication(SQLModel, table=True):
+    __tablename__ = "study_applications"
+    __table_args__ = (UniqueConstraint("group_id", "user_id"),)
+    id: int | None = Field(default=None, primary_key=True)
+    group_id: int = Field(foreign_key="study_groups.id", index=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    status: str = Field(default="pending", max_length=20)
+    created_at: datetime = Field(default_factory=_now)
+    updated_at: datetime = Field(default_factory=_now)

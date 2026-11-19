@@ -17,6 +17,7 @@ from app.features.notices.router import router as notices_router
 from app.features.papers.router import router as papers_router
 from app.features.problems.router import router as problems_router
 from app.features.reviews.router import router as reviews_router
+from app.features.study_groups.router import router as study_groups_router
 from app.services import llm
 
 
@@ -54,5 +55,7 @@ api.include_router(misconceptions_router)
 api.include_router(notices_router)
 
 api.include_router(department_notices_router)
+
+api.include_router(study_groups_router)
 
 app.include_router(api)

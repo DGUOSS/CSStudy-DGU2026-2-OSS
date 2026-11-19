@@ -20,11 +20,11 @@ function StudyContent() {
   const courses = mine.data?.courses ?? []
 
   // 내 강좌를 과목명으로 묶는다
-  const groups = new Map<string, { code: string | null; items: typeof courses }>()
+  const groups = new Map<number, { name: string; code: string | null; items: typeof courses }>()
   for (const c of courses) {
-    const g = groups.get(c.subject_name) ?? { code: c.sbj_no, items: [] }
+    const g = groups.get(c.subject_id) ?? { name: c.subject_name, code: c.sbj_no, items: [] }
     g.items.push(c)
-    groups.set(c.subject_name, g)
+    groups.set(c.subject_id, g)
   }
 
   return (
@@ -63,15 +63,16 @@ function StudyContent() {
         </Empty>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {[...groups.entries()].map(([name, g]) => (
+          {[...groups.entries()].map(([subjectId, g]) => (
             <section
-              key={name}
+              key={subjectId}
               className="flex flex-col gap-3 rounded-2xl border border-home-line bg-white p-5"
             >
               <div>
-                <h2 className="text-lg font-bold">{name}</h2>
+                <h2 className="text-lg font-bold">{g.name}</h2>
                 {g.code && <p className="text-sm text-ink-2">{g.code}</p>}
               </div>
+              <Link to={`/study/subjects/${subjectId}/groups`} className="rounded-full border border-home-line px-4 py-2 text-center text-sm font-bold text-navy hover:bg-navy-tint">스터디 찾기</Link>
               <ul className="flex flex-col gap-2">
                 {g.items.map((c) => (
                   <li key={c.course_id}>
