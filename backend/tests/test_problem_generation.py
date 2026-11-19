@@ -112,3 +112,78 @@ def test_generation_saves_reviewed_questions_with_source(
     assert session.exec(
         select(ProblemConcept).where(ProblemConcept.problem_id == generated[0].id)
     ).all()
+
+
+def _low_stock(session, data, user_id=42):
+    for p in data["problems"][:1]:
+        session.add(Attempt(user_id=user_id, problem_id=p.id, chosen_index=0, correct=False))
+    session.commit()
+
+
+def test_cost_guard_cooldown_gap_and_daily_limit(session, course_with_problems, monkeypatch):
+    """실패하면 1시간 쉬고, 성공해도 10분 간격, 하루 5번까지만 생성을 시작한다."""
+    from app.features.problems import generation as g
+
+    data = course_with_problems
+    cid = data["course"].id
+    _low_stock(session, data)
+    monkeypatch.setattr(settings, "anthropic_api_key", "test-key")
+    clock = {"t": 1_795_568_400.0}  # 2026-11-25 01:00 UTC(하루 안에서 시험)
+    monkeypatch.setattr(g, "_now", lambda: clock["t"])
+
+    def start():
+        tasks = BackgroundTasks()
+        schedule_if_low(tasks, session, cid, 42)
+        return len(tasks.tasks)
+
+    assert start() == 1
+    assert start() == 0  # 실행 중이면 또 시작하지 않음
+    g._release(cid, 0)  # 저장 0개로 끝남(실패)
+    clock["t"] += 30 * 60
+    assert start() == 0  # 실패 후 1시간 안 됨
+    clock["t"] += 31 * 60
+    assert start() == 1  # 1시간 지나면 다시 시도
+    g._release(cid, 3)  # 성공
+    clock["t"] += 5 * 60
+    assert start() == 0  # 성공해도 10분 간격
+    for _ in range(3):  # 오늘 3번 더(합계 5번)
+        clock["t"] += 11 * 60
+        assert start() == 1
+        g._release(cid, 2)
+    clock["t"] += 11 * 60
+    assert start() == 0  # 하루 5번 한도
+    clock["t"] += 24 * 60 * 60
+    assert start() == 1  # 날이 바뀌면 다시
+
+
+def test_background_failure_counts_as_failure(session, course_with_problems, monkeypatch):
+    """생성 중 예외가 나도 실패로 기록해 1시간 쉰다(바로 다시 돌지 않는다)."""
+    from app.features.problems import generation as g
+
+    data = course_with_problems
+    cid = data["course"].id
+    _low_stock(session, data)
+    monkeypatch.setattr(settings, "anthropic_api_key", "test-key")
+    monkeypatch.setattr(g, "engine", session.get_bind())
+    monkeypatch.setattr(
+        g, "generate_for_course", lambda *a: (_ for _ in ()).throw(RuntimeError("x"))
+    )
+    tasks = BackgroundTasks()
+    schedule_if_low(tasks, session, cid, 42)
+    g._replenish_background(cid, 42)
+    assert g._guards[cid].last_saved == 0 and g._guards[cid].running is False
+    clock = g._guards[cid].last_at
+    monkeypatch.setattr(g, "_now", lambda: clock + 20 * 60)
+    tasks2 = BackgroundTasks()
+    schedule_if_low(tasks2, session, cid, 42)
+    assert len(tasks2.tasks) == 0
+
+
+def test_evidence_ignores_spacing_and_punctuation():
+    from app.features.problems.generation import _norm
+
+    page = "포인터는 메모리 주소를 저장하는 변수이다. 역참조 연산자로 값을 읽는다."
+    assert _norm("포인터는 메모리주소를 저장하는 변수이다") in _norm(page)
+    assert _norm("포인터는  메모리 주소를, 저장하는 변수이다!") in _norm(page)
+    assert _norm("포인터는 파일을 저장한다") not in _norm(page)
+    assert _norm("  ...  ") == ""

@@ -2,6 +2,9 @@
 
 import logging
 import re
+import time
+from dataclasses import dataclass
+from datetime import UTC, date, datetime
 from threading import Lock
 
 from fastapi import BackgroundTasks
@@ -21,6 +24,78 @@ LOW_STOCK = 2
 REFILL_SIZE = 5
 _locks_guard = Lock()
 _course_locks: dict[int, Lock] = {}
+
+# ---------- 비용 상한(강좌별) ----------
+# 생성이 실패(저장 0개)해도 '부족' 상태가 그대로라, 막지 않으면 문제를 풀 때마다 다시 생성한다.
+# 시작 전에 아래를 확인하고 하나라도 걸리면 생성하지 않는다. 기록은 서버 메모리(재시작하면 초기화).
+FAIL_COOLDOWN_SEC = 60 * 60  # 저장 0개로 끝났으면 1시간 쉼
+MIN_GAP_SEC = 10 * 60  # 성공했어도 다음 시도까지 10분
+DAILY_RUNS = 5  # 강좌별 하루(UTC) 최대 시도 횟수 → 하루 최대 5 × REFILL_SIZE 문항
+
+
+@dataclass
+class _Guard:
+    day: date
+    runs: int = 0
+    last_at: float = 0.0
+    last_saved: int | None = (
+        None  # 마지막 시도에서 저장한 개수(None = 아직 없음 / 부족하지 않아 건너뜀)
+    )
+    running: bool = False
+
+
+_guards: dict[int, _Guard] = {}
+_guard_lock = Lock()
+
+
+def _now() -> float:  # 테스트에서 바꿔 끼운다
+    return time.time()
+
+
+def _today() -> date:
+    return datetime.fromtimestamp(_now(), UTC).date()
+
+
+def reset_guards() -> None:
+    with _guard_lock:
+        _guards.clear()
+
+
+def _reserve(course_id: int) -> bool:
+    """생성을 시작해도 되면 자리를 잡고 True. 실행 중·실패 후 쉬는 중·간격 미달·하루 한도면 False."""
+    now, today = _now(), _today()
+    with _guard_lock:
+        g = _guards.setdefault(course_id, _Guard(day=today))
+        if g.day != today:
+            g.day, g.runs = today, 0
+        if g.running:
+            return False
+        since = now - g.last_at
+        if g.last_saved == 0 and since < FAIL_COOLDOWN_SEC:
+            return False
+        if g.last_at and since < MIN_GAP_SEC:
+            return False
+        if g.runs >= DAILY_RUNS:
+            log.info("Course %s reached the daily generation limit", course_id)
+            return False
+        g.running = True
+        g.runs += 1
+        g.last_at = now
+        return True
+
+
+def _release(course_id: int, saved: int | None) -> None:
+    with _guard_lock:
+        g = _guards.get(course_id)
+        if g:
+            g.running = False
+            g.last_saved = saved
+            g.last_at = _now()
+
+
+def _norm(text: str) -> str:
+    """근거 비교용: 공백·문장부호를 빼고 비교한다(띄어쓰기 차이로 탈락하지 않게)."""
+    return re.sub(r"[\W_]+", "", text or "")
 
 
 def unanswered_count(session: Session, course_id: int, user_id: int) -> int:
@@ -47,7 +122,11 @@ def unanswered_count(session: Session, course_id: int, user_id: int) -> int:
 def schedule_if_low(
     background_tasks: BackgroundTasks, session: Session, course_id: int, user_id: int
 ) -> None:
-    if settings.anthropic_api_key and unanswered_count(session, course_id, user_id) <= LOW_STOCK:
+    if not settings.anthropic_api_key:
+        return
+    if unanswered_count(session, course_id, user_id) > LOW_STOCK:
+        return
+    if _reserve(course_id):
         background_tasks.add_task(_replenish_background, course_id, user_id)
 
 
@@ -59,13 +138,17 @@ def _lock_for(course_id: int) -> Lock:
 def _replenish_background(course_id: int, user_id: int) -> None:
     # One process on the current Render service. The DB count is rechecked after
     # acquiring the lock, so repeated requests do not start repeated generations.
+    saved: int | None = None
     with _lock_for(course_id):
         try:
             with Session(engine) as session:
                 if unanswered_count(session, course_id, user_id) <= LOW_STOCK:
-                    generate_for_course(session, course_id, user_id)
+                    saved = generate_for_course(session, course_id, user_id)
         except Exception:
+            saved = 0  # 예외도 실패로 보고 쉬게 한다
             log.exception("Automatic problem generation failed for course %s", course_id)
+        finally:
+            _release(course_id, saved)
 
 
 def _lecture_chunks(material: Material, course_id: int) -> list[Chunk]:
@@ -209,7 +292,12 @@ def generate_for_course(session: Session, course_id: int, user_id: int) -> int:
                 ),
                 None,
             )
-            if source is None or question.evidence.strip() not in material.pages[source.page - 1]:
+            evidence = _norm(question.evidence)
+            if (
+                source is None
+                or not evidence
+                or evidence not in _norm(material.pages[source.page - 1])
+            ):
                 continue
             problem = Problem(
                 chapter_id=chapter.id,
