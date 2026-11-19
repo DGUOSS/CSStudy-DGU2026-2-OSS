@@ -47,11 +47,11 @@ export function CoursePage() {
     <div className="flex flex-col gap-5">
       <div>
         <Link
-          to={`/subjects/${c.subject_id}`}
+          to="/"
           className="mb-2 inline-flex items-center text-sm text-muted-foreground"
         >
           <ChevronLeft className="size-4" />
-          {c.subject_name}
+          내 강좌
         </Link>
         <h1 className="text-2xl font-bold">
           {c.subject_name} <span className="text-muted-foreground">·</span> {c.professor_name}{' '}
