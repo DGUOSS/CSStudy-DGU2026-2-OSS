@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qgen"
+version = "0.1.0"
+description = "출제 경향 기반 문제 생성 멀티에이전트 시스템"
+requires-python = ">=3.11"
+# 의존성은 requirements.txt에서 관리 (torch CPU 전용 인덱스 지정 때문)
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
