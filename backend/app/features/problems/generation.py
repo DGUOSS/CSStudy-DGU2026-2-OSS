@@ -128,8 +128,11 @@ class SiteQuestion(Question):
 
 SYSTEM = (
     "너는 대학 시험 출제 시스템의 한 에이전트다. 주어진 스키마의 JSON 하나로만 답한다. "
-    "모든 텍스트는 한국어, 수식은 LaTeX($...$)."
+    "모든 텍스트는 한국어. 사이트는 LaTeX를 렌더링하지 않으므로 $...$ 를 쓰지 않는다."
 )
+
+# 이미 있는 문항: (본문, 정규화한 근거). 같은 내용을 다시 내지 않게 프롬프트에 보이고 검사한다
+Existing = list[tuple[str, str]]
 
 
 def render_prompt(name: str, **vars: object) -> str:
@@ -140,8 +143,9 @@ def render_prompt(name: str, **vars: object) -> str:
     return _render(name, **vars)
 
 
-def _generator_extra(concept_names: list[str]) -> str:
+def _generator_extra(concept_names: list[str], existing: Existing) -> str:
     names = "\n".join(f"- {n}" for n in concept_names)
+    taken = "\n".join(f"- {stem}" for stem, _ in existing[-30:]) or "(없음)"
     return (
         "\n\n## 사이트 저장용 추가 칸\n"
         "- explanation: 정답 해설(왜 정답이고 다른 보기는 왜 틀렸는지).\n"
@@ -149,7 +153,12 @@ def _generator_extra(concept_names: list[str]) -> str:
         "그 문장이 있는 쪽을 sources에 넣는다.\n"
         "- concepts: 이 문항이 실제로 확인하는 개념을 아래 목록에서 1개 이상 골라 이름을 글자 그대로 적는다. "
         "목록에 없는 이름을 만들거나 관련 없는 개념을 고르지 않는다.\n"
-        f"개념 목록:\n{names}"
+        f"개념 목록:\n{names}\n\n"
+        "## 사이트 표시 규칙\n"
+        "사이트는 LaTeX를 렌더링하지 않는다. 위 규칙의 LaTeX($...$) 대신 코드·서식 문자·수식을 "
+        "`%d`, `x^2`처럼 글자 그대로 적고 $ 기호를 쓰지 않는다.\n\n"
+        "## 이미 있는 문항 (같은 내용·같은 근거 문장으로 다시 묻지 말 것)\n"
+        f"{taken}"
     )
 
 
@@ -180,6 +189,7 @@ def generator(
     concept_names: list[str],
     prev: "SiteQuestion | None" = None,
     feedback: str | None = None,
+    existing: Existing | None = None,
 ) -> SiteQuestion:
     revise = ""
     if prev is not None:  # qgen.agents.generator 의 수정 모드 문구 그대로
@@ -193,7 +203,7 @@ def generator(
         ),
         examples=examples or "(없음)",
         revise=revise,
-    ) + _generator_extra(concept_names)
+    ) + _generator_extra(concept_names, existing or [])
     q = _call("generator", prompt, SiteQuestion)
     q.item_id, q.qtype = item.item_id, item.qtype
     return q
@@ -247,8 +257,15 @@ def evidence_chunk(q: SiteQuestion, chunks: list[Chunk]) -> Chunk | None:
     return None
 
 
-def site_issues(q: SiteQuestion, chunks: list[Chunk], concept_names: list[str]) -> list[str]:
+def site_issues(
+    q: SiteQuestion,
+    chunks: list[Chunk],
+    concept_names: list[str],
+    existing: Existing | None = None,
+) -> list[str]:
     issues = []
+    if any("$" in t for t in [q.stem, q.explanation, *(q.choices or [])]):
+        issues.append("$ 기호(LaTeX)가 있음 — 사이트는 렌더링하지 않으니 글자 그대로 적을 것")
     if not re.fullmatch(r"\d+", q.answer.strip()):
         issues.append(f"정답 '{q.answer}'는 번호 하나여야 함(사이트는 정답 하나만 저장)")
     if not q.explanation.strip():
@@ -260,6 +277,13 @@ def site_issues(q: SiteQuestion, chunks: list[Chunk], concept_names: list[str]) 
         issues.append("evidence가 제공된 강의자료에 없음 — 요약하지 말고 글자 그대로 복사")
     elif evidence_chunk(q, chunks) is None:
         issues.append("evidence가 있는 쪽이 sources에 없음")
+    for stem, old_ev in existing or []:
+        if q.stem.strip() == stem.strip():
+            issues.append("이미 있는 문항과 본문이 같음")
+            break
+        if ev and ev == old_ev:
+            issues.append("이미 있는 문항과 같은 근거 문장 — 다른 문장·다른 내용으로 출제")
+            break
     allowed = set(concept_names)
     if not q.concepts:
         issues.append("concepts가 비어 있음 — 개념 목록에서 1개 이상 고를 것")
@@ -272,9 +296,15 @@ def site_issues(q: SiteQuestion, chunks: list[Chunk], concept_names: list[str]) 
 
 
 def all_issues(
-    q: SiteQuestion, item: PlannedItem, chunks: list[Chunk], concept_names: list[str]
+    q: SiteQuestion,
+    item: PlannedItem,
+    chunks: list[Chunk],
+    concept_names: list[str],
+    existing: Existing | None = None,
 ) -> list[str]:
-    return sorted(set(checks.run(q, item, chunks) + site_issues(q, chunks, concept_names)))
+    return sorted(
+        set(checks.run(q, item, chunks) + site_issues(q, chunks, concept_names, existing))
+    )
 
 
 # ---------- 한 문항: qgen.pipeline 과 같은 순서 ----------
@@ -297,18 +327,27 @@ def run_item(
     profile: ExamProfile,
     examples: str,
     concept_names: list[str],
+    existing: Existing | None = None,
 ) -> ItemResult:
     res = ItemResult(item.item_id, item.topic)
-    q = generator(item, ctx, profile, examples, concept_names)
+    existing = existing if existing is not None else []
+    q = generator(item, ctx, profile, examples, concept_names, existing=existing)
     regens = 0
     last = ""
     for _ in range(MAX_REVISIONS + 1):
-        issues = all_issues(q, item, ctx, concept_names)
+        issues = all_issues(q, item, ctx, concept_names, existing)
         if issues:
             res.history.append(f"규칙위반({len(issues)})")
             last = "규칙검사: " + "; ".join(issues)
             q = generator(
-                item, ctx, profile, examples, concept_names, prev=q, feedback="\n".join(issues)
+                item,
+                ctx,
+                profile,
+                examples,
+                concept_names,
+                prev=q,
+                feedback="\n".join(issues),
+                existing=existing,
             )
             continue
         s = solver(q, ctx)
@@ -322,7 +361,7 @@ def run_item(
         )
         if r.verdict == "reject" and regens < MAX_REGENERATIONS:
             regens += 1
-            q = generator(item, ctx, profile, examples, concept_names)
+            q = generator(item, ctx, profile, examples, concept_names, existing=existing)
             continue
         if r.verdict == "reject":
             break
@@ -334,6 +373,7 @@ def run_item(
             concept_names,
             prev=q,
             feedback=r.feedback + "\n" + "\n".join(r.issues),
+            existing=existing,
         )
     res.reason = last or "수정 한도 초과"
     return res
@@ -512,24 +552,22 @@ def generate_for_course(
     examples = "\n\n".join(exam_style_examples(session, user_id, course_id))[:3000]
     # DB에 있는 쪽 글로 검색한다. 독립 실행용 임베딩 인덱스는 읽지 않게 없는 폴더를 준다 → BM25
     retriever = Retriever(chunks, index_dir=Path(__file__).parent / "_no_index", verbose=False)
-    existing = {
-        p.strip()
-        for p in session.exec(
-            select(Problem.question).where(Problem.chapter_id == chapter.id)
-        ).all()
-    }
+    existing: Existing = [
+        (p.question.strip(), normalize(p.evidence or ""))
+        for p in session.exec(select(Problem).where(Problem.chapter_id == chapter.id)).all()
+    ]
     for i, item in enumerate(plan_items(concept_names, chapter.title, REFILL_SIZE)):
         concept = concept_names[i % len(concept_names)]
         ctx = retriever.search_many([concept, chapter.title], k=RETRIEVAL_TOP_K)
         try:
-            res = run_item(item, ctx, profile, examples, concept_names)
+            res = run_item(item, ctx, profile, examples, concept_names, existing)
         except (GenerationCallFailed, LLMNotConfigured) as e:
             res = ItemResult(item.item_id, item.topic, reason=str(e))
         report.items.append(res)
         q = res.question
         if q is None:
             continue
-        if q.stem.strip() in existing:
+        if q.stem.strip() in {stem for stem, _ in existing}:
             res.reason = "기존 문제와 본문이 같음"
             continue
         src = evidence_chunk(q, ctx)
@@ -552,7 +590,7 @@ def generate_for_course(
         session.flush()
         for name in dict.fromkeys(q.concepts):
             session.add(ProblemConcept(problem_id=problem.id, concept_id=by_name[name].id))
-        existing.add(problem.question)
+        existing.append((problem.question, normalize(problem.evidence)))
         res.saved, res.page = True, src.source.page
         report.saved += 1
     session.commit()

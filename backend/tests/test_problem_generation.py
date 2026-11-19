@@ -21,6 +21,9 @@ from app.models import Attempt, Material, Problem, ProblemConcept
 
 PAGE = "포인터의 개념\n포인터는 메모리 주소를 저장하는 변수이다. 역참조 연산자로 해당 주소의 값을 읽는다."
 EVIDENCE = "포인터는 메모리 주소를 저장하는 변수이다."
+# 가짜 출제가 문항마다 다른 근거를 쓰도록(같은 근거 재사용은 탈락) 쪽에 번호 붙은 문장을 더 둔다
+RULES = [f"포인터 규칙 {k}번은 주소 연산을 설명한다." for k in range(1, 21)]
+PAGE += "\n" + "\n".join(RULES)
 
 
 def _qgen_llm_importable() -> bool:
@@ -81,7 +84,8 @@ def _with_material(session, data):
     return material
 
 
-def _question(n: int, concepts: list[str], evidence: str = EVIDENCE) -> SiteQuestion:
+def _question(n: int, concepts: list[str], evidence: str | None = None) -> SiteQuestion:
+    evidence = RULES[(n - 1) % len(RULES)] if evidence is None else evidence
     return SiteQuestion(
         item_id="x",
         qtype="객관식",
@@ -151,7 +155,8 @@ def test_generation_saves_reviewed_questions_with_source_and_concept(
     generated = session.exec(select(Problem).where(Problem.origin == "llm")).all()
     assert len(generated) == 5
     assert all(p.source_material_id == material.id and p.source_page == 1 for p in generated)
-    assert all(p.answer_index == 0 and p.evidence == EVIDENCE for p in generated)
+    assert all(p.answer_index == 0 and p.evidence in RULES for p in generated)
+    assert len({p.evidence for p in generated}) == 5  # 문항마다 다른 근거
     for p in generated:
         links = session.exec(select(ProblemConcept).where(ProblemConcept.problem_id == p.id)).all()
         assert [link.concept_id for link in links] == [data["b"].id]  # 첫 번째 개념(A)이 아님
@@ -255,6 +260,42 @@ def test_paraphrased_or_short_evidence_is_rejected():
     assert any("강의자료에 없음" in i for i in site_issues(q, [_chunk()], ["A"]))
     q = _question(1, ["A"], evidence="포인터")
     assert any("너무 짧음" in i for i in site_issues(q, [_chunk()], ["A"]))
+
+
+def test_same_evidence_or_stem_as_existing_is_rejected():
+    q = _question(1, ["A"], evidence=EVIDENCE)
+    existing = [("다른 문제", normalize("포인터는 메모리 주소를, 저장하는 변수이다"))]
+    assert any("같은 근거 문장" in i for i in site_issues(q, [_chunk()], ["A"], existing))
+    existing = [(q.stem, normalize("다른 근거 문장입니다"))]
+    assert "이미 있는 문항과 본문이 같음" in site_issues(q, [_chunk()], ["A"], existing)
+    assert site_issues(q, [_chunk()], ["A"], [("다른 문제", normalize(RULES[5]))]) == []
+
+
+def test_latex_dollar_is_rejected():
+    q = _question(1, ["A"])
+    q.choices = ["$\\%c$ - 문자", "%s - 문자열", "%d - 정수", "%f - 실수"]
+    assert any("LaTeX" in i for i in site_issues(q, [_chunk()], ["A"]))
+
+
+def test_seed_problem_evidence_blocks_repeat(
+    session, course_with_problems, monkeypatch, fake_prompts
+):
+    """챕터의 기존 문제와 같은 근거로 낸 문항은 수정 요청을 받고, 프롬프트에 기존 문항이 보인다."""
+    data = course_with_problems
+    _with_material(session, data)
+    data["problems"][0].evidence = RULES[0]
+    session.add(data["problems"][0])
+    session.commit()
+    model = FakeModel(lambda n: _question(n, ["A"]))
+    monkeypatch.setattr(g, "_parse", model)
+
+    report = generate_for_course(session, data["course"].id, 42)
+
+    assert report.items[0].history[0] == "규칙위반(1)"  # 1번째 출제가 RULES[0]을 씀
+    assert RULES[0] not in {
+        p.evidence for p in session.exec(select(Problem).where(Problem.origin == "llm"))
+    }
+    assert "## 이미 있는 문항" in model.prompts[0][1] and "- q" in model.prompts[0][1]
 
 
 def test_evidence_page_must_be_cited():
