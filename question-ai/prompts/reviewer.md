@@ -23,5 +23,7 @@
 ## 출제 스타일
 {{profile}}
 
+If the question lists concepts, check that each selected concept is actually tested by the question. Reject unrelated concept labels.
+
 ## 강의자료
 {{chunks}}

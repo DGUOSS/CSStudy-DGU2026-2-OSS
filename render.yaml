@@ -5,9 +5,8 @@ services:
     runtime: python
     region: singapore
     plan: free
-    rootDir: backend
-    buildCommand: pip install uv && uv sync --frozen --no-dev
-    startCommand: uv run --no-sync alembic upgrade head && uv run --no-sync uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    buildCommand: pip install uv && cd backend && uv sync --frozen --no-dev
+    startCommand: cd backend && uv run --no-sync alembic upgrade head && uv run --no-sync uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/v1/health
     envVars:
       - key: PYTHON_VERSION
@@ -20,3 +19,5 @@ services:
         generateValue: true
       - key: COOKIE_SECURE
         value: "true"
+      - key: ANTHROPIC_API_KEY
+        sync: false

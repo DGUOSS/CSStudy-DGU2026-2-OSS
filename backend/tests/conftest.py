@@ -16,6 +16,9 @@ def _no_real_llm(monkeypatch):
     from app.core.config import settings
 
     monkeypatch.setattr(settings, "anthropic_api_key", "")
+    from app.features.problems.generation import reset_guards
+
+    reset_guards()  # 자동 생성 비용 상한 기록이 테스트끼리 섞이지 않게
 
 
 @pytest.fixture
