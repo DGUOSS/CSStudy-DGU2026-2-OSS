@@ -1,6 +1,6 @@
 """챕터 목록, 문제 출제, 채점."""
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlmodel import func, select
 
@@ -9,7 +9,6 @@ from app.core.security import CurrentUser
 from app.features.courses.router import get_course_or_404
 from app.features.enrollments.service import require_course_access
 from app.features.mastery.service import concept_states
-from app.features.problems.generation import schedule_if_low
 from app.features.problems.service import concepts_of, pick_problems
 from app.models import Attempt, Chapter, Concept, Material, Problem
 
@@ -111,7 +110,6 @@ def next_problems(
     chapter_id: int,
     session: SessionDep,
     user: CurrentUser,
-    background_tasks: BackgroundTasks,
     count: int = Query(default=5, ge=1, le=20),
 ) -> list[ProblemOut]:
     """다음에 풀 문제를 고른다.
@@ -128,7 +126,6 @@ def next_problems(
     ).all()  # 퀴즈는 객관식만(서술형은 종이 시험에서)
     picked = pick_problems(session, user.id, list(problems), count)
     concepts = _concepts_of(session, [p.id for p in picked])
-    schedule_if_low(background_tasks, session, chapter.course_id, user.id)
 
     return [
         ProblemOut(
@@ -145,11 +142,7 @@ def next_problems(
 
 @router.post("/problems/{problem_id}/attempts")
 def submit_attempt(
-    problem_id: int,
-    body: AttemptIn,
-    session: SessionDep,
-    user: CurrentUser,
-    background_tasks: BackgroundTasks,
+    problem_id: int, body: AttemptIn, session: SessionDep, user: CurrentUser
 ) -> AttemptResult:
     problem = session.get(Problem, problem_id)
     if problem is None:
@@ -170,7 +163,6 @@ def submit_attempt(
         )
     )
     session.commit()
-    schedule_if_low(background_tasks, session, chapter.course_id, user.id)
     after = concept_states(session, user.id, ids)
 
     source = None
