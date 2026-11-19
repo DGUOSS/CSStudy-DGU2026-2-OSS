@@ -54,13 +54,13 @@ def _client():
     return anthropic.Anthropic(api_key=settings.anthropic_api_key)
 
 
-def _parse(system: str, content, schema: type[BaseModel], model: str | None = None):
+def _parse(system: str, content, schema: type[BaseModel]):
     """구조화 출력 한 번. 거절·파싱 실패·API 오류면 None."""
     import anthropic
 
     try:
         resp = _client().messages.parse(
-            model=model or settings.llm_model,
+            model=settings.llm_model,
             max_tokens=16000,
             system=system,
             messages=[{"role": "user", "content": content}],
