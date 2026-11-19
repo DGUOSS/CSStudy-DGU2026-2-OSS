@@ -286,8 +286,14 @@ def generate_for_course(session: Session, course_id: int, user_id: int) -> int:
                 if not issues:
                     break
                 question = agents.generator(
-                    item, context, profile, examples, prev=question, feedback="\n".join(issues),
-                    runner=_site_runner, concept_names=concept_names,
+                    item,
+                    context,
+                    profile,
+                    examples,
+                    prev=question,
+                    feedback="\n".join(issues),
+                    runner=_site_runner,
+                    concept_names=concept_names,
                 )
             if checks.run(question, item, context, set(concept_names)):
                 continue

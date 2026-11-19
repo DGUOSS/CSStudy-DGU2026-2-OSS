@@ -196,16 +196,27 @@ def test_evidence_ignores_spacing_and_punctuation():
 
 def test_generator_rejects_missing_or_unlisted_concepts():
     source = SourceRef(file="lecture", page=1)
-    chunk = Chunk(chunk_id="one", course_id="1", text="A pointer stores a memory address.", source=source)
+    chunk = Chunk(
+        chunk_id="one", course_id="1", text="A pointer stores a memory address.", source=source
+    )
     item = PlannedItem(
-        item_id="one", qtype="객관식", topic="pointers", bloom_level="이해",
-        difficulty="보통", points=1, rationale="practice",
+        item_id="one",
+        qtype="객관식",
+        topic="pointers",
+        bloom_level="이해",
+        difficulty="보통",
+        points=1,
+        rationale="practice",
     )
     question = Question(
-        item_id="one", qtype="객관식", stem="What does a pointer store?",
+        item_id="one",
+        qtype="객관식",
+        stem="What does a pointer store?",
         choices=["A memory address", "A file", "A process", "Nothing"],
-        answer="1", explanation="It stores an address.",
-        evidence="A pointer stores a memory address.", sources=[source],
+        answer="1",
+        explanation="It stores an address.",
+        evidence="A pointer stores a memory address.",
+        sources=[source],
         concepts=["not a chapter concept"],
     )
     assert any("개념" in issue for issue in check_question(question, item, [chunk], {"B"}))
