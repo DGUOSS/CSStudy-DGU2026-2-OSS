@@ -22,8 +22,3 @@
 {{chunks}}
 
 {{revise}}
-
-For multiple-choice questions, include a clear explanation and copy a supporting sentence from the supplied lecture chunks into `evidence`.
-Available concepts for this question:
-{{concept_options}}
-If concepts are supplied, select the exact names of the concepts tested by this question in `concepts`. Never invent a name or choose an unrelated concept. If no concepts are supplied, return an empty list.

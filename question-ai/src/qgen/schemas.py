@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class SourceRef(BaseModel):
@@ -60,9 +60,6 @@ class Question(BaseModel):
     rubric: list[str] | None = None
     sources: list[SourceRef]
     figure_ref: SourceRef | None = None
-    explanation: str = ""
-    evidence: str = ""
-    concepts: list[str] = Field(default_factory=list)
 
 
 class SolverOutput(BaseModel):

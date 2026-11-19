@@ -15,13 +15,7 @@ def _latex_issues(text: str) -> list[str]:
     return issues
 
 
-def normalize_evidence(text: str) -> str:
-    """Ignore whitespace and punctuation while retaining letters and digits."""
-    return re.sub(r"[\W_]+", "", text or "")
-
-
-def run(q: Question, item: PlannedItem, chunks: list[Chunk],
-        allowed_concepts: set[str] | None = None) -> list[str]:
+def run(q: Question, item: PlannedItem, chunks: list[Chunk]) -> list[str]:
     issues: list[str] = []
     if q.qtype == "객관식":
         ch = q.choices or []
@@ -35,7 +29,7 @@ def run(q: Question, item: PlannedItem, chunks: list[Chunk],
         lens = [len(c) for c in ch]
         if ch and nums and nums[0].isdigit() and 1 <= int(nums[0]) <= len(ch):
             ans_len = lens[int(nums[0]) - 1]
-            others = [length for i, length in enumerate(lens) if i != int(nums[0]) - 1]
+            others = [l for i, l in enumerate(lens) if i != int(nums[0]) - 1]
             if others and ans_len > 2 * max(others):
                 issues.append("정답 선지만 지나치게 길어 정답이 드러남")
     elif q.choices:
@@ -52,13 +46,4 @@ def run(q: Question, item: PlannedItem, chunks: list[Chunk],
     for s in q.sources:
         if (s.file, s.page) not in valid:
             issues.append(f"존재하지 않는 근거 위치: {s.file} p.{s.page} (제공된 자료 위치만 사용)")
-    if q.qtype == "객관식":
-        if not q.explanation.strip():
-            issues.append("객관식 해설이 비어 있음")
-        evidence = normalize_evidence(q.evidence)
-        if not evidence or not any(evidence in normalize_evidence(c.text) for c in chunks):
-            issues.append("근거 문장이 제공된 강의자료와 일치하지 않음")
-    if allowed_concepts is not None:
-        if not q.concepts or any(name not in allowed_concepts for name in q.concepts):
-            issues.append("문제 개념은 제공된 개념 목록에서 한 개 이상 정확히 선택해야 함")
     return sorted(set(issues))

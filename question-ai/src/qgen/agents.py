@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from . import llm
@@ -11,7 +10,7 @@ from .ingest import format_chunks
 from .schemas import Chunk, ExamPlan, ExamProfile, PlannedItem, Question, Review, SolverOutput
 
 
-def analyst(course: str, inp: AnalystInput) -> ExamProfile:
+def analyst(course: str, inp: "AnalystInput") -> ExamProfile:
     """inp: exam_profile.build_input() 결과 (번호 붙인 기출·메모 + 이미지)."""
     p = llm.render_prompt("analyst", course=course, past_exams=inp.past_text or "(없음)",
                           notes=inp.notes_text or "(없음)", images=inp.image_list)
@@ -36,16 +35,14 @@ def planner(profile: ExamProfile, topics: list[str], n: int, max_titles: int = 3
 
 
 def generator(item: PlannedItem, chunks: list[Chunk], profile: ExamProfile, examples: str,
-              prev: Question | None = None, feedback: str | None = None, seed: int = 0,
-              runner: Callable | None = None, concept_names: list[str] | None = None) -> Question:
+              prev: Question | None = None, feedback: str | None = None, seed: int = 0) -> Question:
     revise = ""
     if prev is not None:
         revise = f"## 수정 모드\n이전 문항:\n{prev.model_dump_json(indent=1)}\n\n수정 지시:\n{feedback}\n위 지시를 반영해 문항을 고쳐라."
     p = llm.render_prompt("generator", item=item.model_dump(), chunks=format_chunks(chunks),
                           profile=profile.model_dump(include={"difficulty", "detail_level", "phrasing_examples", "recurring_patterns"}),
-                          examples=examples or "(없음)", revise=revise,
-                          concept_options="\n".join(f"- {name}" for name in concept_names) if concept_names else "(지정되지 않음)")
-    q = (runner or llm.call)("generator", p, Question, seed=seed)
+                          examples=examples or "(없음)", revise=revise)
+    q = llm.call("generator", p, Question, seed=seed)
     q.item_id, q.qtype = item.item_id, item.qtype
     return q
 
@@ -55,18 +52,17 @@ def strip_answer(q: Question) -> dict:
     return q.model_dump(include={"item_id", "qtype", "stem", "choices"})
 
 
-def solver(q: Question, chunks: list[Chunk], runner: Callable | None = None) -> SolverOutput:
+def solver(q: Question, chunks: list[Chunk]) -> SolverOutput:
     p = llm.render_prompt("solver", question=strip_answer(q), chunks=format_chunks(chunks))
-    s = (runner or llm.call)("solver", p, SolverOutput)
+    s = llm.call("solver", p, SolverOutput)
     s.item_id = q.item_id
     return s
 
 
-def reviewer(q: Question, s: SolverOutput, item: PlannedItem, chunks: list[Chunk], profile: ExamProfile,
-             runner: Callable | None = None) -> Review:
+def reviewer(q: Question, s: SolverOutput, item: PlannedItem, chunks: list[Chunk], profile: ExamProfile) -> Review:
     p = llm.render_prompt("reviewer", question=q.model_dump(), solver=s.model_dump(), item=item.model_dump(),
                           chunks=format_chunks(chunks),
                           profile=profile.model_dump(include={"difficulty", "detail_level", "phrasing_examples"}))
-    r = (runner or llm.call)("reviewer", p, Review)
+    r = llm.call("reviewer", p, Review)
     r.item_id = q.item_id
     return r
