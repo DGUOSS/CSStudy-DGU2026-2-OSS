@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     # Claude API (오개념 만들기, 서술형 채점, 결과 요약). 없으면 그 기능만 꺼진다
     anthropic_api_key: str = ""
     llm_model: str = "claude-opus-5-5"
+    qgen_model: str = "claude-haiku-5-5"
 
     @property
     def db_url(self) -> str:
