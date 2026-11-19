@@ -41,6 +41,7 @@ class ImportIn(BaseModel):
 
 
 class MyCourseOut(BaseModel):
+    subject_id: int
     course_id: int
     subject_name: str
     sbj_no: str | None
@@ -63,6 +64,7 @@ class WaitingOut(BaseModel):
 
 
 class PublicCourseOut(BaseModel):
+    subject_id: int
     course_id: int
     subject_name: str
     professor_name: str
@@ -106,6 +108,7 @@ def _my_courses(session, user) -> MyCoursesOut:
         s, p = session.get(Subject, c.subject_id), session.get(Professor, c.professor_id)
         courses.append(
             MyCourseOut(
+                subject_id=s.id,
                 course_id=cid,
                 subject_name=s.name,
                 sbj_no=s.code,
@@ -157,7 +160,7 @@ def _public_courses(session, exclude: set[int]) -> list[PublicCourseOut]:
         .order_by(Subject.name)
     ).all()
     return [
-        PublicCourseOut(course_id=c.id, subject_name=s.name, professor_name=p.name)
+        PublicCourseOut(subject_id=s.id, course_id=c.id, subject_name=s.name, professor_name=p.name)
         for c, s, p in rows
         if c.id not in exclude
     ]

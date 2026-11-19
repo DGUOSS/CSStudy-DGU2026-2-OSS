@@ -64,6 +64,8 @@ function ChaptersContent() {
         </p>
       </div>
 
+      <Link to={`/study/subjects/${c.subject_id}/groups`} className="inline-flex min-h-11 items-center justify-between rounded-2xl border border-home-line bg-white px-5 py-4 font-bold text-navy hover:bg-navy-tint">이 과목 스터디 모집 <span aria-hidden="true">→</span></Link>
+
       <details className="rounded-2xl border border-home-line bg-white p-4">
         <summary className="cursor-pointer text-[15px] font-bold">참고할 족보 고르기</summary>
         <div className="mt-3">

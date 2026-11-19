@@ -55,3 +55,13 @@ uv run python scripts/seed.py      # 교안 PDF가 data/raw/basic-programming-ka
 ## notice_preferences (관심 학과 공지)
 
 사용자별 공지 즐겨찾기. `user_id` INTEGER PRIMARY KEY REFERENCES users(id), `department_ids` JSON NOT NULL. 최대 8개 선택을 API에서 검증한다. 수강 이력/권한과 독립적이다. 마이그레이션 `a90dc6c4db81`이 테이블 하나만 추가한다. 자세한 내용은 [DEPARTMENT_NOTICES.md](DEPARTMENT_NOTICES.md) 참고.
+
+
+## study_groups (과목별 스터디 모집)
+
+`id` 기본키, `subject_id`/`owner_id` 외래키와 인덱스, `title`, `description`, `capacity`, `mode`, `schedule`, `location`, `created_at`, `closed_at`을 저장한다. `closed_at IS NULL`이면 모집 중이다. 기존 테이블은 수정하지 않는다. 마이그레이션 `9bbfc5a89a1d`. 사용법은 [STUDY_GROUPS.md](STUDY_GROUPS.md) 참고.
+
+
+## study_applications
+
+스터디 신청 내역. group_id/user_id 외래키, 두 값의 유일 제약, status(pending/approved/rejected/cancelled), created_at/updated_at을 저장한다. 개설자는 별도 신청 없이 참여 인원에 포함한다. study_groups.capacity=0은 인원 제한 없음이다. 마이그레이션 `e766111f9118`.

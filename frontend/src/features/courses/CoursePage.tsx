@@ -1,3 +1,4 @@
+import { StudyGroupsPanel } from '@/features/study_groups/StudyGroupsPanel'
 import { ChevronLeft } from 'lucide-react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { Empty, ErrorText, Loading } from '@/components/States'
@@ -17,6 +18,7 @@ const TABS = [
   { key: 'mastery', label: '숙련도' },
   { key: 'materials', label: '자료' },
   { key: 'info', label: '강좌 정보' },
+  { key: 'groups', label: '스터디 모집' },
   { key: 'reviews', label: '강좌 후기' },
 ] as const
 
@@ -73,6 +75,7 @@ export function CoursePage() {
           </button>
         ))}
       </nav>
+      {tab === 'groups' && <StudyGroupsPanel key={c.subject_id} subjectId={c.subject_id} />}
       {tab === 'solve' && <ChaptersTab courseId={courseId} />}
       {tab === 'papers' && <PapersTab courseId={courseId} />}
       {tab === 'mastery' && <MasteryTab courseId={courseId} />}
