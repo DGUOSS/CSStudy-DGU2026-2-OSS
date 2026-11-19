@@ -14,7 +14,7 @@ const modes = { online: '온라인', offline: '오프라인', hybrid: '온·오�
 const inputClass = 'mt-1 w-full rounded-xl border border-home-line bg-white px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-navy'
 const blank: Draft = { title: '', description: '', capacity: 4, mode: 'offline', schedule: '', location: '' }
 
-export function StudyGroupsPanel({ subjectId }: { subjectId: number }) {
+export function StudyGroupsPanel({ subjectId, design = false }: { subjectId: number; design?: boolean }) {
   const { user } = useAuth()
   const qc = useQueryClient()
   const [state, setState] = useState<'open' | 'closed' | 'all'>('open')
@@ -60,7 +60,7 @@ export function StudyGroupsPanel({ subjectId }: { subjectId: number }) {
         <div><dt className="text-xs font-bold text-ink-2">시간·기간</dt><dd className="mt-1 whitespace-pre-wrap break-words">{group.schedule}</dd></div>
         <div><dt className="text-xs font-bold text-ink-2">장소·진행 채널</dt><dd className="mt-1 whitespace-pre-wrap break-words">{group.location}</dd></div>
       </dl>
-      {(group.is_mine || group.my_application === 'approved') && <Link to={`/study/groups/${group.id}`} className="mt-4 inline-flex h-11 items-center rounded-full bg-navy px-5 text-sm font-bold text-white hover:bg-navy-deep">스터디 입장</Link>}
+      {(group.is_mine || group.my_application === 'approved') && <Link to={`${design ? "/study" : ""}/groups/${group.id}`} className="mt-4 inline-flex h-11 items-center rounded-full bg-navy px-5 text-sm font-bold text-white hover:bg-navy-deep">스터디 입장</Link>}
       <Participation group={group} subjectId={subjectId} onChanged={() => qc.invalidateQueries({ queryKey: key })} />
       {group.is_mine && !group.closed_at && <div className="mt-4 flex justify-end"><Button variant="outline" onClick={() => { close.reset(); setClosing(group) }}>모집 종료</Button></div>}
     </li>)}</ul>

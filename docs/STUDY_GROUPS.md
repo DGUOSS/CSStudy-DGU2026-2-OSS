@@ -43,3 +43,8 @@
 ## 참여자 전용 공간
 
 개설자 또는 approved 참여자에게만 모집 카드의 스터디 입장을 표시한다. 화면은 `/study/groups/:groupId`, API는 `GET /api/v1/study-groups/{group_id}/space`이다. 서버에서 멤버십을 확인하며 미로그인은 401, 미신청/대기/거절/취소 및 비참여 관리자는 403, 없는 스터디는 404다. 모집 종료 후에도 입장을 유지하고 참여 취소 후에는 접근을 차단한다. 스터디 제목, 과목과 기본 안내만 표시하며 공지·채팅·일정 등 운영 기능은 아직 없다. 별도 테이블 추가는 필요 없다.
+
+
+## 기존/새 디자인 경로
+
+기존 과목 화면에서는 `/subjects/:subjectId/groups` → `/groups/:groupId`로 이동하며 Layout 헤더를 유지한다. 목록에서 돌아가기는 `/subjects/:subjectId`로 연결한다. 새 디자인에서는 기존 `/study/subjects/:subjectId/groups` → `/study/groups/:groupId` 경로와 AppShell을 유지한다. 같은 패널에 design 속성을 전달하여 입장·복귀 링크가 다른 레이아웃으로 넘어가지 않도록 한다.

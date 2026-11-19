@@ -24,7 +24,7 @@ export function SubjectCoursesPage() {
           수강 기록이 있는 교수님 강좌에만 들어갈 수 있습니다. 다른 교수님 강좌는 잠겨 있습니다.
         </p>
       </div>
-      {courses.data?.some(c => c.accessible) && <Link to={`/study/subjects/${subjectId}/groups`} className="rounded-xl border p-4 font-bold text-navy hover:bg-navy-tint">이 과목 스터디 찾기 →</Link>}
+      {courses.data?.some(c => c.accessible) && <Link to={`/subjects/${subjectId}/groups`} className="rounded-xl border p-4 font-bold text-navy hover:bg-navy-tint">이 과목 스터디 찾기 →</Link>}
       {courses.isPending ? (
         <Loading />
       ) : courses.data?.length === 0 ? (
