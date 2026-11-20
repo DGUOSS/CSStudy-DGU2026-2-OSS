@@ -153,34 +153,53 @@ def offerings_of(session: Session, course: Course) -> list[CatalogOffering]:
 Term = tuple[str, str]
 
 
-def votes(session: Session, course_id: int) -> dict[Term, tuple[int, int]]:
-    """학기별 (있었다, 없었다) 수. 한 학생은 한 표: 제보 버튼 응답이 있으면 그것, 없으면 후기 응답."""
-    by_user: dict[tuple[Term, int], bool] = {}
+Votes = dict[Term, tuple[int, int]]
+
+
+def votes_many(session: Session, course_ids: list[int]) -> dict[int, Votes]:
+    """강좌별·학기별 (있었다, 없었다) 수. 한 학생은 한 표: 제보 버튼 응답이 있으면 그것, 없으면 후기 응답.
+    강좌 여러 개를 조회 2번(후기 응답, 제보)으로 센다."""
+    if not course_ids:
+        return {}
+    by_user: dict[tuple[int, Term, int], bool] = {}
     for r in session.exec(
         select(CourseReview).where(
-            CourseReview.course_id == course_id,
+            CourseReview.course_id.in_(course_ids),  # type: ignore[attr-defined]
             CourseReview.is_deleted == False,  # noqa: E712
             CourseReview.team_project.is_not(None),  # type: ignore[union-attr]
         )
     ).all():
-        by_user[((r.year, r.sem_cd), r.user_id)] = bool(r.team_project)
+        by_user[(r.course_id, (r.year, r.sem_cd), r.user_id)] = bool(r.team_project)
     for p in session.exec(
-        select(TeamProjectReport).where(TeamProjectReport.course_id == course_id)
+        select(TeamProjectReport).where(TeamProjectReport.course_id.in_(course_ids))  # type: ignore[attr-defined]
     ).all():
-        by_user[((p.year, p.sem_cd), p.user_id)] = p.team_project
-    out: dict[Term, list[int]] = {}
-    for (term, _), v in by_user.items():
-        out.setdefault(term, [0, 0])[0 if v else 1] += 1
-    return {k: (v[0], v[1]) for k, v in out.items()}
+        by_user[(p.course_id, (p.year, p.sem_cd), p.user_id)] = p.team_project
+    out: dict[int, dict[Term, list[int]]] = {}
+    for (cid, term, _), v in by_user.items():
+        out.setdefault(cid, {}).setdefault(term, [0, 0])[0 if v else 1] += 1
+    return {cid: {t: (a, b) for t, (a, b) in d.items()} for cid, d in out.items()}
 
 
-def overrides(session: Session, course_id: int) -> dict[Term, TeamProjectOverride]:
-    return {
-        (o.year, o.sem_cd): o
-        for o in session.exec(
-            select(TeamProjectOverride).where(TeamProjectOverride.course_id == course_id)
-        ).all()
-    }
+def votes(session: Session, course_id: int) -> Votes:
+    return votes_many(session, [course_id]).get(course_id, {})
+
+
+Overrides = dict[Term, TeamProjectOverride]
+
+
+def overrides_many(session: Session, course_ids: list[int]) -> dict[int, Overrides]:
+    if not course_ids:
+        return {}
+    out: dict[int, Overrides] = {}
+    for o in session.exec(
+        select(TeamProjectOverride).where(TeamProjectOverride.course_id.in_(course_ids))  # type: ignore[attr-defined]
+    ).all():
+        out.setdefault(o.course_id, {})[(o.year, o.sem_cd)] = o
+    return out
+
+
+def overrides(session: Session, course_id: int) -> Overrides:
+    return overrides_many(session, [course_id]).get(course_id, {})
 
 
 def _label(
@@ -211,11 +230,16 @@ def _label(
 def _labels(
     session: Session, offerings: list[CatalogOffering], course_id: int | None
 ) -> list[TermLabel]:
+    v = votes(session, course_id) if course_id else {}
+    ov = overrides(session, course_id) if course_id else {}
+    return _labels_from(offerings, v, ov)
+
+
+def _labels_from(offerings: list[CatalogOffering], v: Votes, ov: Overrides) -> list[TermLabel]:
+    """학기별 라벨 계산(조회 없음). 단건 조회와 강좌 찾기 묶음 조회가 같은 계산을 쓴다."""
     by_term: dict[Term, list[CatalogOffering]] = {}
     for o in offerings:
         by_term.setdefault((o.year, o.sem_cd), []).append(o)
-    v = votes(session, course_id) if course_id else {}
-    ov = overrides(session, course_id) if course_id else {}
     out = []
     for term in sorted(set(by_term) | set(v) | set(ov), reverse=True):
         t = _label(term, by_term.get(term, []), v.get(term, (0, 0)), ov.get(term))
@@ -293,3 +317,49 @@ def group_history(
     o = group[0]
     rows = offerings_by(session, o.sbj_no, o.emp_no, o.emp_nm)
     return _history(_labels(session, rows, course_id), o.year)
+
+
+def catalog_labels(
+    session: Session, groups: list[tuple[list[CatalogOffering], int | None]]
+) -> list[tuple[TermLabel, TeamHistory]]:
+    """강좌 찾기 한 페이지의 (그 학기 라벨, 최근 3년)을 한꺼번에 계산한다.
+    그룹 수와 상관없이 조회 4번: 개설 목록(그 과목들, 3년치), 후기 응답, 제보, 운영진 지정.
+    결과는 그룹마다 offering_group_label·group_history를 부른 것과 같다."""
+    if not groups:
+        return []
+    ids = sorted({cid for _, cid in groups if cid})
+    v_all, ov_all = votes_many(session, ids), overrides_many(session, ids)
+    years = [int(g[0].year) for g, _ in groups]
+    lo, hi = str(min(years) - YEARS + 1), str(max(years))
+    codes = sorted({g[0].sbj_no for g, _ in groups})
+    by_no: dict[tuple[str, str], list[CatalogOffering]] = {}
+    by_nm: dict[tuple[str, str], list[CatalogOffering]] = {}
+    for o in session.exec(
+        select(CatalogOffering).where(
+            CatalogOffering.sbj_no.in_(codes),  # type: ignore[attr-defined]
+            CatalogOffering.year >= lo,
+            CatalogOffering.year <= hi,
+        )
+    ).all():
+        if o.emp_no:
+            by_no.setdefault((o.sbj_no, o.emp_no), []).append(o)
+        if o.emp_nm is not None:
+            by_nm.setdefault((o.sbj_no, o.emp_nm), []).append(o)
+    out = []
+    for group, cid in groups:
+        o = group[0]
+        term = (o.year, o.sem_cd)
+        v = v_all.get(cid, {}) if cid else {}
+        ov = ov_all.get(cid, {}) if cid else {}
+        # offerings_by와 같은 규칙: 교원번호가 있으면 교원번호로, 없으면 이름으로
+        if o.emp_no:
+            rows = by_no.get((o.sbj_no, o.emp_no), [])
+        else:
+            rows = by_nm.get((o.sbj_no, o.emp_nm), []) if o.emp_nm is not None else []
+        out.append(
+            (
+                _label(term, group, v.get(term, (0, 0)), ov.get(term)),
+                _history(_labels_from(rows, v, ov), o.year),
+            )
+        )
+    return out

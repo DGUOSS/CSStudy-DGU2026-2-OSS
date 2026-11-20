@@ -84,6 +84,13 @@ def find_course(
     """과목 안에서 교수(교원번호 우선, 없으면 이름)로 강좌를 찾는다."""
     q = select(Course, Professor).join(Professor, Professor.id == Course.professor_id)
     rows = session.exec(q.where(Course.subject_id == subject.id)).all()
+    return pick_course(list(rows), emp_no, emp_nm)
+
+
+def pick_course(
+    rows: list[tuple[Course, Professor]], emp_no: str | None, emp_nm: str | None
+) -> Course | None:
+    """한 과목의 (강좌, 교수) 목록에서 교수로 강좌를 고른다(조회 없음)."""
     if emp_no:
         for c, p in rows:
             if p.emp_no == emp_no:

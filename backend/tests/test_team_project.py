@@ -23,6 +23,7 @@ from app.models import (
     Enrollment,
     Professor,
     Subject,
+    TeamProjectOverride,
     TeamProjectReport,
     User,
 )
@@ -481,3 +482,137 @@ def test_site_codes_for_ndrims_bookmarklet(client, session, two_profs):
     assert r.headers["access-control-allow-origin"] == "https://ndrims.dongguk.edu"
     other = client.get("/api/v1/catalog/site-codes", headers={"Origin": "https://evil.example"})
     assert "access-control-allow-origin" not in other.headers
+
+
+# ---------- 강좌 찾기: 묶음 조회 ----------
+
+
+def _many_courses(session, n: int, code: str = "CSC3000", name: str = "자료구조"):
+    """한 과목에 교수 n명. 교수마다 3년 밖 학기까지 개설 목록, 일부는 응답·제보·운영진 지정,
+    일부는 교원번호 없이 이름만, 일부는 사이트 강좌 없음."""
+    subj = Subject(name=name, code=code)
+    session.add(subj)
+    session.flush()
+    tps = ["yes", "no", "not_mentioned", None]
+    for i in range(n):
+        emp_no = None if i % 5 == 3 else f"P{code}{i}"
+        prof = Professor(name=f"교수{i}", emp_no=emp_no)
+        session.add(prof)
+        session.flush()
+        course = None
+        if i % 4 != 2:  # 넷 중 하나는 사이트에 강좌가 없다
+            course = Course(subject_id=subj.id, professor_id=prof.id)
+            session.add(course)
+            session.flush()
+        for y in ("2026", "2025", "2024", "2023"):  # 2023은 3년 밖
+            session.add(
+                CatalogOffering(
+                    year=y,
+                    sem_cd=FALL,
+                    sbj_no=code,
+                    sbj_nm=name,
+                    dvcls=f"{i:02d}",
+                    emp_no=emp_no,
+                    emp_nm=prof.name,
+                    team_project=tps[(i + int(y)) % 4],
+                    team_evidence="팀 프로젝트 30%" if tps[(i + int(y)) % 4] == "yes" else None,
+                )
+            )
+        if course and i % 3 == 0:
+            _review(session, course, "2025", FALL, True, n=2)
+        if course and i % 3 == 1:
+            u = User(email=f"rep{code}{i}@dgu.ac.kr", name="r", password_hash="x")
+            session.add(u)
+            session.flush()
+            session.add(
+                TeamProjectReport(
+                    user_id=u.id, course_id=course.id, year="2026", sem_cd=FALL, team_project=False
+                )
+            )
+        if course and i % 7 == 0:
+            session.add(
+                TeamProjectOverride(
+                    course_id=course.id, year="2024", sem_cd=FALL, team_project=True, note="확인"
+                )
+            )
+    session.commit()
+
+
+def test_catalog_batch_matches_per_group(session, two_profs):
+    """묶음 계산 결과가 그룹마다 따로 계산한 것과 같다."""
+    from app.features.catalog.router import _courses_for
+    from app.features.enrollments.service import find_course, find_subject
+    from app.features.team_project.service import (
+        catalog_labels,
+        group_history,
+        offering_group_label,
+    )
+
+    _many_courses(session, 12)
+    session.add(Subject(name="이름만과목"))  # 학수번호 없는 옛 과목 → 이름으로 찾기
+    session.add(
+        CatalogOffering(
+            year="2026",
+            sem_cd=FALL,
+            sbj_no="ZZZ9999",
+            sbj_nm="이름만과목",
+            dvcls="01",
+            emp_nm="누구",
+        )
+    )
+    session.commit()
+    groups: dict[tuple, list[CatalogOffering]] = {}
+    for o in session.exec(select(CatalogOffering).where(CatalogOffering.year == "2026")).all():
+        groups.setdefault((o.sbj_no, o.emp_no or o.emp_nm), []).append(o)
+    gs = list(groups.values())
+    firsts = [g[0] for g in gs]
+    batch_courses = _courses_for(session, firsts)
+    for o, c in zip(firsts, batch_courses, strict=True):
+        sub = find_subject(session, o.sbj_no, o.sbj_nm)
+        assert c == (find_course(session, sub, o.emp_no, o.emp_nm) if sub else None)
+    batch = catalog_labels(
+        session, [(g, c.id if c else None) for g, c in zip(gs, batch_courses, strict=True)]
+    )
+    seen_sources = set()
+    for g, c, (lbl, hist) in zip(gs, batch_courses, batch, strict=True):
+        cid = c.id if c else None
+        assert lbl == offering_group_label(session, g, cid)
+        assert hist == group_history(session, g, cid)
+        seen_sources |= {t.source for t in hist.terms}
+    assert {
+        "admin",
+        "students",
+        "syllabus",
+    } <= seen_sources  # 세 경우가 모두 들어간 데이터로 비교했다
+
+
+def test_catalog_search_query_count_is_constant(client, login, session, two_profs):
+    """강좌 찾기 한 번의 조회 수가 결과 그룹 수와 상관없다."""
+    from sqlalchemy import event
+
+    _many_courses(session, 2, code="CSC3000", name="자료구조")
+    _many_courses(session, 30, code="CSC4000", name="운영체제")
+    login("s@dgu.ac.kr", "학생")
+    engine = session.get_bind()
+    count = {"n": 0}
+
+    def on_exec(*_):
+        count["n"] += 1
+
+    def run(q):
+        count["n"] = 0
+        event.listen(engine, "before_cursor_execute", on_exec)
+        try:
+            r = client.get(
+                "/api/v1/catalog/search", params={"year": "2026", "sem_cd": FALL, "q": q}
+            )
+        finally:
+            event.remove(engine, "before_cursor_execute", on_exec)
+        assert r.status_code == 200
+        return len(r.json()["items"]), count["n"]
+
+    few_items, few = run("CSC3000")
+    many_items, many = run("CSC4000")
+    assert (few_items, many_items) == (2, 30)
+    assert few == many, (few, many)
+    assert many <= 12, many

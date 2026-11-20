@@ -18,12 +18,13 @@ from app.features.enrollments.service import (
     find_course,
     find_subject,
     norm_code,
+    pick_course,
     relink_unlinked,
     sem_label,
     term_label,
 )
 from app.features.team_project.schemas import TeamHistoryOut, TeamLabelOut, history_out, label_out
-from app.features.team_project.service import group_history, offering_group_label
+from app.features.team_project.service import catalog_labels
 from app.models import CatalogOffering, Course, CourseRequest, Enrollment, Professor, Subject
 
 router = APIRouter(tags=["catalog"])
@@ -279,12 +280,15 @@ def search(
     page = keys[offset : offset + limit]
     pending = session.exec(select(CourseRequest).where(CourseRequest.status == "pending")).all()
     my_recs = session.exec(select(Enrollment).where(Enrollment.user_id == user.id)).all()
+    # 한 페이지의 강좌·팀플 라벨은 묶어서 조회한다(그룹 수와 상관없이 조회 수 일정)
+    courses = _courses_for(session, [groups[k][0] for k in page])
+    team = catalog_labels(
+        session, [(groups[k], c.id if c else None) for k, c in zip(page, courses, strict=True)]
+    )
     items = []
-    for k in page:
+    for k, course, (term_lbl, history) in zip(page, courses, team, strict=True):
         g = groups[k]
         o = g[0]
-        subject = find_subject(session, o.sbj_no, o.sbj_nm)
-        course = find_course(session, subject, o.emp_no, o.emp_nm) if subject else None
         same = [
             r
             for r in pending
@@ -325,13 +329,45 @@ def search(
                 request_count=len(same),
                 requested_by_me=any(r.requester_id == user.id for r in same),
                 mine=bool(mine),
-                team_project=label_out(
-                    offering_group_label(session, g, course.id if course else None)
-                ),
-                team_history=history_out(group_history(session, g, course.id if course else None)),
+                team_project=label_out(term_lbl),
+                team_history=history_out(history),
             )
         )
     return SearchOut(total=len(keys), items=items)
+
+
+def _courses_for(session, firsts: list[CatalogOffering]) -> list[Course | None]:
+    """개설 목록 줄마다 사이트 강좌를 찾는다. find_subject·find_course와 같은 규칙을 조회 3번 이내로.
+    - 과목: 학수번호로, 없으면 학수번호가 없는 옛 과목을 이름으로
+    - 강좌: 그 과목 안에서 교수(교원번호 우선, 없으면 이름)"""
+    codes = {norm_code(o.sbj_no) for o in firsts} - {""}
+    by_code: dict[str, Subject] = {}
+    if codes:
+        for sub in session.exec(select(Subject).where(Subject.code.in_(codes))).all():  # type: ignore[union-attr]
+            by_code.setdefault(sub.code, sub)
+    need_name = {
+        o.sbj_nm.strip() for o in firsts if o.sbj_nm and norm_code(o.sbj_no) not in by_code
+    }
+    by_name: dict[str, Subject] = {}
+    if need_name:
+        for sub in session.exec(
+            select(Subject).where(Subject.name.in_(need_name), Subject.code.is_(None))  # type: ignore[attr-defined,union-attr]
+        ).all():
+            by_name.setdefault(sub.name, sub)
+    subjects = [
+        by_code.get(norm_code(o.sbj_no)) or (by_name.get(o.sbj_nm.strip()) if o.sbj_nm else None)
+        for o in firsts
+    ]
+    sub_ids = {s.id for s in subjects if s}
+    rows: dict[int, list[tuple[Course, Professor]]] = {}
+    if sub_ids:
+        q = select(Course, Professor).join(Professor, Professor.id == Course.professor_id)
+        for c, p in session.exec(q.where(Course.subject_id.in_(sub_ids))).all():  # type: ignore[attr-defined]
+            rows.setdefault(c.subject_id, []).append((c, p))
+    return [
+        pick_course(rows.get(sub.id, []), o.emp_no, o.emp_nm) if sub else None
+        for o, sub in zip(firsts, subjects, strict=True)
+    ]
 
 
 class RequestCreatedOut(BaseModel):
