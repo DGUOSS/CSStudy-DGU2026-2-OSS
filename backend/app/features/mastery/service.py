@@ -20,21 +20,33 @@ def concept_states(
 ) -> dict[int, ConceptState]:
     """개념별로 이 사용자의 숙련도를 계산한다. 파라미터 학습에는 모든 사용자의 기록을 쓴다.
 
+    같은 문제를 다시 푼 기록은 빼고 처음 푼 결과만 쓴다(정답을 외워 다시 맞혀도 오르지 않게).
+
     before를 주면 이 사용자의 그 시각 이후 풀이는 빼고 계산한다(예: 시험 보기 전 숙련도).
     """
     if not concept_ids:
         return {}
     rows = session.exec(
-        select(ProblemConcept.concept_id, Attempt.user_id, Attempt.correct, Attempt.created_at)
+        select(
+            ProblemConcept.concept_id,
+            Attempt.user_id,
+            Attempt.problem_id,
+            Attempt.correct,
+            Attempt.created_at,
+        )
         .join(Attempt, Attempt.problem_id == ProblemConcept.problem_id)
         .where(ProblemConcept.concept_id.in_(concept_ids))
         .order_by(Attempt.id)
     ).all()
     seqs: dict[int, dict[str, list[bool]]] = defaultdict(lambda: defaultdict(list))
     cut = before.replace(tzinfo=None) if before else None
-    for concept_id, uid, correct, at in rows:
+    seen: set[tuple[int, int, int]] = set()
+    for concept_id, uid, problem_id, correct, at in rows:
         if cut and uid == user_id and at is not None and at.replace(tzinfo=None) >= cut:
             continue
+        if (concept_id, uid, problem_id) in seen:
+            continue
+        seen.add((concept_id, uid, problem_id))
         seqs[concept_id][str(uid)].append(correct)
 
     out = {}
