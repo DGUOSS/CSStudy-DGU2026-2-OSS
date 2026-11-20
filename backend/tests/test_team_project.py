@@ -471,3 +471,13 @@ def test_course_endpoints_include_history(client, login, session, two_profs):
     assert c["team_history"]["summary"] == "mixed" and len(c["team_history"]["terms"]) == 2
     t = client.get(f"/api/v1/courses/{kang.id}/team-project").json()
     assert t["history"]["to_year"] == "2026"
+
+
+def test_site_codes_for_ndrims_bookmarklet(client, session, two_profs):
+    session.add(Subject(name="코드 없음"))
+    session.commit()
+    r = client.get("/api/v1/catalog/site-codes", headers={"Origin": "https://ndrims.dongguk.edu"})
+    assert r.status_code == 200 and r.json() == {"codes": ["CSC2001"]}
+    assert r.headers["access-control-allow-origin"] == "https://ndrims.dongguk.edu"
+    other = client.get("/api/v1/catalog/site-codes", headers={"Origin": "https://evil.example"})
+    assert "access-control-allow-origin" not in other.headers

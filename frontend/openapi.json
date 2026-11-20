@@ -2035,6 +2035,28 @@
         }
       }
     },
+    "/api/v1/catalog/site-codes": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Site Codes",
+        "description": "사이트에 있는 과목의 학수번호. 엔드림스 창에서만 읽을 수 있게 그 주소만 허용한다.",
+        "operationId": "site_codes_api_v1_catalog_site_codes_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteCodesOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/catalog/terms": {
       "get": {
         "tags": [
@@ -9256,6 +9278,22 @@
           "password"
         ],
         "title": "SignupIn"
+      },
+      "SiteCodesOut": {
+        "properties": {
+          "codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Codes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "codes"
+        ],
+        "title": "SiteCodesOut"
       },
       "SourceOut": {
         "properties": {

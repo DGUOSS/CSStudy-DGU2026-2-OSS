@@ -42,7 +42,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean, C
     alert('엔드림스(ndrims.dongguk.edu) 창에서 눌러 주세요.')
     return
   }
-  const VER = 12
+  const VER = 13
   // 예전 버전 상자가 남아 있으면 치우고 새로 시작한다(새로고침 없이 새 버튼이 동작하도록)
   if (w.__dguStudy && w.__dguStudy.v !== VER) {
     w.__dguStudy.box?.remove()
@@ -59,7 +59,21 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean, C
   const look: Record<string, Row> = {} // 내 수업 교수 찾기용 조회 결과(보내지 않음)
   const syl: Record<string, { year: string; sem_cd: string; sbj_no: string; dvcls: string; text: string }> = {}
   const code = (v: unknown) => String(v ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '')
-  const SITE_CODES = new Set(CODES.map(code))
+  let siteCodes: Set<string> | null = null
+  // 사이트 과목코드: 누를 때마다 사이트에서 새로 받는다(과목이 늘어도 즐겨찾기를 다시 놓지 않게). 안 되면 만들 때 넣은 목록
+  async function getSiteCodes(): Promise<Set<string>> {
+    if (siteCodes) return siteCodes
+    try {
+      const r = await F(SITE + '/api/v1/catalog/site-codes')
+      const j = (await r.json()) as { codes?: string[] }
+      if (r.ok && Array.isArray(j.codes)) siteCodes = new Set(j.codes.map(code))
+    } catch {
+      /* 아래 목록으로 */
+    }
+    log.push(`사이트 과목코드 ${siteCodes ? '사이트에서 받음' : '즐겨찾기에 넣은 목록'}`)
+    siteCodes ??= new Set(CODES.map(code))
+    return siteCodes
+  }
   const SEMS: [string, string][] = [['CM160.10', '1학기'], ['CM160.11', '여름학기'], ['CM160.20', '2학기'], ['CM160.21', '겨울학기']]
   let pick: [string, string] | null = null // 관리자가 고른 학기(없으면 이번 학기)
   const str = (v: unknown, n = 200) => (v == null ? null : String(v).slice(0, n))
@@ -218,9 +232,9 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean, C
           SEMS.map(([c, l]) => '<option value="' + c + '">' + l + '</option>').join('') +
           '</select></div>' +
           '<button data-c style="width:100%;margin-top:6px;padding:6px;border:1px solid #c8102e;border-radius:8px;background:#fff;color:#c8102e;cursor:pointer">관리자: 이 학기 개설 목록 전체 가져오기</button>' +
-          '<button data-p style="width:100%;margin-top:6px;padding:6px;border:1px solid #c8102e;border-radius:8px;background:#fff;color:#c8102e;cursor:pointer">관리자: 이 학기 강의계획서 가져오기 (사이트 과목 ' +
-          SITE_CODES.size +
-          '개)</button>' +
+          '<button data-p style="width:100%;margin-top:6px;padding:6px;border:1px solid #c8102e;border-radius:8px;background:#fff;color:#c8102e;cursor:pointer">관리자: 이 학기 강의계획서 가져오기</button>' +
+          '<button data-a style="width:100%;margin-top:6px;padding:6px;border:0;border-radius:8px;background:#c8102e;color:#fff;cursor:pointer">관리자: 최근 3년 강의계획서 한 번에 가져오기</button>' +
+          '<div style="font-size:11px;color:#666;margin-top:4px">계획서는 사이트에 있는 과목만 가져와 팀플 여부를 판정합니다.</div>' +
           '<button data-r style="width:100%;margin-top:6px;padding:4px;border:0;background:none;color:#666;font-size:12px;cursor:pointer;text-decoration:underline">내 수강 기록도 가져오기</button>'
         : '') +
       '<div style="display:flex;gap:6px;margin-top:8px"><button data-s style="flex:1;padding:6px;border:0;border-radius:8px;background:#c8102e;color:#fff;cursor:pointer">동국스터디로 보내기</button>' +
@@ -238,7 +252,9 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean, C
     const c = box.querySelector('[data-c]') as HTMLElement | null
     if (c) c.onclick = () => fullCatalog().catch(fail)
     const pl = box.querySelector('[data-p]') as HTMLElement | null
-    if (pl) pl.onclick = () => syllabi().catch(fail)
+    if (pl) pl.onclick = () => syllabi([pick || term()]).catch(fail)
+    const all = box.querySelector('[data-a]') as HTMLElement | null
+    if (all) all.onclick = () => syllabi(recentTerms()).catch(fail)
     const r = box.querySelector('[data-r]') as HTMLElement | null
     if (r) r.onclick = () => run(true)
   }
@@ -398,8 +414,16 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean, C
   }
 
   // 관리자: 고른 학기 종합강의시간표 전체(대학·학과 조건 없이). 시간표 행(원본)을 돌려준다
-  async function termRows(): Promise<{ rows: Json[]; lesnNana: string; ids: Record<string, string> }> {
-    const t = pick || term()
+  // 최근 3개 연도(올해 포함)의 1·2학기, 최근부터
+  function recentTerms(): [string, string][] {
+    const y = Number(term()[0])
+    return [0, 1, 2].flatMap((i) => [[String(y - i), 'CM160.20'], [String(y - i), 'CM160.10']] as [string, string][])
+  }
+  // 고른 학기 종합강의시간표 전체(대학·학과 조건 없이). all이면 개설 목록에 모두 넣고, 아니면 원본만 돌려준다
+  async function termRows(
+    t: [string, string] = pick || term(),
+    all = true,
+  ): Promise<{ rows: Json[]; lesnNana: string; ids: Record<string, string> }> {
     msg(termLabel(t) + ' 개설 목록을 가져오는 중… (몇 초 걸립니다)')
     const { ids, pgmNana } = await session()
     const lesnNana = await pgmNana('EdcLesn010')
@@ -410,7 +434,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean, C
       '@d1#OPEN_ORGN_CLSF_CD': 'CM015.110',
       '@d1#OPEN_YY': t[0],
       '@d1#OPEN_SEM_CD': t[1],
-    })
+    }, true, !all)
     render()
     return { rows: ((j as { dsMain?: Json[] }).dsMain || []) as Json[], lesnNana, ids }
   }
@@ -423,48 +447,56 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean, C
     send(true)
   }
 
-  // 관리자: 고른 학기에서 사이트에 있는 과목의 강의계획서. 시간표의 "강의계획서" 버튼이 여는 팝업과 같은 요청
-  async function syllabi() {
-    if (!SITE_CODES.size) {
+  // 관리자: 고른 학기들에서 사이트에 있는 과목의 강의계획서. 시간표의 "강의계획서" 버튼이 여는 팝업과 같은 요청.
+  // 개설 목록에는 그 과목 행만 넣는다(계획서 판정이 붙을 자리). 학기 전체 목록은 [개설 목록 전체 가져오기]로
+  async function syllabi(terms: [string, string][]) {
+    const codes = await getSiteCodes()
+    if (!codes.size) {
       msg('사이트에 과목코드가 있는 과목이 없습니다.')
       return
     }
-    const { rows, lesnNana, ids } = await termRows()
-    const targets: Record<string, Json> = {}
-    for (const x of rows) {
-      if (!SITE_CODES.has(code(x.SBJ_NO))) continue
-      const k = [x.OPEN_YY, x.OPEN_SEM_CD, x.SBJ_NO, x.DVCLS].join('|')
-      if (!targets[k] || x.MAIN_PROF_YN === 'Y') targets[k] = x
-    }
-    const list = Object.entries(targets)
+    let total = 0
     let empty = 0
-    for (let i = 0; i < list.length; i++) {
-      const [k, x] = list[i]
-      msg(`강의계획서 ${i + 1}/${list.length} 가져오는 중…`)
-      const q: Record<string, string> = {
-        OPEN_ORGN_CLSF_CD: String(x.OPEN_ORGN_CLSF_CD || 'CM015.110'),
-        OPEN_YY: String(x.OPEN_YY),
-        OPEN_SEM_CD: String(x.OPEN_SEM_CD),
-        EMP_NO: String(x.EMP_NO ?? ''),
-        PLAN_LANG_CD: 'CM310.ko',
-        DVCLS: String(x.DVCLS ?? ''),
-        SBJ_NO: String(x.SBJ_NO),
-        OPEN_DPTMJR_CD: String(x.OPEN_DPTMJR_CD ?? ''),
+    for (const t of terms) {
+      const { rows, lesnNana, ids } = await termRows(t, false)
+      const targets: Record<string, Json> = {}
+      for (const x of rows) {
+        if (!codes.has(code(x.SBJ_NO))) continue
+        const k = [x.OPEN_YY, x.OPEN_SEM_CD, x.SBJ_NO, x.DVCLS].join('|')
+        if (!targets[k] || x.MAIN_PROF_YN === 'Y') targets[k] = x
       }
-      const j = await post('/ed/edc/plan/popup/EdcPlan010P20/doList.do', {
-        _runningNana: lesnNana,
-        ...ids,
-        ...Object.fromEntries(Object.entries(q).map(([a, b]) => ['@d1#' + a, b])),
-      })
-      const text = planText(j)
-      if (text) syl[k] = { year: q.OPEN_YY, sem_cd: q.OPEN_SEM_CD, sbj_no: q.SBJ_NO, dvcls: q.DVCLS, text }
-      else empty++
-      await new Promise((r) => setTimeout(r, 200)) // 학교 서버에 몰아서 보내지 않는다
+      lesnInto(cat, Object.values(targets))
+      const list = Object.entries(targets)
+      total += list.length
+      for (let i = 0; i < list.length; i++) {
+        const [k, x] = list[i]
+        msg(`${termLabel(t)} 강의계획서 ${i + 1}/${list.length} 가져오는 중…`)
+        const q: Record<string, string> = {
+          OPEN_ORGN_CLSF_CD: String(x.OPEN_ORGN_CLSF_CD || 'CM015.110'),
+          OPEN_YY: String(x.OPEN_YY),
+          OPEN_SEM_CD: String(x.OPEN_SEM_CD),
+          EMP_NO: String(x.EMP_NO ?? ''),
+          PLAN_LANG_CD: 'CM310.ko',
+          DVCLS: String(x.DVCLS ?? ''),
+          SBJ_NO: String(x.SBJ_NO),
+          OPEN_DPTMJR_CD: String(x.OPEN_DPTMJR_CD ?? ''),
+        }
+        const j = await post('/ed/edc/plan/popup/EdcPlan010P20/doList.do', {
+          _runningNana: lesnNana,
+          ...ids,
+          ...Object.fromEntries(Object.entries(q).map(([a, b]) => ['@d1#' + a, b])),
+        })
+        const text = planText(j)
+        if (text) syl[k] = { year: q.OPEN_YY, sem_cd: q.OPEN_SEM_CD, sbj_no: q.SBJ_NO, dvcls: q.DVCLS, text }
+        else empty++
+        await new Promise((r) => setTimeout(r, 200)) // 학교 서버에 몰아서 보내지 않는다
+      }
+      render()
     }
-    log.push(`계획서 대상 ${list.length}, 받음 ${list.length - empty}, 비어 있음 ${empty}`)
+    log.push(`계획서 대상 ${total}, 받음 ${total - empty}, 비어 있음 ${empty} (${terms.length}개 학기)`)
     render()
-    if (!list.length) {
-      msg('이 학기에 열린 사이트 과목이 없습니다.')
+    if (!total) {
+      msg(terms.length > 1 ? '최근 3년에 열린 사이트 과목이 없습니다.' : '이 학기에 열린 사이트 과목이 없습니다.')
       return
     }
     send(true)

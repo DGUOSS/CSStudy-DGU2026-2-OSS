@@ -6,7 +6,7 @@
 from collections import defaultdict
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlmodel import func, select
 
@@ -24,7 +24,7 @@ from app.features.enrollments.service import (
 )
 from app.features.team_project.schemas import TeamHistoryOut, TeamLabelOut, history_out, label_out
 from app.features.team_project.service import group_history, offering_group_label
-from app.models import CatalogOffering, Course, CourseRequest, Enrollment, Professor
+from app.models import CatalogOffering, Course, CourseRequest, Enrollment, Professor, Subject
 
 router = APIRouter(tags=["catalog"])
 
@@ -184,6 +184,26 @@ def _link_professors(session, rows: list[OfferingIn]) -> int:
                 n += 1
                 break
     return n
+
+
+# 엔드림스 창의 관리자 즐겨찾기가 계획서를 받을 과목을 고를 때 부른다(그 창에서 다른 사이트로 보내는 요청).
+# 로그인 쿠키가 따라가지 않으므로 공개로 두고, 사이트 과목의 학수번호만 돌려준다.
+NDRIMS_ORIGINS = {"https://ndrims.dongguk.edu"}
+
+
+class SiteCodesOut(BaseModel):
+    codes: list[str]
+
+
+@router.get("/catalog/site-codes")
+def site_codes(request: Request, response: Response, session: SessionDep) -> SiteCodesOut:
+    """사이트에 있는 과목의 학수번호. 엔드림스 창에서만 읽을 수 있게 그 주소만 허용한다."""
+    origin = request.headers.get("origin")
+    if origin in NDRIMS_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Vary"] = "Origin"
+    codes = session.exec(select(Subject.code).where(Subject.code.is_not(None))).all()  # type: ignore[union-attr]
+    return SiteCodesOut(codes=sorted({c for c in codes if c}))
 
 
 @router.get("/catalog/terms")

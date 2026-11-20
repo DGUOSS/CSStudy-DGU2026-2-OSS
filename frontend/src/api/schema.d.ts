@@ -548,6 +548,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/site-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Site Codes
+         * @description 사이트에 있는 과목의 학수번호. 엔드림스 창에서만 읽을 수 있게 그 주소만 허용한다.
+         */
+        get: operations["site_codes_api_v1_catalog_site_codes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/terms": {
         parameters: {
             query?: never;
@@ -2714,6 +2734,11 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** SiteCodesOut */
+        SiteCodesOut: {
+            /** Codes */
+            codes: string[];
+        };
         /** SourceOut */
         SourceOut: {
             /** Material Id */
@@ -4275,6 +4300,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    site_codes_api_v1_catalog_site_codes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteCodesOut"];
                 };
             };
         };
