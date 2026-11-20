@@ -69,3 +69,23 @@ def test_pybkt_fit_returns_sane_params():
     params = bkt.fit_params(seqs)
     assert 0.01 <= params.learn <= 0.5
     assert 0.05 <= params.guess <= 0.4
+
+
+def test_bkt_default_rises_gradually():
+    """정답 몇 개로 바로 '다 안다'가 되지 않는다(예전엔 3개 연속 정답이면 96%)."""
+    rises = [bkt.trace([True] * n) for n in range(1, 7)]
+    assert rises[0] < 0.3 and rises[2] < 0.75 and rises[5] > 0.95
+    assert bkt.trace([True, True, False, True, True]) < 0.7  # 중간 오답이 반영된다
+
+
+def test_resolving_same_problem_does_not_raise_mastery(client, login, course_with_problems, enroll):
+    login()
+    enroll(course_with_problems["course"].subject_id)
+    p_a = course_with_problems["problems"][0]
+    cid = course_with_problems["course"].id
+    first = client.post(f"/api/v1/problems/{p_a.id}/attempts", json={"chosen_index": 1}).json()
+    again = client.post(f"/api/v1/problems/{p_a.id}/attempts", json={"chosen_index": 1}).json()
+    assert again["mastery"][0]["after"] == first["mastery"][0]["after"]
+    [chapter] = client.get(f"/api/v1/courses/{cid}/mastery").json()
+    a = next(c for c in chapter["concepts"] if c["name"] == "A")
+    assert a["attempts"] == 1
