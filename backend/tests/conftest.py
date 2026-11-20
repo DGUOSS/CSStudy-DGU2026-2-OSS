@@ -16,6 +16,9 @@ def _no_real_llm(monkeypatch):
     from app.core.config import settings
 
     monkeypatch.setattr(settings, "anthropic_api_key", "")
+    # 학교 계정 로그인도 기본은 끔(.env에 있어도). 필요한 테스트가 직접 켠다
+    monkeypatch.setattr(settings, "google_client_id", "")
+    monkeypatch.setattr(settings, "admin_emails", "")
     from app.features.problems.generation import reset_guards
 
     reset_guards()  # 자동 생성 비용 상한 기록이 테스트끼리 섞이지 않게
