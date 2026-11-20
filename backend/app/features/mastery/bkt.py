@@ -14,10 +14,12 @@ REFIT_EVERY = 40  # 기록이 이만큼 늘 때마다 다시 학습
 
 @dataclass(frozen=True)
 class BktParams:
-    prior: float = 0.2
-    learn: float = 0.15
-    guess: float = 0.25  # 4지선다
-    slip: float = 0.1
+    # 기록이 적을 때 쓰는 기본값. 정답 하나를 "안다"의 증거로 너무 크게 치지 않게 보수적으로 잡는다.
+    # 연속 정답 1~6개 → 약 24·46·69·85·94·98%. (예전 값은 3개만 맞혀도 96%였다)
+    prior: float = 0.1
+    learn: float = 0.03
+    guess: float = 0.35  # 4지선다 + 보기 소거로 찍어 맞히는 경우
+    slip: float = 0.12
 
 
 DEFAULT_PARAMS = BktParams()

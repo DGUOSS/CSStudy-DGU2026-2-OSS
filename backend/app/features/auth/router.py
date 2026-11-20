@@ -1,7 +1,9 @@
+import jwt
 from fastapi import APIRouter, HTTPException, Response, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlmodel import select
 
+from app.core.config import settings
 from app.core.db import SessionDep
 from app.core.security import (
     CurrentUser,
@@ -10,6 +12,7 @@ from app.core.security import (
     set_login_cookie,
     verify_password,
 )
+from app.features.auth import google
 from app.models import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -36,6 +39,10 @@ class UserOut(BaseModel):
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 def signup(body: SignupIn, session: SessionDep, response: Response) -> UserOut:
+    if settings.google_client_id:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "동국대 계정으로 로그인하면 자동으로 가입됩니다"
+        )
     email = body.email.lower()
     if session.exec(select(User).where(User.email == email)).first():
         raise HTTPException(status.HTTP_409_CONFLICT, "이미 가입된 이메일입니다")
@@ -50,6 +57,11 @@ def signup(body: SignupIn, session: SessionDep, response: Response) -> UserOut:
 @router.post("/login")
 def login(body: LoginIn, session: SessionDep, response: Response) -> UserOut:
     user = session.exec(select(User).where(User.email == body.email.strip().lower())).first()
+    if user is not None and not user.password_hash:
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            "동국대 계정으로 가입한 계정입니다. 동국대 계정으로 로그인하세요",
+        )
     if user is None or not verify_password(body.password, user.password_hash):
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED, "아이디(이메일) 또는 비밀번호가 틀렸습니다"
@@ -65,4 +77,49 @@ def logout(response: Response) -> None:
 
 @router.get("/me")
 def me(user: CurrentUser) -> UserOut:
+    return UserOut.model_validate(user, from_attributes=True)
+
+
+class GoogleConfigOut(BaseModel):
+    client_id: str  # 비어 있으면 동국대 계정 로그인이 꺼져 있다
+    domain: str
+
+
+@router.get("/google/config")
+def google_config() -> GoogleConfigOut:
+    return GoogleConfigOut(client_id=settings.google_client_id, domain=settings.school_email_domain)
+
+
+class GoogleLoginIn(BaseModel):
+    credential: str = Field(min_length=1, max_length=4096)
+
+
+@router.post("/google")
+def google_login(body: GoogleLoginIn, session: SessionDep, response: Response) -> UserOut:
+    """동국대 계정 로그인. 처음이면 가입되고, 같은 이메일로 가입한 계정이 있으면 그 계정으로 들어간다."""
+    if not settings.google_client_id:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, "동국대 계정 로그인이 꺼져 있습니다"
+        )
+    try:
+        email, name = google.school_identity(google.verify_credential(body.credential))
+    except jwt.PyJWTError:
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED, "로그인 확인에 실패했습니다. 다시 시도하세요"
+        ) from None
+    except google.NotSchoolAccount:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            f"동국대 계정(@{settings.school_email_domain})만 로그인할 수 있습니다",
+        ) from None
+    user = session.exec(select(User).where(User.email == email)).first()
+    if user is None:
+        user = User(email=email, name=name, password_hash="")  # 비밀번호 없음: 비밀번호 로그인 불가
+    admins = {e.strip().lower() for e in settings.admin_emails.split(",") if e.strip()}
+    if email in admins:
+        user.role = "admin"
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    set_login_cookie(response, user.id)
     return UserOut.model_validate(user, from_attributes=True)
