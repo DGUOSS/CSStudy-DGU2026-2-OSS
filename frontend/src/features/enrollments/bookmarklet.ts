@@ -64,7 +64,8 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean, C
   async function getSiteCodes(): Promise<Set<string>> {
     if (siteCodes) return siteCodes
     try {
-      const r = await F(SITE + '/api/v1/catalog/site-codes')
+      // 5초 안에 답이 없으면(네트워크·브라우저 권한 대기 등) 즐겨찾기에 넣은 목록으로 간다
+      const r = await F(SITE + '/api/v1/catalog/site-codes', { signal: AbortSignal.timeout(5000) })
       const j = (await r.json()) as { codes?: string[] }
       if (r.ok && Array.isArray(j.codes)) siteCodes = new Set(j.codes.map(code))
     } catch {
@@ -450,6 +451,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean, C
   // 관리자: 고른 학기들에서 사이트에 있는 과목의 강의계획서. 시간표의 "강의계획서" 버튼이 여는 팝업과 같은 요청.
   // 개설 목록에는 그 과목 행만 넣는다(계획서 판정이 붙을 자리). 학기 전체 목록은 [개설 목록 전체 가져오기]로
   async function syllabi(terms: [string, string][]) {
+    msg('사이트 과목 목록을 받는 중…')
     const codes = await getSiteCodes()
     if (!codes.size) {
       msg('사이트에 과목코드가 있는 과목이 없습니다.')

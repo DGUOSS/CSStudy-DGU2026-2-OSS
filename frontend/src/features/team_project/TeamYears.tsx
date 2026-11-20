@@ -36,7 +36,7 @@ export function TeamYears({ history, className }: { history: History | null | un
   return (
     <div className={cn('flex flex-wrap items-center gap-1.5 text-xs', className)}>
       <span
-        className={cn('inline-flex items-center gap-1 rounded-md border px-2 py-0.5 font-medium', TONE[history.summary])}
+        className={cn('inline-flex items-center gap-1 whitespace-nowrap rounded-md border px-2 py-0.5 font-medium', TONE[history.summary])}
         title={`${range}년, 이 교수 수업 기준`}
       >
         <Users aria-hidden="true" className="size-3" />
@@ -47,7 +47,7 @@ export function TeamYears({ history, className }: { history: History | null | un
           <li
             key={`${t.year}-${t.sem_cd}`}
             title={teamSourceText(t)}
-            className={cn('rounded border px-1.5 py-0.5', TONE[t.label])}
+            className={cn('whitespace-nowrap rounded border px-1.5 py-0.5', TONE[t.label])}
           >
             {shortTerm(t)} {TERM_TEXT[t.label] ?? t.label}
             {t.differs_from_syllabus && <span className="opacity-80"> (계획서와 다름)</span>}

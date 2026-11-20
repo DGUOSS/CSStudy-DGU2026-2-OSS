@@ -21,7 +21,7 @@ export function TeamHistory({ courseId }: { courseId: number }) {
   const q = useTeamProject(courseId)
   const { user } = useAuth()
   return (
-    <Card className="gap-3 p-5">
+    <Card className="flex flex-col gap-3 p-5">
       <h2 className="font-semibold">팀 프로젝트</h2>
       <ErrorText error={q.error} />
       {q.data && q.data.terms.length === 0 && (
@@ -29,7 +29,7 @@ export function TeamHistory({ courseId }: { courseId: number }) {
           아직 정보가 없습니다. 강의계획서를 가져오거나 수강생이 응답하면 표시됩니다.
         </p>
       )}
-      <ul className="flex flex-col gap-2">
+      <ul className="flex flex-col gap-3 sm:gap-2">
         {q.data?.terms.map((t) => (
           <li key={`${t.year}-${t.sem_cd}`} className="flex flex-col gap-1 text-sm sm:flex-row sm:items-start sm:gap-3">
             <span className="w-28 shrink-0 font-medium">{t.term}</span>
@@ -38,7 +38,7 @@ export function TeamHistory({ courseId }: { courseId: number }) {
             ) : (
               <TeamBadge label={t} className="self-start" />
             )}
-            <span className="min-w-0 break-words text-muted-foreground">{teamSourceText(t)}</span>
+            <span className="min-w-0 break-words text-muted-foreground">{teamSourceText(t, false)}</span>
           </li>
         ))}
       </ul>
