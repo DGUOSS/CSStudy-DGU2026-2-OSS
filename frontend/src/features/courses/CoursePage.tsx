@@ -9,7 +9,7 @@ import { MaterialsTab } from '@/features/materials/MaterialsTab'
 import { PapersTab } from '@/features/papers/PapersTab'
 import { ChaptersTab } from '@/features/problems/ChaptersTab'
 import { ReviewsTab } from '@/features/reviews/ReviewsTab'
-import { TeamBadge } from '@/features/team_project/TeamBadge'
+import { TeamYears } from '@/features/team_project/TeamYears'
 import { TeamHistory } from '@/features/team_project/TeamHistory'
 import { TeamReportPrompt } from '@/features/team_project/TeamReport'
 import { CourseInfoTab } from './CourseInfoTab'
@@ -60,7 +60,7 @@ export function CoursePage() {
           {c.subject_name} <span className="text-muted-foreground">·</span> {c.professor_name}{' '}
           교수님
         </h1>
-        <TeamBadge label={c.team_project} showTerm className="mt-2" />
+        <TeamYears history={c.team_history} className="mt-2" />
       </div>
       <TeamReportPrompt courseId={courseId} />
       <nav className="flex gap-1 overflow-x-auto border-b">

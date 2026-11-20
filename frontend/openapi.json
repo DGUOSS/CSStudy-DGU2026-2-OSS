@@ -6096,6 +6096,16 @@
                 "type": "null"
               }
             ]
+          },
+          "team_history": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TeamHistoryOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -6294,13 +6304,17 @@
             },
             "type": "array",
             "title": "My Terms"
+          },
+          "history": {
+            "$ref": "#/components/schemas/TeamHistoryOut"
           }
         },
         "type": "object",
         "required": [
           "latest",
           "terms",
-          "my_terms"
+          "my_terms",
+          "history"
         ],
         "title": "CourseTeamOut"
       },
@@ -7701,6 +7715,9 @@
           },
           "team_project": {
             "$ref": "#/components/schemas/TeamLabelOut"
+          },
+          "team_history": {
+            "$ref": "#/components/schemas/TeamHistoryOut"
           }
         },
         "type": "object",
@@ -7724,7 +7741,8 @@
           "request_count",
           "requested_by_me",
           "mine",
-          "team_project"
+          "team_project",
+          "team_history"
         ],
         "title": "OfferingGroupOut",
         "description": "같은 과목·교수의 분반을 한 줄로 묶은 결과. 사이트의 강좌 하나에 해당한다."
@@ -9783,6 +9801,39 @@
           "remaining_sec"
         ],
         "title": "TakeOut"
+      },
+      "TeamHistoryOut": {
+        "properties": {
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "description": "yes | no | likely_no | mixed(학기마다 다름) | unknown"
+          },
+          "from_year": {
+            "type": "string",
+            "title": "From Year"
+          },
+          "to_year": {
+            "type": "string",
+            "title": "To Year"
+          },
+          "terms": {
+            "items": {
+              "$ref": "#/components/schemas/TeamLabelOut"
+            },
+            "type": "array",
+            "title": "Terms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary",
+          "from_year",
+          "to_year",
+          "terms"
+        ],
+        "title": "TeamHistoryOut",
+        "description": "같은 교수·같은 과목의 최근 3개 연도 학기별 라벨. 수강신청 전에 보는 용도."
       },
       "TeamLabelOut": {
         "properties": {

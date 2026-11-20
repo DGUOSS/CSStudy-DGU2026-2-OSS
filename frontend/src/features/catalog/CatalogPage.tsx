@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { api, unwrap } from '@/api/client'
 import { RequestWithFiles } from '@/features/course_requests/RequestWithFiles'
-import { TeamBadge } from '@/features/team_project/TeamBadge'
+import { TeamYears } from '@/features/team_project/TeamYears'
 import {
   type OfferingGroup,
   type SearchQuery,
@@ -210,10 +210,8 @@ function Row({ g }: { g: OfferingGroup }) {
         {g.sbj_no}-{g.dvcls.join(',')}
       </td>
       <td className="px-3 py-2">
-        <div className="flex flex-wrap items-center gap-1.5 font-medium">
-          {g.sbj_nm}
-          <TeamBadge label={g.team_project} />
-        </div>
+        <div className="font-medium">{g.sbj_nm}</div>
+        <TeamYears history={g.team_history} className="mt-1" />
         <div className="text-xs text-muted-foreground">
           {g.dpt_nm}
           {rates.length > 0 && ` · ${rates.map(([k, v]) => `${k} ${v}%`).join(' ')}`}

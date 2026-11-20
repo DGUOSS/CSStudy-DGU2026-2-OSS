@@ -22,8 +22,8 @@ from app.features.enrollments.service import (
     sem_label,
     term_label,
 )
-from app.features.team_project.schemas import TeamLabelOut, label_out
-from app.features.team_project.service import offering_group_label
+from app.features.team_project.schemas import TeamHistoryOut, TeamLabelOut, history_out, label_out
+from app.features.team_project.service import group_history, offering_group_label
 from app.models import CatalogOffering, Course, CourseRequest, Enrollment, Professor
 
 router = APIRouter(tags=["catalog"])
@@ -102,6 +102,7 @@ class OfferingGroupOut(BaseModel):
     requested_by_me: bool
     mine: bool  # 내 수강 기록에 있는 수업인가(열린 강좌면 들어갈 수 있다)
     team_project: TeamLabelOut  # 이 학기·이 교수 분반들의 팀 프로젝트 라벨
+    team_history: TeamHistoryOut  # 같은 교수·과목의 최근 3개 연도(조회 연도 기준)
 
 
 class SearchOut(BaseModel):
@@ -307,6 +308,7 @@ def search(
                 team_project=label_out(
                     offering_group_label(session, g, course.id if course else None)
                 ),
+                team_history=history_out(group_history(session, g, course.id if course else None)),
             )
         )
     return SearchOut(total=len(keys), items=items)

@@ -4,7 +4,7 @@ import { Empty, ErrorText, Loading } from '@/components/States'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { useAuth } from '@/features/auth/useAuth'
-import { TeamBadge } from '@/features/team_project/TeamBadge'
+import { TeamYears } from '@/features/team_project/TeamYears'
 import { useCourses, useSubjects } from './queries'
 
 export function SubjectCoursesPage() {
@@ -41,8 +41,8 @@ export function SubjectCoursesPage() {
                     <div className="flex flex-wrap gap-1.5">
                       <Badge variant="secondary">자료 {c.material_count}</Badge>
                       <Badge variant="secondary">문제 {c.problem_count}</Badge>
-                      <TeamBadge label={c.team_project} />
                     </div>
+                    <TeamYears history={c.team_history} />
                   </div>
                   <ChevronRight className="size-5 text-muted-foreground" />
                 </Card>
@@ -51,7 +51,7 @@ export function SubjectCoursesPage() {
               <Card key={c.id} className="flex items-center justify-between p-5">
                 <div className="flex flex-col gap-2">
                   <div className="font-semibold opacity-60">{c.professor_name} 교수님</div>
-                  <TeamBadge label={c.team_project} className="self-start" />
+                  <TeamYears history={c.team_history} />
                 </div>
                 <Lock className="size-4 text-muted-foreground" />
               </Card>

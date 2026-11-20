@@ -1666,6 +1666,7 @@ export interface components {
              */
             is_public?: boolean;
             team_project?: components["schemas"]["TeamLabelOut"] | null;
+            team_history?: components["schemas"]["TeamHistoryOut"] | null;
         };
         /** CourseRequestOut */
         CourseRequestOut: {
@@ -1718,6 +1719,7 @@ export interface components {
             terms: components["schemas"]["TeamLabelOut"][];
             /** My Terms */
             my_terms: components["schemas"]["MyTermOut"][];
+            history: components["schemas"]["TeamHistoryOut"];
         };
         /** CourseUpdate */
         CourseUpdate: {
@@ -2226,6 +2228,7 @@ export interface components {
             /** Mine */
             mine: boolean;
             team_project: components["schemas"]["TeamLabelOut"];
+            team_history: components["schemas"]["TeamHistoryOut"];
         };
         /** OfferingIn */
         OfferingIn: {
@@ -2897,6 +2900,23 @@ export interface components {
             spent_sec: number;
             /** Remaining Sec */
             remaining_sec: number;
+        };
+        /**
+         * TeamHistoryOut
+         * @description 같은 교수·같은 과목의 최근 3개 연도 학기별 라벨. 수강신청 전에 보는 용도.
+         */
+        TeamHistoryOut: {
+            /**
+             * Summary
+             * @description yes | no | likely_no | mixed(학기마다 다름) | unknown
+             */
+            summary: string;
+            /** From Year */
+            from_year: string;
+            /** To Year */
+            to_year: string;
+            /** Terms */
+            terms: components["schemas"]["TeamLabelOut"][];
         };
         /** TeamLabelOut */
         TeamLabelOut: {

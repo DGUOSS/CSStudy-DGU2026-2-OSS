@@ -10,8 +10,8 @@ from app.core.db import SessionDep
 from app.core.security import AdminUser, CurrentUser
 from app.features.courses.router import get_course_or_404
 from app.features.enrollments.service import norm_code, term_label
-from app.features.team_project.schemas import TeamLabelOut, label_out
-from app.features.team_project.service import classify_syllabus, term_labels
+from app.features.team_project.schemas import TeamHistoryOut, TeamLabelOut, history_out, label_out
+from app.features.team_project.service import classify_syllabus, course_history, term_labels
 from app.models import (
     CatalogOffering,
     CourseReview,
@@ -37,6 +37,7 @@ class CourseTeamOut(BaseModel):
     latest: TeamLabelOut | None
     terms: list[TeamLabelOut]
     my_terms: list[MyTermOut]
+    history: TeamHistoryOut  # 최근 3개 연도 요약
 
 
 def _course_team(session, course, user: User) -> CourseTeamOut:
@@ -79,7 +80,12 @@ def _course_team(session, course, user: User) -> CourseTeamOut:
         )
         for y, s in terms
     ]
-    return CourseTeamOut(latest=labels[0] if labels else None, terms=labels, my_terms=mine)
+    return CourseTeamOut(
+        latest=labels[0] if labels else None,
+        terms=labels,
+        my_terms=mine,
+        history=history_out(course_history(session, course)),
+    )
 
 
 @router.get("/courses/{course_id}/team-project")

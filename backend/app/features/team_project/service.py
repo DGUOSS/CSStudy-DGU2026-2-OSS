@@ -10,8 +10,9 @@
 
 import re
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 
-from sqlmodel import Session, select
+from sqlmodel import Session, func, select
 
 from app.features.enrollments.service import term_label
 from app.models import (
@@ -127,19 +128,26 @@ def _merge_syllabus(rows: list[CatalogOffering]) -> tuple[str | None, str | None
     return None, None
 
 
+def offerings_by(
+    session: Session, sbj_no: str, emp_no: str | None, emp_nm: str | None
+) -> list[CatalogOffering]:
+    """과목+교수의 모든 학기 개설 목록 행. 교원번호가 있으면 교원번호로, 없으면 이름으로."""
+    q = select(CatalogOffering).where(CatalogOffering.sbj_no == sbj_no)
+    q = (
+        q.where(CatalogOffering.emp_no == emp_no)
+        if emp_no
+        else q.where(CatalogOffering.emp_nm == emp_nm)
+    )
+    return list(session.exec(q).all())
+
+
 def offerings_of(session: Session, course: Course) -> list[CatalogOffering]:
-    """이 강좌(과목+교수)의 개설 목록 행. 교원번호가 있으면 교원번호로, 없으면 이름으로."""
+    """이 강좌(과목+교수)의 개설 목록 행."""
     subject = session.get(Subject, course.subject_id)
     prof = session.get(Professor, course.professor_id)
     if subject is None or not subject.code or prof is None:
         return []
-    q = select(CatalogOffering).where(CatalogOffering.sbj_no == subject.code)
-    q = (
-        q.where(CatalogOffering.emp_no == prof.emp_no)
-        if prof.emp_no
-        else q.where(CatalogOffering.emp_nm == prof.name)
-    )
-    return list(session.exec(q).all())
+    return offerings_by(session, subject.code, prof.emp_no, prof.name)
 
 
 Term = tuple[str, str]
@@ -200,12 +208,14 @@ def _label(
     )
 
 
-def term_labels(session: Session, course: Course) -> list[TermLabel]:
-    """학기별 라벨, 최근 학기부터. 계획서·응답·운영진 지정이 하나도 없는 학기는 넣지 않는다."""
+def _labels(
+    session: Session, offerings: list[CatalogOffering], course_id: int | None
+) -> list[TermLabel]:
     by_term: dict[Term, list[CatalogOffering]] = {}
-    for o in offerings_of(session, course):
+    for o in offerings:
         by_term.setdefault((o.year, o.sem_cd), []).append(o)
-    v, ov = votes(session, course.id), overrides(session, course.id)
+    v = votes(session, course_id) if course_id else {}
+    ov = overrides(session, course_id) if course_id else {}
     out = []
     for term in sorted(set(by_term) | set(v) | set(ov), reverse=True):
         t = _label(term, by_term.get(term, []), v.get(term, (0, 0)), ov.get(term))
@@ -213,6 +223,11 @@ def term_labels(session: Session, course: Course) -> list[TermLabel]:
             continue  # 계획서는 아직 판정 전이고 응답도 없음
         out.append(t)
     return out
+
+
+def term_labels(session: Session, course: Course) -> list[TermLabel]:
+    """학기별 라벨, 최근 학기부터. 계획서·응답·운영진 지정이 하나도 없는 학기는 넣지 않는다."""
+    return _labels(session, offerings_of(session, course), course.id)
 
 
 def latest_label(session: Session, course: Course) -> TermLabel | None:
@@ -229,3 +244,52 @@ def offering_group_label(
     vote = votes(session, course_id).get(term, (0, 0)) if course_id else (0, 0)
     override = overrides(session, course_id).get(term) if course_id else None
     return _label(term, group, vote, override)
+
+
+# ---------- 최근 3년 ----------
+# 라벨은 수강신청 전에 보려는 것이다. 이번 학기 라벨은 아직 비어 있기 쉬우므로
+# 같은 교수·같은 과목의 최근 3개 연도(기준 연도 포함) 학기별 기록을 함께 보인다.
+YEARS = 3
+SUMMARY_MIXED = "mixed"  # 학기마다 다름
+
+
+@dataclass
+class TeamHistory:
+    summary: str  # yes | no | likely_no | mixed | unknown
+    from_year: str
+    to_year: str
+    terms: list[TermLabel]  # 최근 학기부터
+
+
+def summarize(terms: list[TermLabel]) -> str:
+    known = {t.label for t in terms} - {LABEL_UNKNOWN}
+    if not known:
+        return LABEL_UNKNOWN
+    if LABEL_YES in known:
+        return LABEL_YES if known == {LABEL_YES} else SUMMARY_MIXED
+    return LABEL_NO if LABEL_NO in known else LABEL_LIKELY_NO
+
+
+def _history(labels: list[TermLabel], anchor: str) -> TeamHistory:
+    lo = str(int(anchor) - YEARS + 1)
+    terms = [t for t in labels if lo <= t.year <= anchor]
+    return TeamHistory(summarize(terms), lo, anchor, terms)
+
+
+def latest_catalog_year(session: Session) -> str:
+    """개설 목록에 들어온 가장 최근 연도(없으면 올해)."""
+    y = session.exec(select(func.max(CatalogOffering.year))).one()
+    return y or str(datetime.now(UTC).year)
+
+
+def course_history(session: Session, course: Course, anchor: str | None = None) -> TeamHistory:
+    return _history(term_labels(session, course), anchor or latest_catalog_year(session))
+
+
+def group_history(
+    session: Session, group: list[CatalogOffering], course_id: int | None
+) -> TeamHistory:
+    """개설 목록의 한 줄(과목+교수): 조회한 학기 연도를 기준으로 최근 3년."""
+    o = group[0]
+    rows = offerings_by(session, o.sbj_no, o.emp_no, o.emp_nm)
+    return _history(_labels(session, rows, course_id), o.year)

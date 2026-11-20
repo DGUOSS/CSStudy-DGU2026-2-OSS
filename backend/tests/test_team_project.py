@@ -8,9 +8,12 @@ from app.features.team_project.service import (
     LABEL_NO,
     LABEL_UNKNOWN,
     LABEL_YES,
+    TermLabel,
     classify_syllabus,
+    course_history,
     decide,
     differs,
+    summarize,
     term_labels,
 )
 from app.models import (
@@ -395,3 +398,76 @@ def test_admin_override(client, login, session, two_profs):
     assert {t["term"]: t["label"] for t in r.json()["terms"]}["2025 2학기"] == "yes"
     r = client.put(url, json={"year": "2026", "sem_cd": FALL, "team_project": None})  # 지정 해제
     assert r.json()["latest"]["source"] == "syllabus"
+
+
+# ---------- 최근 3년 ----------
+
+
+def _offer(session, year, sem, dvcls, emp_no, emp_nm, tp, ev=None):
+    session.add(
+        CatalogOffering(
+            year=year,
+            sem_cd=sem,
+            sbj_no="CSC2001",
+            sbj_nm="기초프로그래밍",
+            dvcls=dvcls,
+            emp_no=emp_no,
+            emp_nm=emp_nm,
+            team_project=tp,
+            team_evidence=ev,
+        )
+    )
+
+
+def test_summary_rules():
+    def t(label):
+        return TermLabel(year="2026", sem_cd=FALL, term="x", label=label, source=None)
+
+    assert summarize([t("yes"), t("yes")]) == "yes"
+    assert summarize([t("yes"), t("no")]) == "mixed"
+    assert summarize([t("yes"), t("likely_no")]) == "mixed"
+    assert summarize([t("no"), t("likely_no")]) == "no"
+    assert summarize([t("likely_no"), t("unknown")]) == "likely_no"
+    assert summarize([t("unknown")]) == summarize([]) == "unknown"
+
+
+def test_history_keeps_last_three_years(session, two_profs):
+    kang = two_profs["kang"]
+    _offer(session, "2025", FALL, "01", "E1", "강동현", "yes", "조별 발표")
+    _offer(session, "2024", FALL, "01", "E1", "강동현", "not_mentioned")
+    _offer(session, "2023", FALL, "01", "E1", "강동현", "no", "팀플 없음")  # 3년 밖
+    session.commit()
+    h = course_history(session, kang)
+    assert (h.from_year, h.to_year) == ("2024", "2026")
+    assert [t.term for t in h.terms] == ["2026 2학기", "2026 1학기", "2025 2학기", "2024 2학기"]
+    assert h.summary == "mixed"  # 2026-1 없음, 나머지 있음/언급 없음
+    assert course_history(session, kang, anchor="2024").terms[-1].term == "2023 2학기"
+
+
+def test_catalog_search_shows_history_before_registration(client, login, session, two_profs):
+    """다음 학기 개설 목록은 계획서가 아직 없어도, 같은 교수의 지난 3년 기록을 보인다."""
+    _offer(session, "2027", SPRING, "01", "E2", "김교수", None)  # 아직 판정 전
+    _offer(session, "2025", FALL, "02", "E2", "김교수", "no", "조별 과제 없음")
+    _offer(session, "2027", SPRING, "05", "E9", "새교수", None)  # 사이트에 강좌 없는 교수
+    _offer(session, "2026", FALL, "05", "E9", "새교수", "yes", "팀 프로젝트 40%")
+    session.commit()
+    _setup_api(client, login, session, two_profs)
+    items = client.get(
+        "/api/v1/catalog/search", params={"year": "2027", "sem_cd": SPRING, "q": "CSC2001"}
+    ).json()["items"]
+    by = {i["emp_nm"]: i for i in items}
+    assert by["김교수"]["team_project"]["label"] == "unknown"
+    h = by["김교수"]["team_history"]
+    assert (h["summary"], h["from_year"], h["to_year"]) == ("no", "2025", "2027")
+    assert [t["term"] for t in h["terms"]] == ["2026 2학기", "2025 2학기"]
+    assert by["새교수"]["team_history"]["summary"] == "yes"
+    assert by["새교수"]["course_id"] is None
+
+
+def test_course_endpoints_include_history(client, login, session, two_profs):
+    _setup_api(client, login, session, two_profs)
+    kang = two_profs["kang"]
+    c = client.get(f"/api/v1/courses/{kang.id}").json()
+    assert c["team_history"]["summary"] == "mixed" and len(c["team_history"]["terms"]) == 2
+    t = client.get(f"/api/v1/courses/{kang.id}/team-project").json()
+    assert t["history"]["to_year"] == "2026"
