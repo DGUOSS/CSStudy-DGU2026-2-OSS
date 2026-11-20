@@ -1272,6 +1272,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/courses/{course_id}/team-project": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Course Team Project
+         * @description 학기별 팀 프로젝트 라벨. 수강 기록이 없어도 볼 수 있다(수강 전에 고르는 데 쓰는 정보).
+         */
+        get: operations["course_team_project_api_v1_courses__course_id__team_project_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/syllabi": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import Syllabi
+         * @description 엔드림스 강의계획서 글을 받아 팀 프로젝트 여부만 판정해 저장한다. 계획서 원문은 저장하지 않는다.
+         */
+        post: operations["import_syllabi_api_v1_admin_catalog_syllabi_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1585,6 +1625,7 @@ export interface components {
              * @default false
              */
             is_public?: boolean;
+            team_project?: components["schemas"]["TeamLabelOut"] | null;
         };
         /** CourseRequestOut */
         CourseRequestOut: {
@@ -1629,6 +1670,12 @@ export interface components {
             created_at: string;
             /** Reviewed At */
             reviewed_at: string | null;
+        };
+        /** CourseTeamOut */
+        CourseTeamOut: {
+            latest: components["schemas"]["TeamLabelOut"] | null;
+            /** Terms */
+            terms: components["schemas"]["TeamLabelOut"][];
         };
         /** CourseUpdate */
         CourseUpdate: {
@@ -2122,6 +2169,7 @@ export interface components {
             requested_by_me: boolean;
             /** Mine */
             mine: boolean;
+            team_project: components["schemas"]["TeamLabelOut"];
         };
         /** OfferingIn */
         OfferingIn: {
@@ -2471,6 +2519,11 @@ export interface components {
             difficulty: number;
             /** Workload */
             workload: number;
+            /**
+             * Team Project
+             * @description 그 학기에 팀 프로젝트(조별 과제)가 있었나. null = 답하지 않음
+             */
+            team_project?: boolean | null;
             /** Content */
             content: string;
             /** Enrollment Id */
@@ -2484,6 +2537,11 @@ export interface components {
             difficulty: number;
             /** Workload */
             workload: number;
+            /**
+             * Team Project
+             * @description 그 학기에 팀 프로젝트(조별 과제)가 있었나. null = 답하지 않음
+             */
+            team_project?: boolean | null;
             /** Content */
             content: string;
             /** Id */
@@ -2709,6 +2767,40 @@ export interface components {
              */
             essays?: components["schemas"]["EssayIn"][];
         };
+        /** SyllabusImportIn */
+        SyllabusImportIn: {
+            /** Rows */
+            rows: components["schemas"]["SyllabusIn"][];
+        };
+        /** SyllabusImportOut */
+        SyllabusImportOut: {
+            /** Checked */
+            checked: number;
+            /** Missing */
+            missing: number;
+            /** Yes */
+            yes: number;
+            /** No */
+            no: number;
+            /** Not Mentioned */
+            not_mentioned: number;
+        };
+        /** SyllabusIn */
+        SyllabusIn: {
+            /** Year */
+            year: string;
+            /** Sem Cd */
+            sem_cd: string;
+            /** Sbj No */
+            sbj_no: string;
+            /**
+             * Dvcls
+             * @default
+             */
+            dvcls?: string;
+            /** Text */
+            text: string;
+        };
         /** TakeOut */
         TakeOut: {
             /** Id */
@@ -2732,6 +2824,33 @@ export interface components {
             spent_sec: number;
             /** Remaining Sec */
             remaining_sec: number;
+        };
+        /** TeamLabelOut */
+        TeamLabelOut: {
+            /** Year */
+            year: string;
+            /** Sem Cd */
+            sem_cd: string;
+            /** Term */
+            term: string;
+            /**
+             * Label
+             * @description yes | no | likely_no(계획서에 언급 없음) | unknown
+             */
+            label: string;
+            /**
+             * Source
+             * @description syllabus | reviews | null
+             */
+            source: string | null;
+            /** Evidence */
+            evidence: string | null;
+            /** Yes Votes */
+            yes_votes: number;
+            /** No Votes */
+            no_votes: number;
+            /** Dvcls */
+            dvcls: string[];
         };
         /** TermOut */
         TermOut: {
@@ -5534,6 +5653,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StudySpaceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    course_team_project_api_v1_courses__course_id__team_project_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourseTeamOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_syllabi_api_v1_admin_catalog_syllabi_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyllabusImportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyllabusImportOut"];
                 };
             };
             /** @description Validation Error */

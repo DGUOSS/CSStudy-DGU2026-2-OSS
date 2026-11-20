@@ -12,6 +12,11 @@ const PAGE_SIZE = 20
 const DIFFICULTY_LABELS = ['매우 쉬움', '쉬움', '보통', '어려움', '매우 어려움']
 const RECOMMENDATION_LABELS = ['전혀 추천하지 않음', '추천하지 않음', '보통', '추천함', '매우 추천함']
 const WORKLOAD_LABELS = ['매우 적음', '적음', '보통', '많음', '매우 많음']
+const TEAM_CHOICES: { value: boolean | null; label: string }[] = [
+  { value: true, label: '있었어요' },
+  { value: false, label: '없었어요' },
+  { value: null, label: '답하지 않음' },
+]
 
 export function ReviewsTab({ courseId }: { courseId: number }) {
   const qc = useQueryClient()
@@ -54,7 +59,7 @@ export function ReviewsTab({ courseId }: { courseId: number }) {
         </span>
         <span>{r.recommendation}/5 · {RECOMMENDATION_LABELS[r.recommendation - 1]}</span>
       </div>
-      <p className="text-sm text-muted-foreground">체감 난이도 {r.difficulty}/5 · {DIFFICULTY_LABELS[r.difficulty - 1]} · 과제량 {WORKLOAD_LABELS[r.workload - 1]}</p>
+      <p className="text-sm text-muted-foreground">체감 난이도 {r.difficulty}/5 · {DIFFICULTY_LABELS[r.difficulty - 1]} · 과제량 {WORKLOAD_LABELS[r.workload - 1]}{r.team_project != null && ` · 팀 프로젝트 ${r.team_project ? '있었음' : '없었음'}`}</p>
       <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{r.content}</p>
       {r.is_mine && <div className="flex flex-wrap gap-2">
         <Button variant="ghost" disabled={remove.isPending} onClick={() => { setDeleting(r.id); remove.reset() }}>삭제</Button>
@@ -82,6 +87,7 @@ function ReviewForm({ courseId, terms, onCancel, onSaved }: {
   const [difficulty, setDifficulty] = useState(3)
   const [workload, setWorkload] = useState(3)
   const [recommendation, setRecommendation] = useState(3)
+  const [teamProject, setTeamProject] = useState<boolean | null>(null)
   const ratingId = useId()
   const save = useMutation({
     mutationFn: (body: Body) => unwrap(api.POST('/api/v1/courses/{course_id}/reviews', {
@@ -90,7 +96,7 @@ function ReviewForm({ courseId, terms, onCancel, onSaved }: {
     onSuccess: onSaved,
   })
   const selectClass = 'rounded-md border bg-background px-3 py-2 text-sm'
-  return <Card className="p-5"><form className="flex flex-col gap-4" onSubmit={e => { e.preventDefault(); save.mutate({ content: content.trim(), recommendation, difficulty, workload }) }}>
+  return <Card className="p-5"><form className="flex flex-col gap-4" onSubmit={e => { e.preventDefault(); save.mutate({ content: content.trim(), recommendation, difficulty, workload, team_project: teamProject }) }}>
     <h3 className="font-semibold">후기 작성</h3>
     <label className="flex flex-col gap-2 text-sm">수강 학기
       <select className={selectClass} value={enrollmentId} onChange={e => setEnrollmentId(Number(e.target.value))} disabled={save.isPending}>
@@ -147,6 +153,17 @@ function ReviewForm({ courseId, terms, onCancel, onSaved }: {
           <span className="flex min-h-11 items-center rounded-md border px-4 py-2 text-sm transition-colors hover:bg-accent peer-checked:border-primary peer-checked:bg-primary peer-checked:font-semibold peer-checked:text-primary-foreground peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary peer-disabled:cursor-not-allowed peer-disabled:opacity-50">{label}</span>
         </label>)}
       </div>
+    </fieldset>
+    <fieldset disabled={save.isPending} className="min-w-0">
+      <legend className="mb-2 text-sm font-medium">팀 프로젝트(조별 과제)가 있었나요?</legend>
+      <div className="flex flex-wrap gap-2">
+        {TEAM_CHOICES.map(c => <label key={c.label} className="relative cursor-pointer">
+          <input type="radio" name={`${ratingId}-team`} checked={teamProject === c.value}
+            onChange={() => setTeamProject(c.value)} aria-label={`팀 프로젝트: ${c.label}`} className="peer sr-only" />
+          <span className="flex min-h-11 items-center rounded-md border px-4 py-2 text-sm transition-colors hover:bg-accent peer-checked:border-primary peer-checked:bg-primary peer-checked:font-semibold peer-checked:text-primary-foreground peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary peer-disabled:cursor-not-allowed peer-disabled:opacity-50">{c.label}</span>
+        </label>)}
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">수강한 학기 기준이에요. 강좌 목록의 팀플 라벨에 반영됩니다.</p>
     </fieldset>
     <label className="flex flex-col gap-2 text-sm">수업·시험 후기<Textarea rows={6} minLength={10} maxLength={3000} required value={content} onChange={e => setContent(e.target.value)} disabled={save.isPending} placeholder="시험 유형, 도움이 된 자료, 공부 방법을 알려 주세요. 개인정보나 비방은 포함하지 말아 주세요." /></label>
     <p className="text-xs text-muted-foreground">{content.length}/3000자 · 최소 10자 · 다른 사용자에게 작성자 이름은 표시되지 않습니다.</p>

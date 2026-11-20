@@ -18,6 +18,9 @@ class ReviewBody(BaseModel):
     recommendation: int = Field(ge=1, le=5)
     difficulty: int = Field(ge=1, le=5)
     workload: int = Field(ge=1, le=5)
+    team_project: bool | None = Field(
+        default=None, description="그 학기에 팀 프로젝트(조별 과제)가 있었나. null = 답하지 않음"
+    )
     content: str = Field(min_length=10, max_length=3000)
 
     @field_validator("content")

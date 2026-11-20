@@ -4969,6 +4969,125 @@
           }
         }
       }
+    },
+    "/api/v1/courses/{course_id}/team-project": {
+      "get": {
+        "tags": [
+          "team-project"
+        ],
+        "summary": "Course Team Project",
+        "description": "학기별 팀 프로젝트 라벨. 수강 기록이 없어도 볼 수 있다(수강 전에 고르는 데 쓰는 정보).",
+        "operationId": "course_team_project_api_v1_courses__course_id__team_project_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseTeamOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/catalog/syllabi": {
+      "post": {
+        "tags": [
+          "team-project"
+        ],
+        "summary": "Import Syllabi",
+        "description": "엔드림스 강의계획서 글을 받아 팀 프로젝트 여부만 판정해 저장한다. 계획서 원문은 저장하지 않는다.",
+        "operationId": "import_syllabi_api_v1_admin_catalog_syllabi_post",
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyllabusImportIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyllabusImportOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5829,6 +5948,16 @@
             "type": "boolean",
             "title": "Is Public",
             "default": false
+          },
+          "team_project": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TeamLabelOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -6001,6 +6130,33 @@
           "reviewed_at"
         ],
         "title": "CourseRequestOut"
+      },
+      "CourseTeamOut": {
+        "properties": {
+          "latest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TeamLabelOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "terms": {
+            "items": {
+              "$ref": "#/components/schemas/TeamLabelOut"
+            },
+            "type": "array",
+            "title": "Terms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "latest",
+          "terms"
+        ],
+        "title": "CourseTeamOut"
       },
       "CourseUpdate": {
         "properties": {
@@ -7360,6 +7516,9 @@
           "mine": {
             "type": "boolean",
             "title": "Mine"
+          },
+          "team_project": {
+            "$ref": "#/components/schemas/TeamLabelOut"
           }
         },
         "type": "object",
@@ -7382,7 +7541,8 @@
           "course_id",
           "request_count",
           "requested_by_me",
-          "mine"
+          "mine",
+          "team_project"
         ],
         "title": "OfferingGroupOut",
         "description": "같은 과목·교수의 분반을 한 줄로 묶은 결과. 사이트의 강좌 하나에 해당한다."
@@ -8509,6 +8669,18 @@
             "minimum": 1.0,
             "title": "Workload"
           },
+          "team_project": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Project",
+            "description": "그 학기에 팀 프로젝트(조별 과제)가 있었나. null = 답하지 않음"
+          },
           "content": {
             "type": "string",
             "maxLength": 3000,
@@ -8549,6 +8721,18 @@
             "maximum": 5.0,
             "minimum": 1.0,
             "title": "Workload"
+          },
+          "team_project": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Project",
+            "description": "그 학기에 팀 프로젝트(조별 과제)가 있었나. null = 답하지 않음"
           },
           "content": {
             "type": "string",
@@ -9234,6 +9418,96 @@
         ],
         "title": "SubmitIn"
       },
+      "SyllabusImportIn": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/SyllabusIn"
+            },
+            "type": "array",
+            "maxItems": 5000,
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rows"
+        ],
+        "title": "SyllabusImportIn"
+      },
+      "SyllabusImportOut": {
+        "properties": {
+          "checked": {
+            "type": "integer",
+            "title": "Checked"
+          },
+          "missing": {
+            "type": "integer",
+            "title": "Missing"
+          },
+          "yes": {
+            "type": "integer",
+            "title": "Yes"
+          },
+          "no": {
+            "type": "integer",
+            "title": "No"
+          },
+          "not_mentioned": {
+            "type": "integer",
+            "title": "Not Mentioned"
+          }
+        },
+        "type": "object",
+        "required": [
+          "checked",
+          "missing",
+          "yes",
+          "no",
+          "not_mentioned"
+        ],
+        "title": "SyllabusImportOut"
+      },
+      "SyllabusIn": {
+        "properties": {
+          "year": {
+            "type": "string",
+            "pattern": "^\\d{4}$",
+            "title": "Year"
+          },
+          "sem_cd": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Sem Cd"
+          },
+          "sbj_no": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Sbj No"
+          },
+          "dvcls": {
+            "type": "string",
+            "maxLength": 10,
+            "title": "Dvcls",
+            "default": ""
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "sem_cd",
+          "sbj_no",
+          "text"
+        ],
+        "title": "SyllabusIn"
+      },
       "TakeOut": {
         "properties": {
           "id": {
@@ -9287,6 +9561,78 @@
           "remaining_sec"
         ],
         "title": "TakeOut"
+      },
+      "TeamLabelOut": {
+        "properties": {
+          "year": {
+            "type": "string",
+            "title": "Year"
+          },
+          "sem_cd": {
+            "type": "string",
+            "title": "Sem Cd"
+          },
+          "term": {
+            "type": "string",
+            "title": "Term"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "yes | no | likely_no(계획서에 언급 없음) | unknown"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source",
+            "description": "syllabus | reviews | null"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          },
+          "yes_votes": {
+            "type": "integer",
+            "title": "Yes Votes"
+          },
+          "no_votes": {
+            "type": "integer",
+            "title": "No Votes"
+          },
+          "dvcls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dvcls"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "sem_cd",
+          "term",
+          "label",
+          "source",
+          "evidence",
+          "yes_votes",
+          "no_votes",
+          "dvcls"
+        ],
+        "title": "TeamLabelOut"
       },
       "TermOut": {
         "properties": {

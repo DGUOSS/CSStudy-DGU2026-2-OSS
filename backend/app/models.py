@@ -215,6 +215,8 @@ class CourseReview(SQLModel, table=True):
     difficulty: int
     workload: int
     content: str = Field(sa_column=Column(Text, nullable=False))
+    # 그 학기 수업에 팀 프로젝트(조별 과제)가 있었는가. None = 답하지 않음(옛 후기 포함)
+    team_project: bool | None = None
     created_at: datetime = Field(default_factory=_now)
 
 
@@ -243,6 +245,11 @@ class CatalogOffering(SQLModel, table=True):
     proj_rate: int | None = None
     plan_url: str | None = Field(default=None, max_length=500)
     imported_at: datetime = Field(default_factory=_now)
+    # 강의계획서로 판정한 팀 프로젝트 여부(features/team_project). 시간표를 다시 가져와도 지우지 않는다.
+    # yes(있음) | no(없다고 적힘) | not_mentioned(계획서에 언급 없음) | None(계획서 아직 안 봄)
+    team_project: str | None = Field(default=None, max_length=20)
+    team_evidence: str | None = Field(default=None, max_length=300)  # 판정 근거 문장
+    syllabus_checked_at: datetime | None = None
 
 
 class MaterialVote(SQLModel, table=True):

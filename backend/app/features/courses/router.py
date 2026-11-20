@@ -7,6 +7,8 @@ from sqlmodel import func, select
 from app.core.db import SessionDep
 from app.core.security import AdminUser, CurrentUser
 from app.features.enrollments.service import can_enter, relink_course, require_course_access
+from app.features.team_project.schemas import TeamLabelOut, label_out
+from app.features.team_project.service import latest_label
 from app.models import Chapter, Course, Material, Problem, Professor, Subject
 
 router = APIRouter(tags=["courses"])
@@ -36,6 +38,7 @@ class CourseOut(BaseModel):
     problem_count: int
     accessible: bool = True  # 이 사용자가 들어갈 수 있는가(수강 기록이 있거나 공용 강좌)
     is_public: bool = False
+    team_project: TeamLabelOut | None = None  # 최근 학기 팀 프로젝트 라벨
 
 
 class CourseIn(BaseModel):
@@ -73,6 +76,7 @@ def _course_out(session: SessionDep, course: Course) -> CourseOut:
         exam_info=course.exam_info,
         material_count=material_count,
         problem_count=problem_count,
+        team_project=label_out(latest_label(session, course)),
     )
 
 
