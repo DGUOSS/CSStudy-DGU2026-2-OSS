@@ -30,8 +30,17 @@
 - `PUT /api/v1/admin/courses/{id}/team-project` (관리자) — 운영진 지정 `{year, sem_cd, team_project, note}`. null은 지정 해제.
 - `POST /api/v1/admin/catalog/syllabi` (관리자) — `{rows: [{year, sem_cd, sbj_no, dvcls, text}]}`. 개설 목록에 있는 행만 판정·저장한다.
 
-## 남은 일: 계획서 가져오기
-엔드림스 종합강의시간표의 `PLAN_URL`은 지금 비어서 온다(배포 DB 2,543행 모두 빈 값). 계획서는 별도 화면(강의계획서 조회)에서 받아야 하는데, 그 화면의 요청 경로·값 이름은 아직 조사하지 않았다. 조사되면 즐겨찾기(`bookmarklet.ts`)가 관리자 화면에서 개설 강좌별 계획서 글을 받아 위 API로 보내면 된다. 조사 방법은 `docs/NDRIMS.md`와 같다(로그인한 브라우저에서 화면 요청 기록, 개인 값은 보지 않음).
+## 계획서 가져오기
+종합강의시간표의 `PLAN_URL`은 비어서 온다. 계획서는 시간표 화면의 "강의계획서" 버튼이 여는 팝업(`app/ed/edc/plan/popup/EdcPlan010_P30`)에서 받는다.
+
+- 요청: `POST /ed/edc/plan/popup/EdcPlan010P20/doList.do` (form, `_runningNana`는 종합강의시간표 `EdcLesn010` 메뉴의 NANA)
+- `dmSearch`: `OPEN_ORGN_CLSF_CD`(학부 `CM015.110`), `OPEN_YY`, `OPEN_SEM_CD`, `SBJ_NO`, `DVCLS`, `EMP_NO`, `PLAN_LANG_CD`(`CM310.ko`), `OPEN_DPTMJR_CD` — 뒤의 넷은 시간표 행에서 가져온다.
+- 응답 데이터셋 중 판정에 쓰는 것: `dsMain`(수업 목표·개요 등 글), `dsSub`(평가 비율), `dsTabLesn`(수업 형태), `dsTabWeek.LESN_DSC`(주차별 내용), `dsTabProj`(과제·프로젝트 이름, 제출 방법).
+- **`dsTabAolAt`, `dsTabAolGo`는 판정 글에 넣지 않는다.** 모든 강좌에 같은 선택지 목록("Team Project", "Peer Evaluation" 등)이 오고 선택 여부만 `CHK`로 다르다. 그대로 넣으면 모든 강좌가 "팀플 있음"이 된다. 넣는다면 `CHK=Y`인 행만.
+- 코드·번호·날짜·교원 칸(`*_CD`, `*_NO`, `*_DTTM`, 이름·연락처)은 빼고 글 칸만 이어 붙여 `POST /admin/catalog/syllabi`의 `text`로 보낸다.
+- 엔드림스는 한 계정에 한 곳만 로그인된다. 다른 곳에서 로그인하면 `STATUSCODE -4000`("…에서 접속을 하여 … 접속을 종료합니다")으로 끊긴다.
+
+2026-11-20 확인: 인공지능(CSC4012, 01·02분반) 계획서는 과제가 Homework 1~4, 과제 비율 30%이고 팀 관련 언급이 없다 → "언급 없음". (`dsTabAolAt`을 넣으면 "Team Project"(`CHK=N`) 때문에 잘못 "있음"이 나왔다.)
 
 ## 에브리타임을 쓰지 않는 이유
 에브리타임 강의평은 로그인해야 보이고, 이용약관이 자동 수집과 무단 복제·재게시를 금지한다. 다른 사람이 쓴 글을 가져와 다시 보여 주는 것은 저작권 문제도 있다. 대신 수강 기록이 확인된 학생의 제보 버튼·후기 응답과 운영진 지정으로 계획서를 고친다.
