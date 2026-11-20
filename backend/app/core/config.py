@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     llm_model: str = "claude-opus-5-5"
     qgen_model: str = "claude-haiku-5-5"
+    # 동국대 계정(Google 워크스페이스) 로그인. 클라이언트 ID가 없으면 버튼이 안 보인다
+    google_client_id: str = ""
+    school_email_domain: str = "dgu.ac.kr"
 
     @property
     def db_url(self) -> str:

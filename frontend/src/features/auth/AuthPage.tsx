@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { SchoolLogin } from './SchoolLogin'
 import { useAuth } from './useAuth'
 
 export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
-  const { user, login, signup } = useAuth()
+  const { user, login, signup, googleLogin } = useAuth()
   const navigate = useNavigate()
   const from = (useLocation().state as { from?: string } | null)?.from ?? '/'
   const [email, setEmail] = useState('')
@@ -31,7 +32,15 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
           <CardTitle className="text-xl">{mode === 'login' ? '로그인' : '회원가입'}</CardTitle>
           <CardDescription>동국대 과목·교수별 시험 공부</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-4">
+          <SchoolLogin
+            onCredential={(c) =>
+              googleLogin.mutate(c, { onSuccess: () => navigate(from, { replace: true }) })
+            }
+          />
+          {googleLogin.error && (
+            <p className="text-sm text-destructive">{googleLogin.error.message}</p>
+          )}
           <form onSubmit={submit} className="flex flex-col gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">{mode === 'login' ? '이메일 또는 아이디' : '이메일'}</Label>

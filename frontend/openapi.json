@@ -175,6 +175,69 @@
         }
       }
     },
+    "/api/v1/auth/google/config": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Google Config",
+        "operationId": "google_config_api_v1_auth_google_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoogleConfigOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/google": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Google Login",
+        "description": "동국대 계정 로그인. 처음이면 가입되고, 같은 이메일로 가입한 계정이 있으면 그 계정으로 들어간다.",
+        "operationId": "google_login_api_v1_auth_google_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleLoginIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/subjects": {
       "get": {
         "tags": [
@@ -6369,6 +6432,39 @@
         ],
         "title": "Flow",
         "description": "틀린 객관식 하나가 이어지는 길: 문제 → 오개념 → 개념 → 다시 볼 교안 쪽(오답 흐름 차트)."
+      },
+      "GoogleConfigOut": {
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "title": "Client Id"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_id",
+          "domain"
+        ],
+        "title": "GoogleConfigOut"
+      },
+      "GoogleLoginIn": {
+        "properties": {
+          "credential": {
+            "type": "string",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Credential"
+          }
+        },
+        "type": "object",
+        "required": [
+          "credential"
+        ],
+        "title": "GoogleLoginIn"
       },
       "HTTPValidationError": {
         "properties": {
