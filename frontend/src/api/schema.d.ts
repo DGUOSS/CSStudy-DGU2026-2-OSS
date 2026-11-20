@@ -2621,6 +2621,11 @@ export interface components {
             items: components["schemas"]["StudyOut"][];
             /** Total */
             total: number;
+            /**
+             * My Weak
+             * @default []
+             */
+            my_weak?: string[];
         };
         /** StudyOut */
         StudyOut: {
@@ -2660,6 +2665,11 @@ export interface components {
             pending_count: number | null;
             /** My Application */
             my_application: ("pending" | "approved" | "rejected" | "cancelled") | null;
+            /**
+             * Shared Weak
+             * @default []
+             */
+            shared_weak?: string[];
         };
         /** StudySpaceOut */
         StudySpaceOut: {
@@ -5265,6 +5275,7 @@ export interface operations {
                 state?: "all" | "open" | "closed";
                 offset?: number;
                 limit?: number;
+                sort?: "recommended" | "recent";
             };
             header?: never;
             path: {

@@ -9,6 +9,7 @@ from sqlmodel import func, select
 from app.core.db import SessionDep
 from app.core.security import CurrentUser
 from app.features.enrollments.service import can_enter
+from app.features.mastery.service import weak_concepts_by_user
 from app.models import Course, StudyApplication, StudyGroup, Subject, User, _now
 
 router = APIRouter(tags=["study-groups"])
@@ -47,11 +48,14 @@ class StudyOut(StudyCreate):
     participant_count: int
     pending_count: int | None
     my_application: Literal["pending", "approved", "rejected", "cancelled"] | None
+    # 나와 이 스터디(개설자·승인된 참여자)의 약점이 겹치는 개념 이름. 다른 사람의 점수나 누구의 약점인지는 주지 않는다
+    shared_weak: list[str] = []
 
 
 class StudyList(BaseModel):
     items: list[StudyOut]
     total: int
+    my_weak: list[str] = []  # 이 과목에서 내 약점 개념(추천 기준)
 
 
 def output(session, row, owner_name, user_id):
@@ -100,6 +104,7 @@ def list_groups(
     state: Literal["all", "open", "closed"] = "open",
     offset: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=50),
+    sort: Literal["recommended", "recent"] = "recommended",
 ) -> StudyList:
     require_subject_access(session, user, subject_id)
     conditions = [StudyGroup.subject_id == subject_id]
@@ -113,10 +118,46 @@ def list_groups(
         .join(User, User.id == StudyGroup.owner_id)
         .where(*conditions)
         .order_by(StudyGroup.created_at.desc(), StudyGroup.id.desc())
-        .offset(offset)
-        .limit(limit)
     ).all()
-    return StudyList(items=[output(session, r, name, user.id) for r, name in rows], total=total)
+    members = _members(session, [r.id for r, _ in rows])
+    weak = weak_concepts_by_user(
+        session, [user.id, *{u for ids in members.values() for u in ids}], subject_id
+    )
+    mine = weak.get(user.id, set())
+    shared = {
+        r.id: sorted(mine & set().union(*(weak.get(u, set()) for u in members[r.id] - {user.id})))
+        for r, _ in rows
+    }
+    if sort == "recommended":
+        # 약점이 많이 겹치는 스터디가 위로(같으면 최신순). 정렬이 안정적이라 최신순이 유지된다
+        rows = sorted(rows, key=lambda rn: -len(shared[rn[0].id]))
+    page = rows[offset : offset + limit]
+    return StudyList(
+        items=[
+            output(session, r, name, user.id).model_copy(update={"shared_weak": shared[r.id]})
+            for r, name in page
+        ],
+        total=total,
+        my_weak=sorted(mine),
+    )
+
+
+def _members(session, group_ids: list[int]) -> dict[int, set[int]]:
+    """스터디별 개설자 + 승인된 참여자."""
+    out: dict[int, set[int]] = {g: set() for g in group_ids}
+    if not group_ids:
+        return out
+    for gid, owner in session.exec(
+        select(StudyGroup.id, StudyGroup.owner_id).where(StudyGroup.id.in_(group_ids))
+    ).all():
+        out[gid].add(owner)
+    for gid, uid in session.exec(
+        select(StudyApplication.group_id, StudyApplication.user_id).where(
+            StudyApplication.group_id.in_(group_ids), StudyApplication.status == "approved"
+        )
+    ).all():
+        out[gid].add(uid)
+    return out
 
 
 @router.post("/subjects/{subject_id}/study-groups", status_code=201)
