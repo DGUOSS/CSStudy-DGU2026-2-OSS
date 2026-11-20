@@ -14,23 +14,32 @@ export function useImportNdrims(isAdmin: boolean) {
   return useMutation({
     mutationFn: async (p: NdrimsPayload) => {
       // 둘은 따로 저장한다. 개설 목록이 실패해도 내 수강 기록은 저장되게
-      const [catalog, mine] = await Promise.allSettled([
-        isAdmin && p.catalog.length
-          ? unwrap(
+      const adminSave = async () => {
+        const catalog = p.catalog.length
+          ? await unwrap(
               api.POST('/api/v1/admin/catalog/import', {
                 body: { rows: p.catalog as Schemas['OfferingIn'][] },
               }),
             )
-          : Promise.resolve(null),
+          : null
+        // 계획서 판정은 개설 목록 행에 붙으므로 개설 목록을 먼저 저장한다
+        const syllabi = p.syllabi?.length
+          ? await unwrap(api.POST('/api/v1/admin/catalog/syllabi', { body: { rows: p.syllabi } }))
+          : null
+        return { catalog, syllabi }
+      }
+      const [admin, mine] = await Promise.allSettled([
+        isAdmin && (p.catalog.length || p.syllabi?.length) ? adminSave() : Promise.resolve(null),
         p.records.length
           ? unwrap(api.POST('/api/v1/me/ndrims/import', { body: { records: p.records } }))
           : Promise.resolve(null),
       ])
       if (mine.status === 'rejected') throw mine.reason
-      if (catalog.status === 'rejected' && !mine.value) throw catalog.reason
+      if (admin.status === 'rejected' && !mine.value) throw admin.reason
       return {
-        catalog: catalog.status === 'fulfilled' ? catalog.value : null,
-        catalogError: catalog.status === 'rejected' ? (catalog.reason as Error) : null,
+        catalog: admin.status === 'fulfilled' ? (admin.value?.catalog ?? null) : null,
+        syllabi: admin.status === 'fulfilled' ? (admin.value?.syllabi ?? null) : null,
+        catalogError: admin.status === 'rejected' ? (admin.reason as Error) : null,
         mine: mine.value,
       }
     },

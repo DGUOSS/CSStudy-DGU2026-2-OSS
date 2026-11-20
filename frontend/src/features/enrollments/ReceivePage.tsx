@@ -5,6 +5,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useAuth } from '@/features/auth/useAuth'
 import { useImportNdrims } from './queries'
+import { SyllabusResult } from './SyllabusResult'
 import { MESSAGE_TYPE, NDRIMS_ORIGINS, type NdrimsPayload } from './bookmarklet'
 import { donePull, PULL_TYPE, wantsPull } from './receive'
 
@@ -86,6 +87,9 @@ export function ReceivePage() {
           {isAdmin && payload.catalog.length > 0 && (
             <p className="text-sm">관리자: 개설 목록 {payload.catalog.length}건을 저장합니다.</p>
           )}
+          {isAdmin && (payload.syllabi?.length ?? 0) > 0 && (
+            <p className="text-sm">관리자: 강의계획서 {payload.syllabi?.length}건으로 팀플 여부를 판정합니다.</p>
+          )}
           <div className="flex gap-2">
             <Button disabled={save.isPending} onClick={() => save.mutate(payload)}>
               {save.isPending
@@ -95,6 +99,7 @@ export function ReceivePage() {
                     isAdmin &&
                       payload.catalog.length > 0 &&
                       `개설 목록 ${payload.catalog.length}건`,
+                    isAdmin && (payload.syllabi?.length ?? 0) > 0 && `계획서 ${payload.syllabi?.length}건`,
                   ]
                     .filter(Boolean)
                     .join(' + ') + ' 가져오기'}
@@ -110,7 +115,7 @@ export function ReceivePage() {
         <div className="flex flex-col gap-1 text-sm">
           {r.catalogError && (
             <p className="text-destructive">
-              개설 목록은 저장하지 못했습니다: {r.catalogError.message}
+              개설 목록·계획서는 저장하지 못했습니다: {r.catalogError.message}
             </p>
           )}
           {r.catalog && (
@@ -119,6 +124,7 @@ export function ReceivePage() {
               {r.catalog.updated}건 저장
             </p>
           )}
+          <SyllabusResult r={r.syllabi} />
           {r.mine && (
             <p>
               수강 기록 {r.mine.received}건을 받았습니다(새로 {r.mine.added}건). 들어갈 수 있는 강좌{' '}
