@@ -23,6 +23,7 @@ from qgen import llm  # noqa: E402
 from qgen.ingest import (  # noqa: E402
     BM25, EmbeddingIndex, Retriever, chunk_pages, default_index_dir, parse_lectures, st_encoder,
 )
+from qgen.ingest import vision_titles as vt  # noqa: E402
 
 
 def main() -> None:
@@ -30,6 +31,9 @@ def main() -> None:
     ap.add_argument("--course", required=True)
     ap.add_argument("--query", action="append", default=[], help="만든 뒤 바로 검색해 볼 검색어 (여러 번 가능)")
     ap.add_argument("-k", type=int, default=5)
+    ap.add_argument("--no-vision-titles", action="store_true",
+                    help="제목이 그림인 교안을 이미지 모델로 읽지 않는다 (이미 저장된 titles.json은 그대로 씀)")
+    ap.add_argument("--reread-titles", action="store_true", help="저장된 titles.json을 무시하고 다시 읽는다")
     a = ap.parse_args()
 
     course_dir = ROOT / "data" / a.course
@@ -39,7 +43,19 @@ def main() -> None:
     index_dir = default_index_dir(a.course)
     t0 = time.time()
 
-    reports = parse_lectures(course_dir, render_dir=index_dir / "pages")
+    saved = {} if a.reread_titles else vt.load_saved(index_dir)
+    reports = parse_lectures(course_dir, render_dir=index_dir / "pages", titles=saved)
+    todo = [r for r in reports if vt.needs_vision(r) and r.file not in saved]
+    if todo and not a.no_vision_titles:
+        model = llm.CFG["models"][vt.ROLE]
+        print(f"[title] 제목이 그림인 교안 {len(todo)}개 → {model}로 위쪽 띠 읽기 "
+              f"({sum(len(r.pages) for r in todo)}쪽, 처음 한 번만 — 결과는 {vt.TITLES_FILE}에 저장)")
+        for r in todo:
+            saved[r.file] = vt.read_titles(course_dir / "lectures" / r.file, [p.page for p in r.pages])
+            vt.apply_titles(r, saved[r.file])
+            vt.save(index_dir, saved, model)  # 파일마다 저장 (중간에 멈춰도 읽은 만큼 남게)
+    elif todo:
+        print(f"[title] 제목이 그림인 교안 {len(todo)}개를 건너뜀 (--no-vision-titles): {[r.file for r in todo]}")
     pages = [p for r in reports for p in r.pages]
     chunks = chunk_pages(pages, a.course)
     if not chunks:

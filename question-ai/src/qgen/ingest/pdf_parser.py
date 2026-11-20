@@ -28,6 +28,7 @@ class Page:
     page: int  # 1부터
     text: str
     title: str = ""  # PDF는 가장 큰 글씨 줄, 없으면 chunker가 첫 줄로 정함
+    title_from_text: bool = False  # PDF 위쪽 글자에서 제목을 직접 뽑았는지 (False면 앞 제목을 이어받았거나 없음)
     image_ratio: float = 0.0  # 큰 이미지 면적 합 / 쪽 면적 (최대 1)
     drawings: int = 0
     has_figure: bool = False
@@ -136,10 +137,11 @@ def parse_pdf(path: Path, render_dir: Path | None = None, dpi: int = 110,
             drawings = len(pg.get_drawings())
             # 위쪽에 제목 글자가 없는 쪽(제목이 그림이거나 앞 슬라이드를 이어 가는 쪽)은 같은 파일의 앞 제목을 이어받는다.
             # 그래야 진리표·수식 쪽이 앞의 개념 쪽과 같은 제목으로 함께 검색된다.
-            title = _largest_font_title(pg) or last_title
+            own = _largest_font_title(pg)
+            title = own or last_title
             last_title = title or last_title
             p = Page(
-                file=path.name, page=i, text=text, title=title,
+                file=path.name, page=i, text=text, title=title, title_from_text=bool(own),
                 image_ratio=round(ratio, 3), drawings=drawings,
                 has_figure=ratio >= FIGURE_IMAGE_RATIO or drawings >= FIGURE_DRAWINGS,
                 figure_heavy=ratio >= FIGURE_HEAVY_RATIO,

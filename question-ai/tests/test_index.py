@@ -100,3 +100,23 @@ def test_load_chunks_demo_course():
     ch = load_chunks(llm.ROOT / "data" / "demo", verbose=False)
     assert len(ch) == 7  # 예전 ingest.py와 같은 청크 수 (speed-1 실행 로그: 청크 7개)
     assert all(c.source.file == "os_ch5_scheduling.md" for c in ch)
+
+
+def test_title_missing_from_text_is_searchable(fake_encoder):
+    """제목이 도형인 쪽: 본문에 제목 글자가 없어도 (이미지로 읽은) 제목으로 찾아야 한다."""
+    from qgen.ingest.index import fingerprint, search_text
+    from qgen.schemas import Chunk, SourceRef
+
+    def ch(n, title, text):
+        return Chunk(chunk_id=f"p{n}", course_id="c", text=text, source=SourceRef(file="a.pdf", page=n), title=title)
+
+    chunks = [ch(1, "Half Adder", "x y c s 0 0 0 0 truth table s = x'y + xy'"),
+              ch(2, "Flip-Flops", "Flip-Flops store one bit of state"),
+              ch(3, "Decoder", "n inputs to 2^n outputs truth table")]
+    assert search_text(chunks[0]).startswith("Half Adder\n")
+    assert search_text(chunks[1]) == chunks[1].text  # 본문에 이미 있으면 그대로
+    assert BM25(chunks).scores("Half Adder")[0] == max(BM25(chunks).scores("Half Adder"))
+    idx = EmbeddingIndex.build(chunks, fake_encoder, "fake")
+    assert int(idx.scores("Half Adder", fake_encoder).argmax()) == 0
+    # 제목이 바뀌면 지문도 바뀐다 → 예전 인덱스를 잘못 쓰지 않는다
+    assert fingerprint(chunks) != fingerprint([chunks[0].model_copy(update={"title": "X"}), *chunks[1:]])

@@ -10,6 +10,8 @@ models:
   # 최종 품질 평가자 (M5). 생성에 쓰는 모델과 겹치지 않아야 함 (명세 §7, §10)
   # TODO(M5): reviewer가 haiku라 judge와 같은 모델 → M5 실험 전에 judge를 다른 모델로 바꿀 것
   judge:     "anthropic/claude-haiku-5-5"
+  # 제목이 도형·그림인 교안의 제목 읽기 (build_index 때만, 결과는 index/titles.json에 저장). 2026-11-20 Gemini로 결정
+  title_reader: "gemini/gemini-3-flash-preview"
 
 retrieval:
   embedding_model: "intfloat/multilingual-e5-small"   # CPU, 8GB RAM에서 동작
