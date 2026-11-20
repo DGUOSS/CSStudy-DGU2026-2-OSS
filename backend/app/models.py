@@ -379,3 +379,14 @@ class StudyApplication(SQLModel, table=True):
     status: str = Field(default="pending", max_length=20)
     created_at: datetime = Field(default_factory=_now)
     updated_at: datetime = Field(default_factory=_now)
+
+
+class StudyMessage(SQLModel, table=True):
+    """스터디 공간 채팅 한 줄. 개설자와 승인된 참여자만 읽고 쓴다."""
+
+    __tablename__ = "study_messages"
+    id: int | None = Field(default=None, primary_key=True)
+    group_id: int = Field(foreign_key="study_groups.id", index=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    body: str = Field(sa_column=Column(Text, nullable=False))
+    created_at: datetime = Field(default_factory=_now)
