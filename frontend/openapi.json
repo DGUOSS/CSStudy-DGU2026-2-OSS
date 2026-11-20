@@ -4436,6 +4436,20 @@
             }
           },
           {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "recommended",
+                "recent"
+              ],
+              "type": "string",
+              "default": "recommended",
+              "title": "Sort"
+            }
+          },
+          {
             "name": "access_token",
             "in": "cookie",
             "required": false,
@@ -8947,6 +8961,14 @@
           "total": {
             "type": "integer",
             "title": "Total"
+          },
+          "my_weak": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "My Weak",
+            "default": []
           }
         },
         "type": "object",
@@ -9061,6 +9083,14 @@
               }
             ],
             "title": "My Application"
+          },
+          "shared_weak": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Shared Weak",
+            "default": []
           }
         },
         "additionalProperties": false,

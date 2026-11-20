@@ -45,12 +45,13 @@ export function StudyGroupsPanel({ subjectId, design = false }: { subjectId: num
     <div className="flex gap-2" role="group" aria-label="모집 상태">
       {([['open', '모집 중'], ['closed', '모집 종료'], ['all', '전체']] as const).map(([value, label]) => <Button key={value} variant={state === value ? 'default' : 'outline'} aria-pressed={state === value} onClick={() => { setState(value); setPage(0) }}>{label}</Button>)}
     </div>
+    {(groups.data?.my_weak ?? []).length > 0 && <p className="rounded-xl bg-home-bg p-3 text-sm text-ink-2">내 약점 개념 <b className="text-navy">{groups.data?.my_weak?.join(', ')}</b> 기준으로, 약점이 비슷한 스터디를 먼저 보여 줘요.</p>}
     {message && <p role="status" className="rounded-xl bg-navy-tint p-3 text-sm text-navy">{message}</p>}
     {groups.isPending && <Loading />}
     {groups.isError && <div role="alert"><ErrorText error={groups.error} /><Button variant="outline" onClick={() => groups.refetch()}>다시 시도</Button></div>}
     {groups.data && !groups.data.items.length && <Empty>{state === 'open' ? '모집 중인 스터디가 없어요. 첫 스터디를 개설해 보세요.' : '해당하는 스터디가 없어요.'}</Empty>}
     <ul className="space-y-3">{groups.data?.items.map(group => <li key={group.id} className="rounded-2xl border border-home-line bg-white p-5">
-      <div className="mb-3 flex flex-wrap items-center gap-2"><span className={`rounded-full px-3 py-1 text-xs font-bold ${group.closed_at ? 'bg-home-bg text-ink-2' : 'bg-gold-soft text-navy'}`}>{group.closed_at ? '모집 종료' : '모집 중'}</span>{group.is_mine && <span className="text-xs font-bold text-navy">내가 개설한 스터디</span>}<span className="ml-auto text-xs text-ink-2">{new Date(group.created_at).toLocaleDateString('ko-KR')}</span></div>
+      <div className="mb-3 flex flex-wrap items-center gap-2"><span className={`rounded-full px-3 py-1 text-xs font-bold ${group.closed_at ? 'bg-home-bg text-ink-2' : 'bg-gold-soft text-navy'}`}>{group.closed_at ? '모집 종료' : '모집 중'}</span>{group.is_mine && <span className="text-xs font-bold text-navy">내가 개설한 스터디</span>}{(group.shared_weak ?? []).length > 0 && <span className="rounded-full bg-navy-tint px-3 py-1 text-xs font-bold text-navy" title="나와 이 스터디 참여자들이 함께 어려워하는 개념">약점 비슷 · {group.shared_weak?.slice(0, 3).join(', ')}{(group.shared_weak?.length ?? 0) > 3 ? ` 외 ${(group.shared_weak?.length ?? 0) - 3}개` : ''}</span>}<span className="ml-auto text-xs text-ink-2">{new Date(group.created_at).toLocaleDateString('ko-KR')}</span></div>
       <h3 className="break-words text-lg font-bold">{group.title}</h3>
       <p className="mt-1 text-sm text-ink-2">개설자 {group.owner_name}</p>
       <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-relaxed">{group.description}</p>
