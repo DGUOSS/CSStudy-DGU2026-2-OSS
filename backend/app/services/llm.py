@@ -175,6 +175,7 @@ def grade_essay(
         "틀린 내용이 섞여 있으면 그 항목만 깎는다. 답 칸이 비어 있으면 0점. 한국어.",
         content,
         EssayGrade,
+        model=settings.grade_model,
     )
     if g is None:
         return None
