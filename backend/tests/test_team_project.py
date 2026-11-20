@@ -10,6 +10,7 @@ from app.features.team_project.service import (
     LABEL_YES,
     classify_syllabus,
     decide,
+    differs,
     term_labels,
 )
 from app.models import (
@@ -19,6 +20,7 @@ from app.models import (
     Enrollment,
     Professor,
     Subject,
+    TeamProjectReport,
     User,
 )
 from tests.conftest import make_admin
@@ -81,12 +83,26 @@ def test_yes_wins_over_a_negated_mention():
 
 
 def test_decide_rules():
-    assert decide("yes", "e", 0, 3) == (LABEL_YES, "syllabus")  # 계획서가 우선
-    assert decide("no", "e", 5, 0) == (LABEL_NO, "syllabus")
-    assert decide("not_mentioned", None, 2, 1) == (LABEL_YES, "reviews")
-    assert decide("not_mentioned", None, 1, 1) == (LABEL_LIKELY_NO, "syllabus")
-    assert decide(None, None, 0, 2) == (LABEL_NO, "reviews")
-    assert decide(None, None, 0, 0) == (LABEL_UNKNOWN, None)
+    # 운영진 > 수강생(2명 이상·과반) > 계획서
+    assert decide("yes", 0, 5, override=True) == (LABEL_YES, "admin")
+    assert decide("yes", 0, 3) == (LABEL_NO, "students")  # 계획서와 실제가 다르면 실제
+    assert decide("no", 2, 0) == (LABEL_YES, "students")
+    assert decide("yes", 0, 1) == (LABEL_YES, "syllabus")  # 한 명은 부족
+    assert decide("yes", 1, 1) == (LABEL_YES, "syllabus")  # 동률이면 계획서
+    assert decide("not_mentioned", 2, 1) == (LABEL_YES, "students")
+    assert decide("not_mentioned", 0, 0) == (LABEL_LIKELY_NO, "syllabus")
+    assert decide(None, 0, 2) == (LABEL_NO, "students")
+    assert decide(None, 1, 0) == (LABEL_UNKNOWN, None)
+    assert decide(None, 0, 0) == (LABEL_UNKNOWN, None)
+
+
+def test_differs_from_syllabus():
+    assert differs("yes", LABEL_NO, "students")
+    assert differs("not_mentioned", LABEL_YES, "admin")
+    assert differs("no", LABEL_YES, "students")
+    assert not differs("yes", LABEL_YES, "students")
+    assert not differs("yes", LABEL_YES, "syllabus")
+    assert not differs(None, LABEL_YES, "students")  # 계획서가 없으면 비교하지 않음
 
 
 # ---------- (강좌, 학기) 단위 ----------
@@ -162,15 +178,36 @@ def _review(session, course, year, sem, team, n=1):
     session.commit()
 
 
-def test_reviews_fill_terms_without_syllabus(session, two_profs):
+def test_students_override_syllabus(session, two_profs):
     kim = two_profs["kim"]
     _review(session, kim, "2025", FALL, True, n=2)
     _review(session, kim, "2025", FALL, False)
-    _review(session, kim, "2026", FALL, True, n=3)  # 계획서(없음)가 있는 학기는 계획서를 따른다
+    _review(session, kim, "2026", FALL, True, n=3)  # 계획서엔 '조별 과제 없음'
     labels = {t.term: t for t in term_labels(session, kim)}
-    assert (labels["2025 2학기"].label, labels["2025 2학기"].source) == ("yes", "reviews")
+    assert (labels["2025 2학기"].label, labels["2025 2학기"].source) == ("yes", "students")
     assert (labels["2025 2학기"].yes_votes, labels["2025 2학기"].no_votes) == (2, 1)
-    assert labels["2026 2학기"].label == "no" and labels["2026 2학기"].yes_votes == 3
+    t = labels["2026 2학기"]
+    assert (t.label, t.source, t.syllabus, t.differs_from_syllabus) == (
+        "yes",
+        "students",
+        "no",
+        True,
+    )
+    assert t.evidence == "조별 과제 없음"  # 계획서 문장은 비교용으로 남긴다
+
+
+def test_report_and_review_count_once_per_student(session, two_profs):
+    kang = two_profs["kang"]
+    _review(session, kang, "2026", FALL, True)  # 후기에서 '있었다'
+    u = session.exec(select(CourseReview)).one().user_id
+    session.add(
+        TeamProjectReport(
+            user_id=u, course_id=kang.id, year="2026", sem_cd=FALL, team_project=False
+        )
+    )
+    session.commit()  # 같은 학생이 제보 버튼으로 '없었다' → 제보가 그 학생의 한 표
+    t = term_labels(session, kang)[0]
+    assert (t.yes_votes, t.no_votes) == (0, 1) and t.source == "syllabus"
 
 
 # ---------- API ----------
@@ -272,5 +309,89 @@ def test_review_records_team_answer(client, login, session, two_profs):
     )
     assert r.status_code == 201, r.text
     assert r.json()["team_project"] is True
-    terms = client.get(f"/api/v1/courses/{kim.id}/team-project").json()["terms"]
-    assert {t["term"]: t["label"] for t in terms}["2025 2학기"] == "yes"
+    body = client.get(f"/api/v1/courses/{kim.id}/team-project").json()
+    t = {t["term"]: t for t in body["terms"]}["2025 2학기"]
+    assert (t["label"], t["yes_votes"]) == ("unknown", 1)  # 한 명은 아직 라벨이 안 됨
+    assert body["my_terms"] == [
+        {"year": "2025", "sem_cd": FALL, "term": "2025 2학기", "my_answer": True}
+    ]
+
+
+def _student_in(client, login, session, course, email, year="2026", sem=FALL):
+    client.post("/api/v1/auth/logout")
+    login(email, "학생")
+    me = client.get("/api/v1/auth/me").json()
+    session.add(
+        Enrollment(
+            user_id=me["id"],
+            year=year,
+            sem_cd=sem,
+            sbj_no="CSC2001",
+            sbj_nm="x",
+            dvcls="01",
+            course_id=course.id,
+        )
+    )
+    session.commit()
+
+
+def test_report_button_flow(client, login, session, two_profs):
+    kang = two_profs["kang"]  # 2026-2 계획서: 팀 프로젝트 30%
+    url = f"/api/v1/courses/{kang.id}/team-project/report"
+    login("nope@dgu.ac.kr", "미수강")
+    assert (
+        client.put(url, json={"year": "2026", "sem_cd": FALL, "team_project": False}).status_code
+        == 403
+    )
+
+    for email in ("s1@dgu.ac.kr", "s2@dgu.ac.kr"):
+        _student_in(client, login, session, kang, email)
+        r = client.put(url, json={"year": "2026", "sem_cd": FALL, "team_project": False})
+        assert r.status_code == 200, r.text
+    latest = r.json()["latest"]
+    assert (latest["label"], latest["source"], latest["differs_from_syllabus"]) == (
+        "no",
+        "students",
+        True,
+    )
+    assert r.json()["my_terms"][0]["my_answer"] is False
+
+    r = client.put(url, json={"year": "2026", "sem_cd": FALL, "team_project": True})  # 마음 바꿈
+    assert (r.json()["latest"]["yes_votes"], r.json()["latest"]["no_votes"]) == (1, 1)
+    assert r.json()["latest"]["source"] == "syllabus"  # 동률 → 계획서
+    r = client.put(url, json={"year": "2026", "sem_cd": FALL, "team_project": None})  # 응답 지우기
+    assert r.json()["latest"]["no_votes"] == 1 and r.json()["my_terms"][0]["my_answer"] is None
+    assert len(session.exec(select(TeamProjectReport)).all()) == 1
+
+
+def test_admin_override(client, login, session, two_profs):
+    kang = two_profs["kang"]
+    url = f"/api/v1/admin/courses/{kang.id}/team-project"
+    login("s@dgu.ac.kr", "학생")
+    assert (
+        client.put(url, json={"year": "2026", "sem_cd": FALL, "team_project": False}).status_code
+        == 403
+    )
+    client.post("/api/v1/auth/logout")
+    _setup_api(client, login, session, two_profs)
+    r = client.put(
+        url,
+        json={
+            "year": "2026",
+            "sem_cd": FALL,
+            "team_project": False,
+            "note": "  수강생 확인: 개인 과제로 바뀜 ",
+        },
+    )
+    latest = r.json()["latest"]
+    assert (latest["label"], latest["source"], latest["note"]) == (
+        "no",
+        "admin",
+        "수강생 확인: 개인 과제로 바뀜",
+    )
+    assert latest["differs_from_syllabus"] is True
+    # 계획서가 없는 학기도 지정할 수 있다
+    r = client.put(url, json={"year": "2025", "sem_cd": FALL, "team_project": True})
+    assert {t["term"]: t["label"] for t in r.json()["terms"]}["2025 2학기"] == "yes"
+    r = client.put(url, json={"year": "2026", "sem_cd": FALL, "team_project": None})  # 지정 해제
+    assert r.json()["latest"]["source"] == "syllabus"

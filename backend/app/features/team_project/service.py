@@ -1,10 +1,11 @@
 """팀 프로젝트(팀플) 여부 라벨.
 
 같은 과목이라도 교수·학기마다 다르므로 라벨은 (강좌 = 과목+교수, 학기) 단위로 정한다.
-근거는 두 가지다.
-- 강의계획서: 엔드림스에서 받은 계획서 글을 규칙으로 판정해 개설 목록(catalog_offerings)에 저장한다.
-- 후기: 그 학기 수강 기록으로 쓴 후기의 "팀 프로젝트가 있었나요?" 응답.
-계획서가 있으면 계획서를 따르고(교수가 공지한 내용), 없거나 언급이 없으면 후기 응답으로 정한다.
+계획서와 실제 수업이 다를 수 있어서, 계획서는 기본값으로만 쓰고 실제 경험으로 덮어쓴다.
+우선순위:
+1. 운영진 지정(team_project_overrides)
+2. 수강생 응답: 제보 버튼(team_project_reports) + 후기 응답, 한 학생 한 표. 2명 이상이고 과반일 때
+3. 강의계획서: 엔드림스 계획서 글을 규칙으로 판정해 개설 목록(catalog_offerings)에 저장한 값
 """
 
 import re
@@ -13,7 +14,15 @@ from dataclasses import dataclass, field
 from sqlmodel import Session, select
 
 from app.features.enrollments.service import term_label
-from app.models import CatalogOffering, Course, CourseReview, Professor, Subject
+from app.models import (
+    CatalogOffering,
+    Course,
+    CourseReview,
+    Professor,
+    Subject,
+    TeamProjectOverride,
+    TeamProjectReport,
+)
 
 # ---------- 강의계획서 판정 ----------
 
@@ -62,6 +71,9 @@ def classify_syllabus(text: str) -> tuple[str, str | None]:
 
 # 화면에 보이는 값
 LABEL_YES, LABEL_NO, LABEL_LIKELY_NO, LABEL_UNKNOWN = "yes", "no", "likely_no", "unknown"
+MIN_VOTES = (
+    2  # 수강생 응답으로 라벨을 정하려면 이만큼 모여야 한다(한 명의 실수·장난에 흔들리지 않게)
+)
 
 
 @dataclass
@@ -70,26 +82,40 @@ class TermLabel:
     sem_cd: str
     term: str
     label: str  # yes | no | likely_no(계획서에 언급 없음) | unknown
-    source: str | None  # syllabus | reviews | None
-    evidence: str | None = None
+    source: str | None  # admin | students | syllabus | None
+    evidence: str | None = None  # 계획서 근거 문장
+    note: str | None = None  # 운영진 메모
+    syllabus: str | None = None  # 계획서 판정(yes | no | not_mentioned | None)
+    differs_from_syllabus: bool = False  # 실제(제보·운영진)가 계획서와 다름
     yes_votes: int = 0
     no_votes: int = 0
     dvcls: list[str] = field(default_factory=list)
 
 
-def decide(syllabus: str | None, evidence: str | None, yes: int, no: int) -> tuple[str, str | None]:
-    """(라벨, 근거 종류). 계획서에 적힌 내용 > 후기 다수결 > 계획서 언급 없음."""
+def decide(
+    syllabus: str | None, yes: int, no: int, override: bool | None = None
+) -> tuple[str, str | None]:
+    """(라벨, 근거 종류). 운영진 > 수강생 응답(2명 이상, 과반) > 강의계획서."""
+    if override is not None:
+        return (LABEL_YES if override else LABEL_NO), "admin"
+    if yes + no >= MIN_VOTES and yes != no:
+        return (LABEL_YES if yes > no else LABEL_NO), "students"
     if syllabus == YES:
         return LABEL_YES, "syllabus"
     if syllabus == NO:
         return LABEL_NO, "syllabus"
-    if yes > no:
-        return LABEL_YES, "reviews"
-    if no > yes:
-        return LABEL_NO, "reviews"
     if syllabus == NOT_MENTIONED:
         return LABEL_LIKELY_NO, "syllabus"
     return LABEL_UNKNOWN, None
+
+
+def differs(syllabus: str | None, label: str, source: str | None) -> bool:
+    """계획서와 실제가 다른가. 계획서에 언급이 없었는데 실제로 있었던 경우도 포함."""
+    if source not in ("admin", "students") or syllabus is None:
+        return False
+    if syllabus == YES:
+        return label == LABEL_NO
+    return label == LABEL_YES  # 계획서 없음/언급 없음인데 실제로 있었음
 
 
 def _merge_syllabus(rows: list[CatalogOffering]) -> tuple[str | None, str | None]:
@@ -116,8 +142,12 @@ def offerings_of(session: Session, course: Course) -> list[CatalogOffering]:
     return list(session.exec(q).all())
 
 
-def _votes(session: Session, course_id: int) -> dict[tuple[str, str], tuple[int, int]]:
-    out: dict[tuple[str, str], list[int]] = {}
+Term = tuple[str, str]
+
+
+def votes(session: Session, course_id: int) -> dict[Term, tuple[int, int]]:
+    """학기별 (있었다, 없었다) 수. 한 학생은 한 표: 제보 버튼 응답이 있으면 그것, 없으면 후기 응답."""
+    by_user: dict[tuple[Term, int], bool] = {}
     for r in session.exec(
         select(CourseReview).where(
             CourseReview.course_id == course_id,
@@ -125,41 +155,63 @@ def _votes(session: Session, course_id: int) -> dict[tuple[str, str], tuple[int,
             CourseReview.team_project.is_not(None),  # type: ignore[union-attr]
         )
     ).all():
-        v = out.setdefault((r.year, r.sem_cd), [0, 0])
-        v[0 if r.team_project else 1] += 1
+        by_user[((r.year, r.sem_cd), r.user_id)] = bool(r.team_project)
+    for p in session.exec(
+        select(TeamProjectReport).where(TeamProjectReport.course_id == course_id)
+    ).all():
+        by_user[((p.year, p.sem_cd), p.user_id)] = p.team_project
+    out: dict[Term, list[int]] = {}
+    for (term, _), v in by_user.items():
+        out.setdefault(term, [0, 0])[0 if v else 1] += 1
     return {k: (v[0], v[1]) for k, v in out.items()}
 
 
-def term_labels(
-    session: Session, course: Course, offerings: list[CatalogOffering] | None = None
-) -> list[TermLabel]:
-    """학기별 라벨, 최근 학기부터. 계획서도 후기 응답도 없는 학기는 넣지 않는다."""
-    offerings = offerings_of(session, course) if offerings is None else offerings
-    by_term: dict[tuple[str, str], list[CatalogOffering]] = {}
-    for o in offerings:
+def overrides(session: Session, course_id: int) -> dict[Term, TeamProjectOverride]:
+    return {
+        (o.year, o.sem_cd): o
+        for o in session.exec(
+            select(TeamProjectOverride).where(TeamProjectOverride.course_id == course_id)
+        ).all()
+    }
+
+
+def _label(
+    term: Term,
+    rows: list[CatalogOffering],
+    vote: tuple[int, int],
+    override: TeamProjectOverride | None,
+) -> TermLabel:
+    syl, ev = _merge_syllabus(rows)
+    yes, no = vote
+    label, source = decide(syl, yes, no, override.team_project if override else None)
+    return TermLabel(
+        year=term[0],
+        sem_cd=term[1],
+        term=term_label(*term),
+        label=label,
+        source=source,
+        evidence=ev,
+        note=override.note if override else None,
+        syllabus=syl,
+        differs_from_syllabus=differs(syl, label, source),
+        yes_votes=yes,
+        no_votes=no,
+        dvcls=sorted(r.dvcls for r in rows),
+    )
+
+
+def term_labels(session: Session, course: Course) -> list[TermLabel]:
+    """학기별 라벨, 최근 학기부터. 계획서·응답·운영진 지정이 하나도 없는 학기는 넣지 않는다."""
+    by_term: dict[Term, list[CatalogOffering]] = {}
+    for o in offerings_of(session, course):
         by_term.setdefault((o.year, o.sem_cd), []).append(o)
-    votes = _votes(session, course.id)
+    v, ov = votes(session, course.id), overrides(session, course.id)
     out = []
-    for key in sorted(set(by_term) | set(votes), reverse=True):
-        rows = by_term.get(key, [])
-        syl, ev = _merge_syllabus(rows)
-        yes, no = votes.get(key, (0, 0))
-        label, source = decide(syl, ev, yes, no)
-        if syl is None and not (yes or no):
-            continue
-        out.append(
-            TermLabel(
-                year=key[0],
-                sem_cd=key[1],
-                term=term_label(*key),
-                label=label,
-                source=source,
-                evidence=ev if source == "syllabus" else None,
-                yes_votes=yes,
-                no_votes=no,
-                dvcls=sorted(r.dvcls for r in rows),
-            )
-        )
+    for term in sorted(set(by_term) | set(v) | set(ov), reverse=True):
+        t = _label(term, by_term.get(term, []), v.get(term, (0, 0)), ov.get(term))
+        if t.syllabus is None and t.source is None and not (t.yes_votes or t.no_votes):
+            continue  # 계획서는 아직 판정 전이고 응답도 없음
+        out.append(t)
     return out
 
 
@@ -173,18 +225,7 @@ def offering_group_label(
     session: Session, group: list[CatalogOffering], course_id: int | None
 ) -> TermLabel:
     """개설 목록 화면의 한 줄(같은 학기·과목·교수의 분반 묶음)."""
-    o = group[0]
-    syl, ev = _merge_syllabus(group)
-    yes, no = _votes(session, course_id).get((o.year, o.sem_cd), (0, 0)) if course_id else (0, 0)
-    label, source = decide(syl, ev, yes, no)
-    return TermLabel(
-        year=o.year,
-        sem_cd=o.sem_cd,
-        term=term_label(o.year, o.sem_cd),
-        label=label,
-        source=source,
-        evidence=ev if source == "syllabus" else None,
-        yes_votes=yes,
-        no_votes=no,
-        dvcls=sorted(r.dvcls for r in group),
-    )
+    term = (group[0].year, group[0].sem_cd)
+    vote = votes(session, course_id).get(term, (0, 0)) if course_id else (0, 0)
+    override = overrides(session, course_id).get(term) if course_id else None
+    return _label(term, group, vote, override)

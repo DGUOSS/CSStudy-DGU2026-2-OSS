@@ -30,7 +30,10 @@ export function ReviewsTab({ courseId }: { courseId: number }) {
   const terms = useQuery({ queryKey: [...key, 'terms'], queryFn: () => unwrap(api.GET('/api/v1/courses/{course_id}/reviews/terms', {
     params: { path: { course_id: courseId } },
   })) })
-  const refresh = () => { void qc.invalidateQueries({ queryKey: key }) }
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: key })
+    void qc.invalidateQueries({ queryKey: ['courses', courseId, 'team-project'] })
+  }
   const remove = useMutation({
     mutationFn: (id: number) => unwrap(api.DELETE('/api/v1/reviews/{review_id}', { params: { path: { review_id: id } } })),
     onSuccess: () => { setDeleting(null); setPage(0); refresh() },

@@ -1292,6 +1292,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/courses/{course_id}/team-project/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Report Team Project
+         * @description 팀플 제보. 그 학기 이 강좌 수강 기록이 있어야 한다. 다시 보내면 바뀐다.
+         */
+        put: operations["report_team_project_api_v1_courses__course_id__team_project_report_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/courses/{course_id}/team-project": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Override
+         * @description 운영진 지정. team_project=null이면 지정을 지워 계획서·제보로 돌아간다.
+         */
+        put: operations["set_override_api_v1_admin_courses__course_id__team_project_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/catalog/syllabi": {
         parameters: {
             query?: never;
@@ -1676,6 +1716,8 @@ export interface components {
             latest: components["schemas"]["TeamLabelOut"] | null;
             /** Terms */
             terms: components["schemas"]["TeamLabelOut"][];
+            /** My Terms */
+            my_terms: components["schemas"]["MyTermOut"][];
         };
         /** CourseUpdate */
         CourseUpdate: {
@@ -2052,6 +2094,20 @@ export interface components {
              */
             submitted_at: string;
         };
+        /**
+         * MyTermOut
+         * @description 내 수강 기록이 있는 학기와 내 응답(제보 버튼, 없으면 후기에서 한 답).
+         */
+        MyTermOut: {
+            /** Year */
+            year: string;
+            /** Sem Cd */
+            sem_cd: string;
+            /** Term */
+            term: string;
+            /** My Answer */
+            my_answer: boolean | null;
+        };
         /** NoteIn */
         NoteIn: {
             /**
@@ -2212,6 +2268,23 @@ export interface components {
             proj_rate?: number | null;
             /** Plan Url */
             plan_url?: string | null;
+        };
+        /** OverrideIn */
+        OverrideIn: {
+            /** Year */
+            year: string;
+            /** Sem Cd */
+            sem_cd: string;
+            /**
+             * Team Project
+             * @description 있었다 / 없었다 / null = 응답 지우기
+             */
+            team_project: boolean | null;
+            /**
+             * Note
+             * @default
+             */
+            note?: string;
         };
         /** PaperIn */
         PaperIn: {
@@ -2840,17 +2913,44 @@ export interface components {
             label: string;
             /**
              * Source
-             * @description syllabus | reviews | null
+             * @description admin | students | syllabus | null
              */
             source: string | null;
-            /** Evidence */
+            /**
+             * Evidence
+             * @description 강의계획서 근거 문장
+             */
             evidence: string | null;
+            /**
+             * Note
+             * @description 운영진 메모
+             */
+            note: string | null;
+            /**
+             * Syllabus
+             * @description 계획서 판정: yes | no | not_mentioned | null
+             */
+            syllabus: string | null;
+            /** Differs From Syllabus */
+            differs_from_syllabus: boolean;
             /** Yes Votes */
             yes_votes: number;
             /** No Votes */
             no_votes: number;
             /** Dvcls */
             dvcls: string[];
+        };
+        /** TermAnswerIn */
+        TermAnswerIn: {
+            /** Year */
+            year: string;
+            /** Sem Cd */
+            sem_cd: string;
+            /**
+             * Team Project
+             * @description 있었다 / 없었다 / null = 응답 지우기
+             */
+            team_project: boolean | null;
         };
         /** TermOut */
         TermOut: {
@@ -5678,6 +5778,80 @@ export interface operations {
             };
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourseTeamOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_team_project_api_v1_courses__course_id__team_project_report_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TermAnswerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourseTeamOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_override_api_v1_admin_courses__course_id__team_project_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OverrideIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

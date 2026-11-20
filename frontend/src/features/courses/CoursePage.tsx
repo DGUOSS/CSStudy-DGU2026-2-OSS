@@ -11,6 +11,7 @@ import { ChaptersTab } from '@/features/problems/ChaptersTab'
 import { ReviewsTab } from '@/features/reviews/ReviewsTab'
 import { TeamBadge } from '@/features/team_project/TeamBadge'
 import { TeamHistory } from '@/features/team_project/TeamHistory'
+import { TeamReportPrompt } from '@/features/team_project/TeamReport'
 import { CourseInfoTab } from './CourseInfoTab'
 import { useCourse } from './queries'
 
@@ -61,6 +62,7 @@ export function CoursePage() {
         </h1>
         <TeamBadge label={c.team_project} showTerm className="mt-2" />
       </div>
+      <TeamReportPrompt courseId={courseId} />
       <nav className="flex gap-1 overflow-x-auto border-b">
         {TABS.map((t) => (
           <button

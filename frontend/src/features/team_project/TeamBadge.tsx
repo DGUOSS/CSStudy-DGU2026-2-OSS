@@ -33,6 +33,7 @@ export function TeamBadge({ label, showTerm = false, className }: {
     >
       <Users aria-hidden="true" className="size-3" />
       {TEXT[label.label]}
+      {label.differs_from_syllabus && <span className="font-normal opacity-80">· 계획서와 다름</span>}
       {showTerm && <span className="font-normal opacity-80">· {label.term}</span>}
     </Badge>
   )

@@ -10,8 +10,11 @@ class TeamLabelOut(BaseModel):
     sem_cd: str
     term: str
     label: str = Field(description="yes | no | likely_no(계획서에 언급 없음) | unknown")
-    source: str | None = Field(description="syllabus | reviews | null")
-    evidence: str | None
+    source: str | None = Field(description="admin | students | syllabus | null")
+    evidence: str | None = Field(description="강의계획서 근거 문장")
+    note: str | None = Field(description="운영진 메모")
+    syllabus: str | None = Field(description="계획서 판정: yes | no | not_mentioned | null")
+    differs_from_syllabus: bool
     yes_votes: int
     no_votes: int
     dvcls: list[str]
