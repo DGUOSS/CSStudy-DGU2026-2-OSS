@@ -1272,6 +1272,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/study-groups/{group_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Messages
+         * @description 채팅. after_id가 0이면 최근 50개, 아니면 그 뒤에 온 메시지(새로 고칠 때). 오래된 것부터 준다.
+         */
+        get: operations["list_messages_api_v1_study_groups__group_id__messages_get"];
+        put?: never;
+        /** Send Message */
+        post: operations["send_message_api_v1_study_groups__group_id__messages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1901,6 +1922,29 @@ export interface components {
             title?: string | null;
             /** Kind */
             kind?: ("lecture" | "exam" | "note") | null;
+        };
+        /** MessageIn */
+        MessageIn: {
+            /** Body */
+            body: string;
+        };
+        /** MessageOut */
+        MessageOut: {
+            /** Id */
+            id: number;
+            /** User Name */
+            user_name: string;
+            /** Is Mine */
+            is_mine: boolean;
+            /** Is Owner */
+            is_owner: boolean;
+            /** Body */
+            body: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** MineOut */
         MineOut: {
@@ -5534,6 +5578,78 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StudySpaceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_messages_api_v1_study_groups__group_id__messages_get: {
+        parameters: {
+            query?: {
+                after_id?: number;
+            };
+            header?: never;
+            path: {
+                group_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_message_api_v1_study_groups__group_id__messages_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessageIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageOut"];
                 };
             };
             /** @description Validation Error */
