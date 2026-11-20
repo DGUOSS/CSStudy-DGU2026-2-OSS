@@ -42,13 +42,31 @@ def test_first_login_creates_account(client, fake_google):
     assert r.status_code in (401, 422)
 
 
-def test_links_existing_account(login, client, fake_google):
-    login("me@dgu.ac.kr", "민제")
-    uid = client.get("/api/v1/auth/me").json()["id"]
-    client.post("/api/v1/auth/logout")
+def test_links_existing_account(client, session, fake_google):
+    from app.models import User
+
+    u = User(email="me@dgu.ac.kr", name="민제", password_hash="x")
+    session.add(u)
+    session.commit()
     fake_google.update(school("ME@dgu.ac.kr", "Google 이름"))
     r = client.post("/api/v1/auth/google", json={"credential": "x"})
-    assert r.json()["id"] == uid and r.json()["name"] == "민제"
+    assert r.json()["id"] == u.id and r.json()["name"] == "민제"
+
+
+def test_admin_emails(client, fake_google, monkeypatch):
+    monkeypatch.setattr(settings, "admin_emails", " Boss@dgu.ac.kr , x@dgu.ac.kr")
+    fake_google.update(school("boss@dgu.ac.kr"))
+    assert client.post("/api/v1/auth/google", json={"credential": "x"}).json()["role"] == "admin"
+    fake_google.update(school("student@dgu.ac.kr"))
+    assert client.post("/api/v1/auth/google", json={"credential": "x"}).json()["role"] == "user"
+
+
+def test_email_signup_closed_when_school_login_on(client, fake_google):
+    r = client.post(
+        "/api/v1/auth/signup",
+        json={"email": "a@dgu.ac.kr", "name": "a", "password": "password123"},
+    )
+    assert r.status_code == 403
 
 
 @pytest.mark.parametrize(

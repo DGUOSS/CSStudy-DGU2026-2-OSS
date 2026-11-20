@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     # 동국대 계정(Google 워크스페이스) 로그인. 클라이언트 ID가 없으면 버튼이 안 보인다
     google_client_id: str = ""
     school_email_domain: str = "dgu.ac.kr"
+    # 학교 계정으로 로그인하면 관리자가 되는 이메일(쉼표로 구분)
+    admin_emails: str = ""
 
     @property
     def db_url(self) -> str:

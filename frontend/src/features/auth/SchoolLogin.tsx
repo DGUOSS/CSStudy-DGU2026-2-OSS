@@ -1,7 +1,6 @@
 /** 동국대 계정 로그인 버튼. 동국대 메일은 Google 워크스페이스라 Google 로그인 버튼을 쓴다. */
-import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
-import { api, unwrap } from '@/api/client'
+import { useSchoolLoginConfig } from './useAuth'
 
 type GoogleId = {
   initialize: (o: {
@@ -41,11 +40,7 @@ export function SchoolLogin({ onCredential }: { onCredential: (credential: strin
   useEffect(() => {
     cb.current = onCredential
   })
-  const config = useQuery({
-    queryKey: ['google-config'],
-    queryFn: () => unwrap(api.GET('/api/v1/auth/google/config')),
-    staleTime: Infinity,
-  })
+  const config = useSchoolLoginConfig()
   const clientId = config.data?.client_id
   const domain = config.data?.domain
 
@@ -84,11 +79,6 @@ export function SchoolLogin({ onCredential }: { onCredential: (credential: strin
       <p className="text-center text-xs text-muted-foreground">
         동국대 계정(@{domain})만 로그인할 수 있습니다
       </p>
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        <span className="h-px flex-1 bg-border" />
-        또는
-        <span className="h-px flex-1 bg-border" />
-      </div>
     </div>
   )
 }

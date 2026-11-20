@@ -39,6 +39,10 @@ class UserOut(BaseModel):
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 def signup(body: SignupIn, session: SessionDep, response: Response) -> UserOut:
+    if settings.google_client_id:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "동국대 계정으로 로그인하면 자동으로 가입됩니다"
+        )
     email = body.email.lower()
     if session.exec(select(User).where(User.email == email)).first():
         raise HTTPException(status.HTTP_409_CONFLICT, "이미 가입된 이메일입니다")
@@ -111,8 +115,11 @@ def google_login(body: GoogleLoginIn, session: SessionDep, response: Response) -
     user = session.exec(select(User).where(User.email == email)).first()
     if user is None:
         user = User(email=email, name=name, password_hash="")  # 비밀번호 없음: 비밀번호 로그인 불가
-        session.add(user)
-        session.commit()
-        session.refresh(user)
+    admins = {e.strip().lower() for e in settings.admin_emails.split(",") if e.strip()}
+    if email in admins:
+        user.role = "admin"
+    session.add(user)
+    session.commit()
+    session.refresh(user)
     set_login_cookie(response, user.id)
     return UserOut.model_validate(user, from_attributes=True)

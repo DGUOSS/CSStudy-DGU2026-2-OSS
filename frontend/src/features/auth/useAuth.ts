@@ -48,3 +48,12 @@ export function useAuth() {
 
   return { user: me.data ?? null, loading: me.isPending, login, signup, googleLogin, logout }
 }
+
+/** 학교 계정 로그인 설정. client_id가 비어 있으면 꺼져 있다 */
+export function useSchoolLoginConfig() {
+  return useQuery({
+    queryKey: ['google-config'],
+    queryFn: () => unwrap(api.GET('/api/v1/auth/google/config')),
+    staleTime: Infinity,
+  })
+}
