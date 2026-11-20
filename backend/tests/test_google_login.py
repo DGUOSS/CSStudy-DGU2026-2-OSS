@@ -85,3 +85,36 @@ def test_rejects_non_school(client, fake_google, claims):
 
 def test_rejects_invalid_token(client, fake_google):
     assert client.post("/api/v1/auth/google", json={"credential": "bad"}).status_code == 401
+
+
+def test_verify_credential_checks_real_signature(monkeypatch):
+    """실제 RS256 서명 검증 경로(암호화 라이브러리 포함). Google 키 대신 테스트용 키를 쓴다."""
+    import time
+    from types import SimpleNamespace
+
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    other = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    monkeypatch.setattr(settings, "google_client_id", "test-client")
+    monkeypatch.setattr(
+        google._jwks,
+        "get_signing_key_from_jwt",
+        lambda token: SimpleNamespace(key=key.public_key()),
+    )
+    now = int(time.time())
+    claims = {
+        **school(),
+        "aud": "test-client",
+        "iss": "https://accounts.google.com",
+        "iat": now,
+        "exp": now + 600,
+    }
+    assert (
+        google.verify_credential(jwt.encode(claims, key, algorithm="RS256"))["email"]
+        == "new@dgu.ac.kr"
+    )
+    with pytest.raises(jwt.PyJWTError):  # 다른 키로 서명(위조)
+        google.verify_credential(jwt.encode(claims, other, algorithm="RS256"))
+    with pytest.raises(jwt.PyJWTError):  # 다른 앱용 토큰
+        google.verify_credential(jwt.encode({**claims, "aud": "x"}, key, algorithm="RS256"))

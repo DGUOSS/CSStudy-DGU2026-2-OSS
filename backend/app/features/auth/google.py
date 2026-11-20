@@ -25,6 +25,7 @@ def verify_credential(credential: str) -> dict:
         algorithms=["RS256"],
         audience=settings.google_client_id,
         issuer=GOOGLE_ISSUERS,
+        leeway=30,  # 서버 시계가 조금 어긋나도 막 받은 토큰을 거절하지 않게
     )
 
 
