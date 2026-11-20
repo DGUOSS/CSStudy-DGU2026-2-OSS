@@ -17,6 +17,7 @@ from app.features.notices.router import router as notices_router
 from app.features.papers.router import router as papers_router
 from app.features.problems.router import router as problems_router
 from app.features.reviews.router import router as reviews_router
+from app.features.structure import service as _structure_hooks  # noqa: F401  (교안 저장 시 자동 챕터·개념)
 from app.features.study_groups.router import router as study_groups_router
 from app.services import llm
 
@@ -24,7 +25,26 @@ from app.services import llm
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     llm.warm_up()
+    _startup_backfill()
     yield
+
+
+def _startup_backfill() -> None:
+    """서버를 켤 때 뒤에서: 챕터·개념이 없는 교안을 채우고, 그다음 오개념이 빠진 객관식을 채운다."""
+    import threading
+
+    from app.core.db import engine
+    from app.features.misconceptions import service as misconceptions
+    from app.features.structure import service as structure
+
+    if not structure.enabled():
+        return
+
+    def run() -> None:
+        structure.backfill(engine)
+        misconceptions.backfill(engine)
+
+    threading.Thread(target=run, daemon=True).start()
 
 
 app = FastAPI(title="dgu-study", version="0.2.0", lifespan=lifespan)

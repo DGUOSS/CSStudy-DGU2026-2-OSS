@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Brain, ChevronDown, ChevronRight, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Brain, ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react'
 import { useState } from 'react'
 import { api, unwrap } from '@/api/client'
 import { ErrorText } from '@/components/States'
@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 
-/** 관리자: 강좌의 객관식 문제에 오개념(틀린 보기별 '왜 골랐을까')을 Claude로 한 번 붙여 둔다. */
+/** 관리자: 강좌 객관식의 오개념 상태와 목록(숨기기). 오개념은 문제가 저장될 때 자동으로 붙는다. */
 export function MisconceptionAdmin({ courseId }: { courseId: number }) {
   const qc = useQueryClient()
   const [listOpen, setListOpen] = useState(false)
@@ -32,15 +32,6 @@ export function MisconceptionAdmin({ courseId }: { courseId: number }) {
         }),
       ),
   })
-  const generate = useMutation({
-    mutationFn: () =>
-      unwrap(
-        api.POST('/api/v1/admin/courses/{course_id}/misconceptions/generate', {
-          params: { path: { course_id: courseId } },
-        }),
-      ),
-    onSuccess: (d) => qc.setQueryData([...key, 'status'], d),
-  })
   const setStatus = useMutation({
     mutationFn: ({ id, s }: { id: number; s: 'auto' | 'hidden' }) =>
       unwrap(
@@ -53,7 +44,6 @@ export function MisconceptionAdmin({ courseId }: { courseId: number }) {
   })
 
   const s = status.data
-  const missing = s ? s.problems - s.covered : 0
   return (
     <div className="flex flex-col gap-2 rounded-lg border p-3 text-sm">
       <div className="flex flex-wrap items-center gap-2">
@@ -65,20 +55,6 @@ export function MisconceptionAdmin({ courseId }: { courseId: number }) {
           </span>
         )}
         <div className="ml-auto flex gap-1">
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={!s || s.running || missing === 0 || generate.isPending}
-            title="Claude로 문제당 한 번 만든다(문제당 약 8초, 약 30원). 이미 있는 문제는 건너뛴다"
-            onClick={() =>
-              confirm(
-                `오개념이 없는 객관식 ${missing}문제에 오개념을 만들까요?\nClaude API를 사용합니다(약 ${Math.ceil(missing * 0.024 * 100) / 100}달러, ${Math.ceil((missing * 8) / 60)}분 안팎).`,
-              ) && generate.mutate()
-            }
-          >
-            {s?.running ? <Loader2 className="animate-spin" /> : <Brain />}
-            {s?.running ? '만드는 중' : missing === 0 ? '모두 붙음' : `오개념 만들기 (${missing})`}
-          </Button>
           <Button size="sm" variant="ghost" onClick={() => setListOpen(!listOpen)}>
             {listOpen ? <ChevronDown /> : <ChevronRight />}
             목록
@@ -100,7 +76,7 @@ export function MisconceptionAdmin({ courseId }: { courseId: number }) {
           지난번 {s.failed}문제는 만들지 못했습니다. 다시 누르면 남은 것만 만듭니다.
         </p>
       )}
-      <ErrorText error={status.error ?? generate.error ?? setStatus.error} />
+      <ErrorText error={status.error ?? setStatus.error} />
       {listOpen && (
         <div className="flex max-h-[28rem] flex-col gap-2 overflow-y-auto">
           {list.data?.length === 0 && <p className="text-muted-foreground">아직 없습니다.</p>}

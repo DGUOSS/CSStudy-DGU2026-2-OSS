@@ -13,6 +13,7 @@ from app.core.db import SessionDep
 from app.core.security import CurrentUser
 from app.features.courses.router import get_course_or_404
 from app.features.enrollments.service import require_course_access
+from app.features.misconceptions.service import ensure_for as ensure_misconceptions
 from app.features.misconceptions.service import visible_for
 from app.features.papers import omr
 from app.features.papers.grading import claim, finish_take, grade_mcq
@@ -292,6 +293,7 @@ def create_paper(course_id: int, body: PaperIn, session: SessionDep, user: Curre
     session.add(paper)
     session.commit()
     session.refresh(paper)
+    ensure_misconceptions(session.get_bind(), list(paper.problem_ids))  # 빠진 오개념은 뒤에서 채움
     return get_paper(paper.id, session, user)
 
 

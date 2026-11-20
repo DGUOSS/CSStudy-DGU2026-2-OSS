@@ -19,6 +19,12 @@ def _no_real_llm(monkeypatch):
     from app.features.problems.generation import reset_guards
 
     reset_guards()  # 자동 생성 비용 상한 기록이 테스트끼리 섞이지 않게
+    # 저장 시 자동으로 도는 뒤 작업(챕터·개념, 오개념)은 기본으로 끈다. 필요한 테스트가 직접 켠다
+    from app.features.misconceptions import service as misconceptions
+    from app.features.structure import service as structure
+
+    monkeypatch.setattr(misconceptions, "spawn", lambda bind, ids: None)
+    monkeypatch.setattr(structure, "spawn", lambda bind, ids: None)
 
 
 @pytest.fixture
