@@ -34,6 +34,8 @@ pipeline:
   # 앞 문항들이 근거(sources)로 이만큼 이상 쓴 쪽은 검색에서 뺀다 → 세부 내용 쪽까지 쓰게
   detail_top_k_factor: 2
   detail_reuse_limit: 1
+  past_variant_ratio: 0.25    # 기출과 같은 질문(숫자만 바꾼 것 포함)을 시험 문항 수의 이 비율까지 허용 (4문항 → 1개, 내림). 0이면 허용 안 함
+  past_same_ratio: 0.5        # reviewer가 센 소문항 중 기출과 같은 과제가 이 비율 이상이면 "같은 질문"
   copy_threshold: 0.25        # 기출 문항과 글자 3개 조각 겹침이 이 이상이면 베끼기 (checks.copy_issues 설명 참고)
   min_interval_sec:           # 회사별 호출 간 최소 간격(초). 무료 티어 분당 요청 제한 대응
     gemini: 7

@@ -109,6 +109,8 @@ class Review(BaseModel):
     # 이유 → 판단 항목 → 판정 순서: 모델이 JSON을 앞에서부터 쓰므로 판정을 먼저 정하고 이유를 맞추지 않게 (solver와 같은 이유, 문제사항 V-04)
     item_id: str
     past_comparison: str = ""             # 기출 예시가 있을 때: 출제 소문항별로 기출 소문항과 같은 과제인지 비교한 뒤 결론
+    past_same: int = 0                    # 기출과 같은 과제인 소문항 수 (기출 예시가 없으면 0)
+    past_total: int = 0                   # 비교한 소문항 수 (소문항이 없으면 1)
     issues: list[str]
     answer_match: Literal["일치", "부분일치", "불일치"]
     grounded: bool

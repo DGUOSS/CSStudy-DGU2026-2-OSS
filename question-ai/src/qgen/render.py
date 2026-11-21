@@ -20,7 +20,7 @@ def render_exam(course: str, plan: ExamPlan, questions: dict[str, Question]) -> 
 
 
 def render_answers(course: str, plan: ExamPlan, questions: dict[str, Question], history: dict[str, list],
-                   code_checks: dict[str, str] | None = None) -> str:
+                   code_checks: dict[str, str] | None = None, variants: dict[str, str] | None = None) -> str:
     out = [f"# {course} 모의고사 — 정답 및 채점 기준\n"]
     n = 0
     for item in plan.items:
@@ -36,6 +36,8 @@ def render_answers(course: str, plan: ExamPlan, questions: dict[str, Question], 
         if q.rubric:
             out.append("- **채점 기준**:\n" + "\n".join(f"  - {r}" for r in q.rubric))
         out.append("- **근거**: " + ", ".join(f"{s.file} p.{s.page}" for s in q.sources))
+        if variants and variants.get(item.item_id):
+            out.append(f"- **기출 변형**: {variants[item.item_id]} (시험당 허용 개수 안에서 통과)")
         if code_checks and code_checks.get(item.item_id):
             out.append(f"- **코드 검산**: {code_checks[item.item_id]}")
         out.append(f"- **검증 이력**: {' → '.join(history.get(item.item_id, []))}\n")
@@ -63,12 +65,17 @@ def render_report(course: str, plan: ExamPlan, questions: dict[str, Question], t
     reps = summary.get("replacements") or []
     if reps:
         out.append("| 보충 | " + ", ".join(f"{r['failed']} → {r['replacement']} ({r['topic']})" for r in reps) + " |")
+    pv = summary.get("past_variants") or {}
+    out.append(f"| 기출 변형 허용 | {len(pv)} / {summary.get('past_variant_limit', 0)}개"
+               + (": " + ", ".join(f"{k} ({v})" for k, v in pv.items()) if pv else "") + " |")
     revised = sum(1 for i in plan.items if sum(1 for t in trace if t["item"] == i.item_id) > 1)
     out.append(f"| 수정·재생성이 있었던 문항 | {revised}개 |\n")
 
     for item in plan.items:
         steps = [t for t in trace if t["item"] == item.item_id]
         mark = "통과" if item.item_id in questions else "**제외**"
+        if item.item_id in (summary.get("past_variants") or {}):
+            mark += " (기출 변형)"
         out.append(f"## {item.item_id} [{item.qtype}] {item.topic} — {mark} (시도 {len(steps)}번)")
         for t in steps:
             cc = t.get("code_check") or {}

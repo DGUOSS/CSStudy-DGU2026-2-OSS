@@ -313,3 +313,71 @@ def test_rerun_same_run_id_keeps_previous_summary(tmp_path, monkeypatch):
     first_summary = (out / "summary.json").read_text(encoding="utf-8")
     pipeline.run("demo", run_id="same", verify=False)
     assert (out / "summary.prev.json").read_text(encoding="utf-8") == first_summary
+
+
+def _variant_setup(tmp_path, monkeypatch, ratio):
+    from qgen.ingest import load_chunks
+    from qgen.schemas import SolverOutput
+
+    first = load_chunks(llm.ROOT / "data" / "demo", verbose=False)[0].source
+    calls = _setup(tmp_path, monkeypatch, first)
+    monkeypatch.setitem(llm.CFG["pipeline"], "past_variant_ratio", ratio)  # 2문항 × ratio
+    monkeypatch.setitem(llm.CFG["pipeline"], "max_replacements", 0)
+    monkeypatch.setattr(agents, "solver", lambda q, ctx: SolverOutput(item_id=q.item_id, reasoning="r", answer="1",
+                                                                     confidence=0.9, is_ambiguous=False))
+    feedbacks = []
+    orig_gen = agents.generator
+
+    def gen(item, ctx, profile, examples, **k):
+        if k.get("feedback"):
+            feedbacks.append((item.item_id, k["feedback"]))
+        return orig_gen(item, ctx, profile, examples, **k)
+
+    monkeypatch.setattr(agents, "generator", gen)
+    return feedbacks
+
+
+def _review(same, total):
+    from qgen.schemas import Review
+    return Review(item_id="", past_comparison="(1) 같음 (2) 같음 (3) 다름", past_same=same, past_total=total,
+                  issues=["기출 2번과 같은 질문: (1),(2)"] if same else [], answer_match="일치", grounded=True,
+                  profile_fit=True, verdict="pass", feedback="")
+
+
+def test_past_variant_allowed_up_to_limit_then_revise(tmp_path, monkeypatch):
+    feedbacks = _variant_setup(tmp_path, monkeypatch, 0.5)  # 2문항 → 1개 허용
+    reviews = iter([_review(2, 3), _review(2, 3), _review(0, 3)])  # q1 같음 → 허용 / q2 같음 → 초과, 수정 → 다름 → 통과
+    monkeypatch.setattr(agents, "reviewer", lambda *a, **k: next(reviews))
+    out = pipeline.run("demo", run_id="t", verify=True)
+    summary = json.loads((out / "summary.json").read_text(encoding="utf-8"))
+    assert summary["past_variant_limit"] == 1 and list(summary["past_variants"]) == ["q1"]
+    assert "소문항 2/3 같음" in summary["past_variants"]["q1"]
+    assert summary["accepted"] == 2
+    assert len(feedbacks) == 1 and feedbacks[0][0] == "q2" and "허용 개수(1개)를 이미 썼으므로" in feedbacks[0][1]
+    ans = (out / "answers.md").read_text(encoding="utf-8")
+    assert "**기출 변형**" in ans and "기출 변형 허용 개수 초과" in ans
+    assert "(기출 변형)" in (out / "report.md").read_text(encoding="utf-8")
+
+
+def test_past_variant_zero_limit_keeps_old_behavior(tmp_path, monkeypatch):
+    feedbacks = _variant_setup(tmp_path, monkeypatch, 0.25)  # 2문항 × 0.25 = 0개
+    reviews = iter([_review(2, 3), _review(0, 3), _review(0, 3)])
+    monkeypatch.setattr(agents, "reviewer", lambda *a, **k: next(reviews))
+    out = pipeline.run("demo", run_id="t", verify=True)
+    summary = json.loads((out / "summary.json").read_text(encoding="utf-8"))
+    assert summary["past_variant_limit"] == 0 and summary["past_variants"] == {}
+    assert [f[0] for f in feedbacks] == ["q1"]  # q1은 같은 질문이라 수정 요청
+
+
+def test_copied_sentences_count_as_variant_while_budget_left(tmp_path, monkeypatch):
+    from qgen import checks
+
+    feedbacks = _variant_setup(tmp_path, monkeypatch, 0.5)  # 1개 허용
+    monkeypatch.setattr(checks, "copy_issues", lambda q, past, th=0.25: ["기출 6번 문장과 겹침 0.32 (기준 0.25) — 다시 쓸 것"])
+    reviews = iter([_review(0, 1), _review(0, 1), _review(0, 1)])
+    monkeypatch.setattr(agents, "reviewer", lambda *a, **k: next(reviews))
+    out = pipeline.run("demo", run_id="t", verify=True)
+    summary = json.loads((out / "summary.json").read_text(encoding="utf-8"))
+    assert list(summary["past_variants"]) == ["q1"] and "문장 겹침" in summary["past_variants"]["q1"]
+    # q2: 허용 개수를 다 써서 글자 겹침이 규칙 위반으로 막힘 → 계속 고치다 실패
+    assert summary["accepted"] == 1 and all(f[0] == "q2" for f in feedbacks)

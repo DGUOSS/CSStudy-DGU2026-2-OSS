@@ -91,6 +91,12 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
     history: dict[str, list[str]] = {}
     trace = []
     fail_reason: dict[str, str] = {}
+    # 기출 변형 허용 (2026-11-21 결정, 문제사항 V-11): 기출과 같은 질문(숫자만 바꾼 것 포함)도 시험 문항 수의
+    # past_variant_ratio(25%)까지는 통과시킨다. 실제 시험도 기출 일부를 바꿔 다시 내고, 모양이 정해진 단원(카르노 맵 등)은
+    # 같은 질문을 피하기 어려워 3번 모두 떨어졌기 때문. 선착순이며, 다 쓰면 예전처럼 수정 요청
+    variant_limit = int(n * cfg.get("past_variant_ratio", 0.25))
+    same_ratio = cfg.get("past_same_ratio", 0.5)
+    variants: dict[str, str] = {}  # 문항 → 허용 사유
 
     def process(item: PlannedItem) -> bool:
         """문항 하나: 검색 → 생성 → (검증 루프) → 통과하면 True."""
@@ -115,10 +121,11 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
             for w in warns:
                 print(f"  [past] {w}")
             examples, ex_images = exam_profile.format_past_examples(chosen, past_inp)
+            past_names = [f"{p.number}번" for p in chosen]
             print(f"  [past] 기출 예시: {[f'{p.number}번' for p in chosen] or '없음'}"
                   + (f" (이미지 {len(ex_images)}장)" if ex_images else ""))
         else:
-            examples, ex_images = past[:3000], []
+            examples, ex_images, past_names = past[:3000], [], []
         q = agents.generator(item, ctx, profile, examples, images=ex_images)
         if not verify:
             vr = verify_mod.run(q)
@@ -141,7 +148,12 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
             last = attempt == cfg["max_revisions"]
             vr = verify_mod.run(q)
             code_checks[item.item_id] = _check_summary(vr)
-            rule_issues = checks.run(q, item, ctx) + checks.copy_issues(q, past_texts, copy_threshold) + vr.issues
+            copy_rule = checks.copy_issues(q, past_texts, copy_threshold)
+            budget_left = len(variants) < variant_limit
+            # 기출 문장 겹침은 허용 개수가 남아 있으면 막지 않고 검증을 계속한다 (통과하면 기출 변형으로 셈)
+            rule_issues = checks.run(q, item, ctx) + vr.issues + ([] if budget_left else copy_rule)
+            if copy_rule and budget_left:
+                print(f"  attempt {attempt}: 기출 문장 겹침 — 허용 개수({len(variants)}/{variant_limit}) 안이라 검증 계속")
             if rule_issues:
                 print(f"  attempt {attempt}: 규칙 위반 {rule_issues}")
                 hist.append(f"규칙위반({len(rule_issues)})")
@@ -159,6 +171,27 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
             hist.append(f"{r.verdict}({r.answer_match})")
             trace.append({"item": item.item_id, "attempt": attempt, "question": q.model_dump(),
                           "solver": s.model_dump(), "review": r.model_dump(), "code_check": vr.__dict__})
+            same = r.past_total > 0 and r.past_same / r.past_total >= same_ratio
+            feedback = r.feedback + "\n" + "\n".join(r.issues)
+            if r.verdict == "pass" and (same or copy_rule):
+                why = ", ".join([f"소문항 {r.past_same}/{r.past_total} 같음" if same else "",
+                                 f"문장 겹침 ({copy_rule[0].split(' (')[0]})" if copy_rule else ""]).strip(", ")
+                if len(variants) < variant_limit:
+                    variants[item.item_id] = f"기출 {', '.join(past_names)} 변형 — {why}" if past_names else f"기출 변형 — {why}"
+                    hist.append(f"기출 변형 허용 ({len(variants)}/{variant_limit})")
+                    print(f"  → 기출과 같은 질문이지만 허용 개수 안 ({len(variants)}/{variant_limit}) — 통과: {why}")
+                    accepted[item.item_id] = q
+                    break
+                # 허용 개수를 다 썼으면 예전처럼 다른 과제로 고치게 한다
+                print(f"  → 기출과 같은 질문, 허용 개수({variant_limit}) 다 씀 — 수정 요청: {why}")
+                hist[-1] = f"revise(기출 변형 허용 개수 초과: {why})"
+                feedback = (f"기출과 같은 질문이다 ({why}). 이 시험의 기출 변형 허용 개수({variant_limit}개)를 이미 썼으므로 "
+                            f"같은 소문항을 기출과 다른 과제로 바꿔라.\n{r.past_comparison}\n" + feedback)
+                if last:
+                    break
+                prev_issues = r.issues
+                q = agents.generator(item, ctx, profile, examples, images=ex_images, prev=q, feedback=feedback)
+                continue
             if r.verdict == "pass":
                 accepted[item.item_id] = q
                 break
@@ -172,7 +205,7 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
             if r.verdict == "reject":
                 break
             prev_issues = r.issues
-            q = agents.generator(item, ctx, profile, examples, images=ex_images, prev=q, feedback=r.feedback + "\n" + "\n".join(r.issues))
+            q = agents.generator(item, ctx, profile, examples, images=ex_images, prev=q, feedback=feedback)
         if item.item_id not in accepted:
             hist.append("실패")
             print("  ✗ 검증 실패 — 시험지에서 제외")
@@ -216,11 +249,12 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
     if replacements:  # plan.json은 다시 실행할 때 쓰므로 그대로 두고, 보충이 들어간 계획은 따로 저장
         (out / "plan_final.json").write_text(final_plan.model_dump_json(indent=2), encoding="utf-8")
     (out / "exam.md").write_text(render_exam(profile.course, final_plan, accepted), encoding="utf-8")
-    (out / "answers.md").write_text(render_answers(profile.course, final_plan, accepted, history, code_checks), encoding="utf-8")
+    (out / "answers.md").write_text(render_answers(profile.course, final_plan, accepted, history, code_checks, variants), encoding="utf-8")
     type_counts = {"target": counts, "planned": dict(Counter(i.qtype for i in plan.items)),
                    "accepted": dict(Counter(q.qtype for q in accepted.values()))}
     summary = {**llm.stats(), "accepted": len(accepted), "planned": len(plan.items), "sec": round(time.time() - t0, 1),
-               "verify": verify, "type_counts": type_counts, "replacements": replacements, "phase_sec": phase_sec, "item_sec": item_sec}
+               "verify": verify, "type_counts": type_counts, "replacements": replacements,
+               "past_variants": variants, "past_variant_limit": variant_limit, "phase_sec": phase_sec, "item_sec": item_sec}
     if (out / "summary.json").exists():  # 같은 --run-id로 다시 돌리면 측정값(시간·호출)이 바뀌므로 직전 기록을 남긴다
         (out / "summary.json").replace(out / "summary.prev.json")
     (out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
