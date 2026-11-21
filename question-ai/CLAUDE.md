@@ -193,8 +193,8 @@ pipeline:
 - 쿼리 = `PlannedItem.topic` (+ 필요시 bloom_level 설명)
 - e5 모델 규칙: 문서는 `"passage: "`, 쿼리는 `"query: "` 접두어
 - `detail_level == "지엽적"`이면 top-k를 늘리고, 이미 많이 쓰인 청크는 제외해 세부 내용 위주로 뽑는다.
-  - **(미구현, M3에서 구현 예정)** M1에서는 검색 자체만 만들었다. 이 규칙은 프로필(M2)의 detail_level과
-    문항 생성 중 "이미 쓴 청크" 기록이 필요해서 M3로 미룸 (2026-11-18 결정).
+  - (2026-11-21 M3에서 구현) k = `retrieval_top_k` × `detail_top_k_factor`(2), 앞 문항이 통과하며 sources로 쓴 쪽을
+    `detail_reuse_limit`(1)번 이상이면 제외. 값은 `config.yaml` pipeline에서 바꾼다. (M1에서 미뤘던 항목, 2026-11-18 결정)
 - (M1에서 추가) 검색어는 `PlannedItem.source_titles`(강의자료 제목 목록에서 번역 없이 복사, 최대 3개)를 쓰고,
   제목별 결과를 번갈아 합친다. 교안이 영어인데 한국어 topic으로 검색하면 관련 쪽을 잘 못 찾기 때문.
 
@@ -298,7 +298,8 @@ render(exam)                                # exam.md (문제지), answers.md (�
 
 ### M3. 계획 + 생성 (2일)
 - Planner, Generator, `render.py`
-- (M1에서 넘어옴) §5 "지엽적" 검색 규칙: `detail_level == "지엽적"`이면 top-k를 늘리고, 앞 문항에서 이미 많이 쓴 청크는 빼고 검색
+- (M1에서 넘어옴) §5 "지엽적" 검색 규칙: `detail_level == "지엽적"`이면 top-k를 늘리고, 앞 문항에서 이미 많이 쓴 청크는 빼고 검색 ✅
+- (2026-11-21 추가) planner 문항 수·유형 수 코드 검사, `--no-verify`(검증 없이 생성), 기출 문항 단위 예시(`past_items`·`past_refs`)
 - ✅ 완료 기준: 검증 없이 시험 1세트가 exam.md로 렌더링됨. 유형 비율이 프로필과 일치
 
 ### M4. 검증 루프 (3일)
