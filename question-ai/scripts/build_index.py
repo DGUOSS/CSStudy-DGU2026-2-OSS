@@ -23,6 +23,7 @@ from qgen import llm  # noqa: E402
 from qgen.ingest import (  # noqa: E402
     BM25, EmbeddingIndex, Retriever, chunk_pages, default_index_dir, parse_lectures, st_encoder,
 )
+from qgen.ingest import vision_pages as vp  # noqa: E402
 from qgen.ingest import vision_titles as vt  # noqa: E402
 
 
@@ -34,6 +35,9 @@ def main() -> None:
     ap.add_argument("--no-vision-titles", action="store_true",
                     help="제목이 그림인 교안을 이미지 모델로 읽지 않는다 (이미 저장된 titles.json은 그대로 씀)")
     ap.add_argument("--reread-titles", action="store_true", help="저장된 titles.json을 무시하고 다시 읽는다")
+    ap.add_argument("--no-vision-pages", action="store_true",
+                    help="그림 위주·글자 부족 쪽을 이미지 모델로 읽지 않는다 (이미 저장된 page_texts.json은 그대로 씀)")
+    ap.add_argument("--reread-pages", action="store_true", help="저장된 page_texts.json을 무시하고 다시 읽는다")
     a = ap.parse_args()
 
     course_dir = ROOT / "data" / a.course
@@ -44,7 +48,8 @@ def main() -> None:
     t0 = time.time()
 
     saved = {} if a.reread_titles else vt.load_saved(index_dir)
-    reports = parse_lectures(course_dir, render_dir=index_dir / "pages", titles=saved)
+    saved_pages = {} if a.reread_pages else vp.load_saved(index_dir)
+    reports = parse_lectures(course_dir, render_dir=index_dir / "pages", titles=saved, page_texts=saved_pages)
     todo = [r for r in reports if vt.needs_vision(r) and r.file not in saved]
     if todo and not a.no_vision_titles:
         model = llm.CFG["models"][vt.ROLE]
@@ -56,6 +61,21 @@ def main() -> None:
             vt.save(index_dir, saved, model)  # 파일마다 저장 (중간에 멈춰도 읽은 만큼 남게)
     elif todo:
         print(f"[title] 제목이 그림인 교안 {len(todo)}개를 건너뜀 (--no-vision-titles): {[r.file for r in todo]}")
+
+    page_todo = {r.file: [n for n in vp.targets(r) if n not in saved_pages.get(r.file, {})] for r in reports}
+    page_todo = {f: ns for f, ns in page_todo.items() if ns}
+    n_pages = sum(len(ns) for ns in page_todo.values())
+    if page_todo and not a.no_vision_pages:
+        model = llm.CFG["models"][vp.ROLE]
+        print(f"[page] 그림 위주·글자 부족 쪽 {n_pages}개 → {model}로 쪽 이미지 읽기 (처음 한 번만 — 결과는 {vp.PAGE_TEXTS_FILE}에 저장)")
+        by_file = {r.file: r for r in reports}
+        for f, ns in page_todo.items():
+            got = vp.read_pages(course_dir / "lectures" / f, ns)
+            saved_pages.setdefault(f, {}).update(got)
+            vp.apply_page_texts(by_file[f], got)
+            vp.save(index_dir, saved_pages, model)  # 파일마다 저장
+    elif page_todo:
+        print(f"[page] 그림 위주·글자 부족 쪽 {n_pages}개를 건너뜀 (--no-vision-pages)")
     pages = [p for r in reports for p in r.pages]
     chunks = chunk_pages(pages, a.course)
     if not chunks:

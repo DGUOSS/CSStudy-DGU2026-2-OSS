@@ -12,6 +12,8 @@ models:
   judge:     "anthropic/claude-haiku-5-5"
   # 제목이 도형·그림인 교안의 제목 읽기 (build_index 때만, 결과는 index/titles.json에 저장). 2026-11-20 Gemini로 결정
   title_reader: "gemini/gemini-3-flash-preview"
+  # 그림 위주·글자 부족 쪽의 내용 읽기 (build_index 때만, 결과는 index/page_texts.json에 저장, 문제사항 R-03)
+  page_reader: "gemini/gemini-3-flash-preview"
 
 retrieval:
   embedding_model: "intfloat/multilingual-e5-small"   # CPU, 8GB RAM에서 동작
