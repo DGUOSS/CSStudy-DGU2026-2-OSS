@@ -137,6 +137,7 @@ def _verify_run(tmp_path, monkeypatch, verdict: str, bad_source: bool = False):
     first = load_chunks(llm.ROOT / "data" / "demo", verbose=False)[0].source
     src = SourceRef(file="없는파일.pdf", page=1) if bad_source else first
     calls = _setup(tmp_path, monkeypatch, src)
+    monkeypatch.setitem(llm.CFG["pipeline"], "max_replacements", 0)  # 호출 수만 세는 테스트: 보충은 끔
     monkeypatch.setattr(agents, "solver", lambda q, ctx: (calls.__setitem__("solver", calls["solver"] + 1),
                         SolverOutput(item_id=q.item_id, reasoning="r", answer="1", confidence=0.9, is_ambiguous=False))[1])
     monkeypatch.setattr(agents, "reviewer", lambda *a, **k: (calls.__setitem__("reviewer", calls["reviewer"] + 1),
@@ -205,3 +206,57 @@ def test_reviewer_is_told_verified_answers(tmp_path, monkeypatch):
     out = pipeline.run("demo", run_id="t", verify=True)
     assert seen and all(v and "Σm(1, 3, 6, 7)" in v[0] for v in seen)
     assert "**코드 검산**: 맞음 1개" in (out / "answers.md").read_text(encoding="utf-8")
+
+
+def test_failed_item_is_replaced_once_with_same_type(tmp_path, monkeypatch):
+    from qgen.ingest import load_chunks
+    from qgen.schemas import Review, SolverOutput
+
+    first = load_chunks(llm.ROOT / "data" / "demo", verbose=False)[0].source
+    calls = _setup(tmp_path, monkeypatch, first)
+    monkeypatch.setitem(llm.CFG["pipeline"], "max_replacements", 1)
+    monkeypatch.setattr(agents, "solver", lambda q, ctx: SolverOutput(item_id=q.item_id, reasoning="r", answer="1",
+                                                                     confidence=0.9, is_ambiguous=False))
+    # q2(서술형)는 원래 주제 t2면 계속 reject, 보충 문항은 pass
+    def rev(q, s, item, *a, **k):
+        bad = item.topic == "t2" or item.item_id == "q2-r1-r1"
+        return Review(item_id="", verdict="reject" if bad else "pass", answer_match="일치", grounded=not bad,
+                      profile_fit=True, issues=["교안에 없는 내용"] if bad else [], feedback="")
+    monkeypatch.setattr(agents, "reviewer", rev)
+    seen = []
+
+    def replan(profile, topics, failed, reason, avoid, max_titles=3):
+        seen.append((failed.item_id, reason, avoid))
+        return failed.model_copy(update={"item_id": f"{failed.item_id}-r1", "topic": "새 주제"})
+
+    monkeypatch.setattr(agents, "replan_item", replan)
+    out = pipeline.run("demo", run_id="t", verify=True)
+    assert seen == [("q2", "교안에 없는 내용", ["t1", "t2"])]
+    exam = json.loads((out / "exam.json").read_text(encoding="utf-8"))
+    assert set(exam) == {"q1", "q2-r1"}
+    summary = json.loads((out / "summary.json").read_text(encoding="utf-8"))
+    assert summary["replacements"][0]["replacement"] == "q2-r1"
+    assert summary["type_counts"]["accepted"] == {"객관식": 1, "서술형": 1}
+    final = json.loads((out / "plan_final.json").read_text(encoding="utf-8"))
+    assert [i["item_id"] for i in final["items"]] == ["q1", "q2", "q2-r1"]
+    ans = (out / "answers.md").read_text(encoding="utf-8")
+    assert "~~q2 (t2)~~" in ans and "새 주제" in ans
+
+
+def test_replacement_that_fails_is_not_replaced_again(tmp_path, monkeypatch):
+    from qgen.ingest import load_chunks
+    from qgen.schemas import Review, SolverOutput
+
+    first = load_chunks(llm.ROOT / "data" / "demo", verbose=False)[0].source
+    _setup(tmp_path, monkeypatch, first)
+    monkeypatch.setitem(llm.CFG["pipeline"], "max_replacements", 1)
+    monkeypatch.setattr(agents, "solver", lambda q, ctx: SolverOutput(item_id=q.item_id, reasoning="r", answer="1",
+                                                                     confidence=0.9, is_ambiguous=False))
+    monkeypatch.setattr(agents, "reviewer", lambda *a, **k: Review(item_id="", verdict="reject", answer_match="불일치",
+                        grounded=False, profile_fit=True, issues=["x"], feedback=""))
+    n = []
+    monkeypatch.setattr(agents, "replan_item", lambda profile, topics, failed, *a, **k: (
+        n.append(failed.item_id), failed.model_copy(update={"item_id": f"{failed.item_id}-r1"}))[1])
+    out = pipeline.run("demo", run_id="t", verify=True)
+    assert n == ["q1", "q2"]  # 원래 문항마다 1번, 보충 문항(q1-r1, q2-r1)은 다시 보충 안 함
+    assert json.loads((out / "exam.json").read_text(encoding="utf-8")) == {}

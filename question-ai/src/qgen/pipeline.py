@@ -9,7 +9,7 @@ from . import agents, checks, exam_profile, llm
 from . import verify as verify_mod  # run()의 verify 인자와 이름이 겹치지 않게
 from .ingest import MAX_SOURCE_TITLES, Retriever, load_chunks, load_text_dir, search_queries, topic_list
 from .render import render_answers, render_exam
-from .schemas import ExamPlan, Question
+from .schemas import ExamPlan, PlannedItem, Question
 
 ROOT = llm.ROOT
 
@@ -90,7 +90,10 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
         print(f"[retrieval] 지엽적 출제: 검색 {top_k}쪽, 앞 문항이 {reuse_limit}번 이상 쓴 쪽은 제외")
     history: dict[str, list[str]] = {}
     trace = []
-    for item in plan.items:
+    fail_reason: dict[str, str] = {}
+
+    def process(item: PlannedItem) -> bool:
+        """문항 하나: 검색 → 생성 → (검증 루프) → 통과하면 True."""
         t_item = time.time()
         print(f"\n[item {item.item_id}] {item.qtype} | {item.topic}")
         hist = history.setdefault(item.item_id, [])
@@ -130,7 +133,7 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
             used_pages.update({(s.file, s.page) for s in q.sources})
             item_sec[item.item_id] = round(time.time() - t_item, 1)
             print(f"  소요 {item_sec[item.item_id]}s")
-            continue
+            return True
         regens = 0
         for attempt in range(cfg["max_revisions"] + 1):
             # 마지막 시도에서는 고쳐도 다시 검사할 기회가 없으므로 generator를 부르지 않는다 (실패 문항마다 약 12초·9천 토큰 낭비였음)
@@ -170,21 +173,50 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
         if item.item_id not in accepted:
             hist.append("실패")
             print("  ✗ 검증 실패 — 시험지에서 제외")
-        if item.item_id in accepted:
+            last_t = next((t for t in reversed(trace) if t["item"] == item.item_id), {})
+            fail_reason[item.item_id] = "; ".join(
+                (last_t.get("review") or {}).get("issues") or last_t.get("rule_issues") or ["검증 실패"])[:800]
+        else:
             used_pages.update({(s.file, s.page) for s in accepted[item.item_id].sources})
         item_sec[item.item_id] = round(time.time() - t_item, 1)
         print(f"  소요 {item_sec[item.item_id]}s")
+        return item.item_id in accepted
+
+    # 검증에서 실패한 문항은 같은 유형·다른 주제로 다시 계획해 보충한다 (문제사항 V-07). 보충 문항이 또 실패하면 그대로 둔다
+    max_rep = cfg.get("max_replacements", 1) if verify else 0
+    queue = list(plan.items)
+    final_items: list[PlannedItem] = []
+    replacements: list[dict] = []
+    while queue:
+        item = queue.pop(0)
+        final_items.append(item)
+        if process(item) or "-r" in item.item_id or max_rep <= 0:
+            continue
+        avoid = list(dict.fromkeys(i.topic for i in [*plan.items, *final_items]))
+        try:
+            new = agents.replan_item(profile, topic_list(chunks), item, fail_reason.get(item.item_id, ""), avoid,
+                                     cfg.get("max_source_titles") or MAX_SOURCE_TITLES)
+        except agents.PlanError as e:
+            print(f"  [planner] 보충 계획 실패: {e}")
+            continue
+        replacements.append({"failed": item.item_id, "replacement": new.item_id, "topic": new.topic,
+                             "reason": fail_reason.get(item.item_id, "")})
+        print(f"  [planner] 보충: {item.item_id} → {new.item_id} {new.qtype} | {new.topic}")
+        queue.insert(0, new)
     phase_sec["items"] = round(time.time() - t_phase, 1)
 
     # 4) 저장/렌더
     (out / "exam.json").write_text(json.dumps({k: v.model_dump() for k, v in accepted.items()}, ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "trace.json").write_text(json.dumps(trace, ensure_ascii=False, indent=2), encoding="utf-8")
-    (out / "exam.md").write_text(render_exam(profile.course, plan, accepted), encoding="utf-8")
-    (out / "answers.md").write_text(render_answers(profile.course, plan, accepted, history, code_checks), encoding="utf-8")
+    final_plan = ExamPlan(items=final_items)
+    if replacements:  # plan.json은 다시 실행할 때 쓰므로 그대로 두고, 보충이 들어간 계획은 따로 저장
+        (out / "plan_final.json").write_text(final_plan.model_dump_json(indent=2), encoding="utf-8")
+    (out / "exam.md").write_text(render_exam(profile.course, final_plan, accepted), encoding="utf-8")
+    (out / "answers.md").write_text(render_answers(profile.course, final_plan, accepted, history, code_checks), encoding="utf-8")
     type_counts = {"target": counts, "planned": dict(Counter(i.qtype for i in plan.items)),
                    "accepted": dict(Counter(q.qtype for q in accepted.values()))}
     summary = {**llm.stats(), "accepted": len(accepted), "planned": len(plan.items), "sec": round(time.time() - t0, 1),
-               "verify": verify, "type_counts": type_counts, "phase_sec": phase_sec, "item_sec": item_sec}
+               "verify": verify, "type_counts": type_counts, "replacements": replacements, "phase_sec": phase_sec, "item_sec": item_sec}
     (out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\n[done] {summary}\n→ {out}")
     return out

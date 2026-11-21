@@ -49,10 +49,11 @@ def plan_issues(plan: ExamPlan, counts: dict[str, int], n: int) -> list[str]:
     return issues
 
 
-def planner(profile: ExamProfile, topics: list[str], n: int, max_titles: int = 3) -> ExamPlan:
+def planner(profile: ExamProfile, topics: list[str], n: int, max_titles: int = 3, extra: str = "") -> ExamPlan:
+    """extra: 프롬프트 끝에 붙일 추가 조건 (보충 계획 등)."""
     counts = type_counts(profile.format_ratio, n)
     base = llm.render_prompt("planner", profile=profile.model_dump(), topics="\n".join(f"- {t}" for t in topics),
-                             counts=counts, n=str(n), max_titles=str(max_titles))
+                             counts=counts, n=str(n), max_titles=str(max_titles)) + extra
     p = base
     for attempt in range(PLAN_RETRIES + 1):
         plan = llm.call("planner", p, ExamPlan)
@@ -63,6 +64,20 @@ def planner(profile: ExamProfile, topics: list[str], n: int, max_titles: int = 3
         p = (base + "\n\n## 이전 계획의 문제 (반드시 고칠 것)\n" + "\n".join(f"- {s}" for s in issues)
              + f"\n\n이전 계획:\n{plan.model_dump_json(indent=1)}")
     raise PlanError(f"planner가 {PLAN_RETRIES + 1}번 모두 조건을 지키지 못함: {issues}")
+
+
+def replan_item(profile: ExamProfile, topics: list[str], failed: PlannedItem, reason: str, avoid: list[str],
+                max_titles: int = 3) -> PlannedItem:
+    """검증에서 실패한 문항 대신 같은 유형·다른 주제로 1문항을 다시 계획한다 (문제사항 V-07)."""
+    one = profile.model_copy(update={"format_ratio": {failed.qtype: 1.0}})
+    extra = ("\n\n## 보충 계획 (반드시 지킬 것)\n"
+             f"아래 문항이 검증에서 실패해 시험지에서 빠졌다. 같은 유형({failed.qtype})의 **다른 주제**로 1문항만 계획하라.\n"
+             f"- 실패한 문항: {failed.topic} (source_titles {failed.source_titles})\n"
+             f"- 실패 이유: {reason or '(기록 없음)'}\n"
+             f"- 이미 쓰였거나 실패한 주제는 고르지 않는다: {avoid}\n"
+             "- 강의자료 주제 목록에 내용이 충분히 있는 주제만 고른다.")
+    plan = planner(one, topics, 1, max_titles, extra=extra)
+    return plan.items[0].model_copy(update={"item_id": f"{failed.item_id}-r1", "points": failed.points})
 
 
 def generator(item: PlannedItem, chunks: list[Chunk], profile: ExamProfile, examples: str,

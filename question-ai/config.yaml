@@ -26,6 +26,7 @@ pipeline:
   num_questions_override: 4   # 무료 한도 절약용. null이면 프로필의 num_questions 사용
   max_revisions: 2
   max_regenerations: 1
+  max_replacements: 1         # 검증 실패 문항을 같은 유형·다른 주제로 다시 계획해 보충하는 횟수 (문항당, 0이면 안 함)
   retrieval_top_k: 4
   # 프로필 detail_level이 "지엽적"일 때 (명세 §5): 검색 쪽 수 = retrieval_top_k × 이 배수,
   # 앞 문항들이 근거(sources)로 이만큼 이상 쓴 쪽은 검색에서 뺀다 → 세부 내용 쪽까지 쓰게

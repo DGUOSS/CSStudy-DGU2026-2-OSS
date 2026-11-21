@@ -57,3 +57,14 @@ def test_planner_gives_up_after_retries(monkeypatch):
     with pytest.raises(agents.PlanError):
         agents.planner(PROFILE, ["A (a.pdf p.1)"], 4)
     assert len(prompts) == agents.PLAN_RETRIES + 1
+
+
+def test_replan_item_same_type_new_id_and_points(monkeypatch):
+    failed = PlannedItem(item_id="q4", qtype="서술형", topic="RAM vs Flash", source_titles=["메모리 - RAM"],
+                         bloom_level="이해", difficulty="보통", points=15, rationale="r")
+    prompts = _fake_calls(monkeypatch, [_plan("서술형")])
+    new = agents.replan_item(PROFILE, ["A (a.pdf p.1)"], failed, "교안에 Flash 없음", ["RAM vs Flash", "부울식"])
+    assert new.item_id == "q4-r1" and new.points == 15 and new.qtype == "서술형"
+    p = prompts[0]
+    assert "보충 계획" in p and "교안에 Flash 없음" in p and "'부울식'" in p
+    assert '"서술형": 1' in p and "총 1문항" in p
