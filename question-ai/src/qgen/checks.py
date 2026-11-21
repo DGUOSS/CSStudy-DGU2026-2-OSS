@@ -15,6 +15,8 @@ def _latex_issues(text: str) -> list[str]:
     return issues
 
 
+MULTI_SELECT = re.compile(r"모두\s*(고르|골라|찾|선택)|있는\s*대로|전부\s*고르|all\s+that\s+apply|select\s+all", re.I)
+
 COPY_NGRAM = 3
 COPY_THRESHOLD = 0.25  # config.yaml pipeline.copy_threshold로 바꿀 수 있음
 
@@ -58,6 +60,11 @@ def run(q: Question, item: PlannedItem, chunks: list[Chunk]) -> list[str]:
         nums = re.findall(r"\d+", q.answer)
         if not nums or not all(1 <= int(n) <= len(ch) for n in nums):
             issues.append(f"정답 번호 '{q.answer}'가 선지 범위(1~{len(ch)})를 벗어남")
+        # 명세 §6 "모두 고르시오 등 형식 일치": 정답이 여러 개면 문제에 그렇게 적혀 있어야 한다
+        if len(set(nums)) != len(nums):
+            issues.append(f"정답 번호가 겹침: '{q.answer}'")
+        if len(set(nums)) > 1 and not MULTI_SELECT.search(q.stem):
+            issues.append(f"정답이 여러 개({q.answer})인데 문제에 '모두 고르시오' 같은 표시가 없음")
         lens = [len(c) for c in ch]
         if ch and nums and nums[0].isdigit() and 1 <= int(nums[0]) <= len(ch):
             ans_len = lens[int(nums[0]) - 1]

@@ -8,7 +8,7 @@ from pathlib import Path
 from . import agents, checks, exam_profile, llm
 from . import verify as verify_mod  # run()의 verify 인자와 이름이 겹치지 않게
 from .ingest import MAX_SOURCE_TITLES, Retriever, load_chunks, load_text_dir, search_queries, topic_list
-from .render import render_answers, render_exam
+from .render import render_answers, render_exam, render_report
 from .schemas import ExamPlan, PlannedItem, Question
 
 ROOT = llm.ROOT
@@ -197,8 +197,9 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
             continue
         avoid = list(dict.fromkeys(i.topic for i in [*plan.items, *final_items]))
         try:
+            used_titles = [t for i in [*plan.items, *final_items] if i.item_id != item.item_id for t in i.source_titles]
             new = agents.replan_item(profile, topic_list(chunks), item, fail_reason.get(item.item_id, ""), avoid,
-                                     cfg.get("max_source_titles") or MAX_SOURCE_TITLES)
+                                     cfg.get("max_source_titles") or MAX_SOURCE_TITLES, used_titles=used_titles)
         except agents.PlanError as e:
             print(f"  [planner] 보충 계획 실패: {e}")
             continue
@@ -220,6 +221,9 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
                    "accepted": dict(Counter(q.qtype for q in accepted.values()))}
     summary = {**llm.stats(), "accepted": len(accepted), "planned": len(plan.items), "sec": round(time.time() - t0, 1),
                "verify": verify, "type_counts": type_counts, "replacements": replacements, "phase_sec": phase_sec, "item_sec": item_sec}
+    if (out / "summary.json").exists():  # 같은 --run-id로 다시 돌리면 측정값(시간·호출)이 바뀌므로 직전 기록을 남긴다
+        (out / "summary.json").replace(out / "summary.prev.json")
     (out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    (out / "report.md").write_text(render_report(profile.course, final_plan, accepted, trace, summary), encoding="utf-8")
     print(f"\n[done] {summary}\n→ {out}")
     return out

@@ -105,3 +105,9 @@ def test_int_repr(rep, expected, ok):
 def test_trivial_check_is_flagged():
     with pytest.raises(verify.ParseError):
         b("C", function="C", variables=["C"])
+
+
+def test_constant_is_both_sop_and_pos():
+    """2026-11-21 162212 q4-r1: 정답 `1`을 'SOP 형태가 아님'으로 잘못 판정했던 것."""
+    assert b("1", "SOP", True, minterms=list(range(8))) == []
+    assert b("0", "POS", True, minterms=[]) == []

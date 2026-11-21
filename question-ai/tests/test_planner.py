@@ -68,3 +68,20 @@ def test_replan_item_same_type_new_id_and_points(monkeypatch):
     p = prompts[0]
     assert "보충 계획" in p and "교안에 Flash 없음" in p and "'부울식'" in p
     assert '"서술형": 1' in p and "총 1문항" in p
+
+
+def test_replan_item_retries_when_topic_or_title_overlaps(monkeypatch):
+    failed = PlannedItem(item_id="q1", qtype="계산형", topic="카르노 맵", source_titles=["Map Simplification"],
+                         bloom_level="적용", difficulty="보통", points=25, rationale="r")
+    dup = _plan("계산형").model_copy()
+    dup.items[0] = dup.items[0].model_copy(update={"topic": "부동소수점표현", "source_titles": ["부동소수점표현"]})
+    ok = _plan("계산형").model_copy()
+    ok.items[0] = ok.items[0].model_copy(update={"topic": "상태 배정", "source_titles": ["State Assignment"]})
+    prompts = _fake_calls(monkeypatch, [dup, ok])
+    new = agents.replan_item(PROFILE, ["A (a.pdf p.1)"], failed, "실패", ["카르노 맵", "부동소수점표현"],
+                             used_titles=["부동소수점표현"])
+    assert new.topic == "상태 배정" and new.item_id == "q1-r1" and len(prompts) == 2
+    assert "직전 보충 계획 '부동소수점표현'" in prompts[1]
+    with pytest.raises(agents.PlanError):
+        _fake_calls(monkeypatch, [dup] * (agents.PLAN_RETRIES + 1))
+        agents.replan_item(PROFILE, ["A (a.pdf p.1)"], failed, "실패", ["부동소수점표현"], used_titles=[])

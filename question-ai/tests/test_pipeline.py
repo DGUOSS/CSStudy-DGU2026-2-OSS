@@ -225,7 +225,7 @@ def test_failed_item_is_replaced_once_with_same_type(tmp_path, monkeypatch):
     monkeypatch.setattr(agents, "reviewer", rev)
     seen = []
 
-    def replan(profile, topics, failed, reason, avoid, max_titles=3):
+    def replan(profile, topics, failed, reason, avoid, max_titles=3, used_titles=None):
         seen.append((failed.item_id, reason, avoid))
         return failed.model_copy(update={"item_id": f"{failed.item_id}-r1", "topic": "새 주제"})
 
@@ -283,3 +283,33 @@ def test_reviewer_gets_previous_issues_on_revision_only(tmp_path, monkeypatch):
     monkeypatch.setattr(agents, "reviewer", rev)
     pipeline.run("demo", run_id="t", verify=True)
     assert seen == [("q1", []), ("q1", ["지적-1"]), ("q1", []), ("q2", [])]
+
+
+def test_report_md_shows_revision_history(tmp_path, monkeypatch):
+    from qgen.ingest import load_chunks
+    from qgen.schemas import Review, SolverOutput
+
+    first = load_chunks(llm.ROOT / "data" / "demo", verbose=False)[0].source
+    _setup(tmp_path, monkeypatch, first)
+    monkeypatch.setattr(agents, "solver", lambda q, ctx: SolverOutput(item_id=q.item_id, reasoning="r", answer="1",
+                                                                     confidence=0.7, is_ambiguous=False))
+    verdicts = iter(["revise", "pass", "pass"])
+    monkeypatch.setattr(agents, "reviewer", lambda *a, **k: Review(
+        item_id="", past_comparison="", issues=["조건이 모호함"], answer_match="부분일치", grounded=True,
+        profile_fit=True, verdict=next(verdicts), feedback="조건을 명확히"))
+    out = pipeline.run("demo", run_id="t", verify=True)
+    rep = (out / "report.md").read_text(encoding="utf-8")
+    assert "## q1 [객관식] t1 — 통과 (시도 2번)" in rep
+    assert "- **시도 0**: revise / 부분일치" in rep and "→ 수정 지시: 조건을 명확히" in rep
+    assert "| 수정·재생성이 있었던 문항 | 1개 |" in rep
+
+
+def test_rerun_same_run_id_keeps_previous_summary(tmp_path, monkeypatch):
+    from qgen.ingest import load_chunks
+
+    first = load_chunks(llm.ROOT / "data" / "demo", verbose=False)[0].source
+    _setup(tmp_path, monkeypatch, first)
+    out = pipeline.run("demo", run_id="same", verify=False)
+    first_summary = (out / "summary.json").read_text(encoding="utf-8")
+    pipeline.run("demo", run_id="same", verify=False)
+    assert (out / "summary.prev.json").read_text(encoding="utf-8") == first_summary

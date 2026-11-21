@@ -307,6 +307,8 @@ render(exam)                                # exam.md (문제지), answers.md (�
 
 ### M4. 검증 루프 (3일)
 - `checks.py`, Solver, Reviewer, `pipeline.py` 루프
+- (2026-11-21 완료 확인) `scripts/generate_exam.py --course 26-CSC2011-02` 한 번으로 실행 `20261121-162212`: 검증 통과 4/4, exam.md·answers.md·report.md·logs.jsonl·trace.json, 수정 사례 다수(report.md). 같은 --run-id 재실행은 캐시로 모델 호출 0번
+  - 추가된 것: 코드 검산(`verify.py`), 베끼기 검사, 실패 문항 보충, reviewer 판단 절차, "모두 고르시오" 형식 검사, 실행 보고서 `report.md`
 - ✅ 완료 기준: `scripts/generate_exam.py --course X` 한 번으로 검증된 시험 1세트 + 답안지 + 로그 생성. 루프에서 실제로 수정된 사례가 로그에 있음
 
 ### M5. 실험 (4일)

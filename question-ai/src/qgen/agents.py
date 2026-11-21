@@ -67,7 +67,7 @@ def planner(profile: ExamProfile, topics: list[str], n: int, max_titles: int = 3
 
 
 def replan_item(profile: ExamProfile, topics: list[str], failed: PlannedItem, reason: str, avoid: list[str],
-                max_titles: int = 3) -> PlannedItem:
+                max_titles: int = 3, used_titles: list[str] | None = None) -> PlannedItem:
     """검증에서 실패한 문항 대신 같은 유형·다른 주제로 1문항을 다시 계획한다 (문제사항 V-07)."""
     one = profile.model_copy(update={"format_ratio": {failed.qtype: 1.0}})
     extra = ("\n\n## 보충 계획 (반드시 지킬 것)\n"
@@ -76,8 +76,19 @@ def replan_item(profile: ExamProfile, topics: list[str], failed: PlannedItem, re
              f"- 실패 이유: {reason or '(기록 없음)'}\n"
              f"- 이미 쓰였거나 실패한 주제는 고르지 않는다: {avoid}\n"
              "- 강의자료 주제 목록에 내용이 충분히 있는 주제만 고른다.")
-    plan = planner(one, topics, 1, max_titles, extra=extra)
-    return plan.items[0].model_copy(update={"item_id": f"{failed.item_id}-r1", "points": failed.points})
+    used_titles = set(used_titles or [])
+    new = None
+    for _ in range(PLAN_RETRIES + 1):
+        new = planner(one, topics, 1, max_titles, extra=extra).items[0]
+        dup = [t for t in new.source_titles if t in used_titles]
+        if new.topic not in avoid and not dup:
+            break
+        # 지시만으로는 안 지킴 (2026-11-21 실행 162212: q1 보충이 q2와 같은 '부동소수점표현') → 코드로 확인해 다시 요청
+        print(f"  [planner] 보충 주제가 다른 문항과 겹침({new.topic}, {dup}) → 다시 요청")
+        extra += f"\n- 직전 보충 계획 '{new.topic}' (source_titles {new.source_titles})은 이미 쓰인 주제·제목과 겹친다. 다른 제목을 골라라."
+    else:
+        raise PlanError(f"보충 계획이 계속 다른 문항과 겹침: {new.topic if new else ''}")
+    return new.model_copy(update={"item_id": f"{failed.item_id}-r1", "points": failed.points})
 
 
 def generator(item: PlannedItem, chunks: list[Chunk], profile: ExamProfile, examples: str,

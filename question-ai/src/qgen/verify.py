@@ -200,7 +200,9 @@ def _is_literal(node: _Node) -> bool:
 
 
 def form_of(node: _Node) -> set[str]:
-    """식이 SOP/POS 형태인지. 리터럴 하나, 곱 하나, 합 하나는 둘 다."""
+    """식이 SOP/POS 형태인지. 상수(0·1), 리터럴 하나, 곱 하나, 합 하나는 둘 다."""
+    if node.op == "const":
+        return {"SOP", "POS"}
     out = set()
     terms = _flatten(node, "or")
     if all(all(_is_literal(f) for f in _flatten(t, "and")) for t in terms):
