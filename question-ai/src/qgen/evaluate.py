@@ -195,8 +195,10 @@ def score(key_file: Path, judge_dir: Path, profile: ExamProfile | None = None) -
         tf = run_dir / "trace.json"
         trace = json.loads(tf.read_text(encoding="utf-8")) if tf.exists() else []
         tries = Counter(t["item"] for t in trace)
+        lf = run_dir / "logs.jsonl"  # 캐시에서 읽은 호출도 한 줄씩 남음 → 조건끼리 비용 비교용 (캐시를 공유하면 api_calls가 0이 될 수 있음)
+        all_calls = sum(1 for line in lf.read_text(encoding="utf-8").splitlines() if line.strip()) if lf.exists() else 0
         c["runs"].append({"summary": summary, "qtypes": Counter(q.qtype for q in exam.values()),
-                          "tries": [tries.get(i.item_id, 0) for i in plan.items]})
+                          "tries": [tries.get(i.item_id, 0) for i in plan.items], "all_calls": all_calls})
     for jid, k in key["items"].items():
         if jid in scores:
             by_cond[k["condition"]]["items"].append(scores[jid])
@@ -218,6 +220,7 @@ def score(key_file: Path, judge_dir: Path, profile: ExamProfile | None = None) -
             "통과/계획": f"{sum(x['accepted'] for x in sm)}/{sum(x['planned'] for x in sm)}",
             "문항당 평균 시도": round(sum(sum(r["tries"]) for r in runs) / max(1, sum(len(r["tries"]) for r in runs)), 2),
             "호출(세트 평균)": round(sum(x.get("api_calls", 0) for x in sm) / len(sm), 1),
+            "호출 캐시 포함(세트 평균)": round(sum(r["all_calls"] for r in runs) / len(runs), 1),
             "토큰(세트 평균)": round(sum(x.get("tokens", 0) for x in sm) / len(sm)),
             "시간(세트 평균, 초)": round(sum(x.get("sec", 0) for x in sm) / len(sm), 1),
         })
