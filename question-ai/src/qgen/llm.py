@@ -36,12 +36,20 @@ PROMPT_DIR = RESOURCE_DIR / "prompts"
 
 T = TypeVar("T", bound=BaseModel)
 
-_state = {"last_call": {},"log_path": None, "use_cache": True, "calls": 0, "tokens": 0}
+_state = {"last_call": {},"log_path": None, "use_cache": True, "calls": 0, "tokens": 0, "seed_base": 0}
 
 
-def configure(log_path: Path | None = None, use_cache: bool = True) -> None:
+def configure(log_path: Path | None = None, use_cache: bool = True, seed_base: int = 0) -> None:
+    """실행마다 부른다. 호출 수·토큰은 0부터 다시 센다 (한 프로세스에서 실행을 여러 번 돌리는 실험용).
+
+    seed_base: 실험 세트 번호. 0이 아니면 모든 호출의 캐시 키에 들어가 세트마다 다른 응답을 받는다
+    (명세 §8 "실험 반복 생성 시에는 seed 인덱스를 키에 포함"). 0이면 예전 키 그대로 (기존 캐시 유지).
+    """
     _state["log_path"] = log_path
     _state["use_cache"] = use_cache
+    _state["seed_base"] = seed_base
+    _state["calls"] = 0
+    _state["tokens"] = 0
 
 
 def stats() -> dict:
@@ -167,7 +175,8 @@ def call(role: str, prompt: str, schema: type[T], seed: int = 0,
     )
     messages = [{"role": "system", "content": system}, {"role": "user", "content": user_content(prompt, images)}]
 
-    key = hashlib.sha256(json.dumps([model, _cache_view(messages), temperature, schema.__name__, seed],
+    key_seed = seed if not _state["seed_base"] else [seed, _state["seed_base"]]
+    key = hashlib.sha256(json.dumps([model, _cache_view(messages), temperature, schema.__name__, key_seed],
                                     ensure_ascii=False).encode()).hexdigest()
     cache_file = CACHE_DIR / f"{key}.json"
     if _state["use_cache"] and cache_file.exists():

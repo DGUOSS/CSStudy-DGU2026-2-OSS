@@ -25,7 +25,7 @@ def _check_summary(vr: "verify_mod.VerifyResult") -> str:
     return ", ".join(parts)
 
 
-def run(course: str, run_id: str | None = None, new_profile: bool = False, use_cache: bool = True,
+def run(course: str, run_id: str | None = None, new_profile: bool = False, use_cache: bool = True, seed: int = 0,
         verify: bool = True) -> Path:
     """verify=False: 문항마다 generator 1번만 부르고 검증(solver·reviewer·수정) 없이 시험지를 만든다.
     M3 완료 기준 확인용이자 M5 실험의 single 조건(베이스라인). 규칙 검사는 비용이 없어 결과만 기록한다."""
@@ -34,7 +34,7 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
     run_id = run_id or time.strftime("%Y%m%d-%H%M%S")
     out = ROOT / "outputs" / course / run_id
     out.mkdir(parents=True, exist_ok=True)
-    llm.configure(log_path=out / "logs.jsonl", use_cache=use_cache)
+    llm.configure(log_path=out / "logs.jsonl", use_cache=use_cache, seed_base=seed)  # seed: 실험 세트 번호
     t0 = time.time()
 
     chunks = load_chunks(course_dir)

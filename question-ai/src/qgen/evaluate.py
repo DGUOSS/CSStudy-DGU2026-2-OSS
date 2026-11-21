@@ -190,8 +190,13 @@ def score(key_file: Path, judge_dir: Path, profile: ExamProfile | None = None) -
     by_cond: dict[str, dict] = {}
     for r in key["runs"]:
         c = by_cond.setdefault(r["condition"], {"runs": [], "items": []})
-        _, exam, summary = _load_run(Path(r["run"]))
-        c["runs"].append({"summary": summary, "qtypes": Counter(q.qtype for q in exam.values())})
+        run_dir = Path(r["run"])
+        plan, exam, summary = _load_run(run_dir)
+        tf = run_dir / "trace.json"
+        trace = json.loads(tf.read_text(encoding="utf-8")) if tf.exists() else []
+        tries = Counter(t["item"] for t in trace)
+        c["runs"].append({"summary": summary, "qtypes": Counter(q.qtype for q in exam.values()),
+                          "tries": [tries.get(i.item_id, 0) for i in plan.items]})
     for jid, k in key["items"].items():
         if jid in scores:
             by_cond[k["condition"]]["items"].append(scores[jid])
@@ -211,6 +216,7 @@ def score(key_file: Path, judge_dir: Path, profile: ExamProfile | None = None) -
             "품질 평균(1~3)": round(sum(qg) / len(qg), 2) if qg else None,
             "유형 분포 거리": round(sum(dist) / len(dist), 3) if dist else None,
             "통과/계획": f"{sum(x['accepted'] for x in sm)}/{sum(x['planned'] for x in sm)}",
+            "문항당 평균 시도": round(sum(sum(r["tries"]) for r in runs) / max(1, sum(len(r["tries"]) for r in runs)), 2),
             "호출(세트 평균)": round(sum(x.get("api_calls", 0) for x in sm) / len(sm), 1),
             "토큰(세트 평균)": round(sum(x.get("tokens", 0) for x in sm) / len(sm)),
             "시간(세트 평균, 초)": round(sum(x.get("sec", 0) for x in sm) / len(sm), 1),
