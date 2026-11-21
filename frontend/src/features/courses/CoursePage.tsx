@@ -9,6 +9,9 @@ import { MaterialsTab } from '@/features/materials/MaterialsTab'
 import { PapersTab } from '@/features/papers/PapersTab'
 import { ChaptersTab } from '@/features/problems/ChaptersTab'
 import { ReviewsTab } from '@/features/reviews/ReviewsTab'
+import { TeamYears } from '@/features/team_project/TeamYears'
+import { TeamHistory } from '@/features/team_project/TeamHistory'
+import { TeamReportPrompt } from '@/features/team_project/TeamReport'
 import { CourseInfoTab } from './CourseInfoTab'
 import { useCourse } from './queries'
 
@@ -57,7 +60,9 @@ export function CoursePage() {
           {c.subject_name} <span className="text-muted-foreground">·</span> {c.professor_name}{' '}
           교수님
         </h1>
+        <TeamYears history={c.team_history} className="mt-2" />
       </div>
+      <TeamReportPrompt courseId={courseId} />
       <nav className="flex gap-1 overflow-x-auto border-b">
         {TABS.map((t) => (
           <button
@@ -80,7 +85,12 @@ export function CoursePage() {
       {tab === 'papers' && <PapersTab courseId={courseId} />}
       {tab === 'mastery' && <MasteryTab courseId={courseId} />}
       {tab === 'materials' && <MaterialsTab courseId={courseId} />}
-      {tab === 'info' && <CourseInfoTab course={c} />}
+      {tab === 'info' && (
+        <div className="flex flex-col gap-4">
+          <CourseInfoTab course={c} />
+          <TeamHistory courseId={courseId} />
+        </div>
+      )}
       {tab === 'reviews' && <ReviewsTab key={courseId} courseId={courseId} />}
     </div>
   )

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { api, unwrap } from '@/api/client'
 import { RequestWithFiles } from '@/features/course_requests/RequestWithFiles'
+import { TeamYears } from '@/features/team_project/TeamYears'
 import {
   type OfferingGroup,
   type SearchQuery,
@@ -208,8 +209,9 @@ function Row({ g }: { g: OfferingGroup }) {
       <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">
         {g.sbj_no}-{g.dvcls.join(',')}
       </td>
-      <td className="px-3 py-2">
+      <td className="min-w-56 px-3 py-2">
         <div className="font-medium">{g.sbj_nm}</div>
+        <TeamYears history={g.team_history} className="mt-1" />
         <div className="text-xs text-muted-foreground">
           {g.dpt_nm}
           {rates.length > 0 && ` · ${rates.map(([k, v]) => `${k} ${v}%`).join(' ')}`}

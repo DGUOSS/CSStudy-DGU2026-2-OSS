@@ -1,0 +1,365 @@
+"""팀 프로젝트(팀플) 여부 라벨.
+
+같은 과목이라도 교수·학기마다 다르므로 라벨은 (강좌 = 과목+교수, 학기) 단위로 정한다.
+계획서와 실제 수업이 다를 수 있어서, 계획서는 기본값으로만 쓰고 실제 경험으로 덮어쓴다.
+우선순위:
+1. 운영진 지정(team_project_overrides)
+2. 수강생 응답: 제보 버튼(team_project_reports) + 후기 응답, 한 학생 한 표. 2명 이상이고 과반일 때
+3. 강의계획서: 엔드림스 계획서 글을 규칙으로 판정해 개설 목록(catalog_offerings)에 저장한 값
+"""
+
+import re
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+
+from sqlmodel import Session, func, select
+
+from app.features.enrollments.service import term_label
+from app.models import (
+    CatalogOffering,
+    Course,
+    CourseReview,
+    Professor,
+    Subject,
+    TeamProjectOverride,
+    TeamProjectReport,
+)
+
+# ---------- 강의계획서 판정 ----------
+
+# 앞이 한글이면 다른 단어의 일부("강조 과제", "스팀")라서 뺀다
+_TEAM = re.compile(
+    r"(?<![가-힣])(?:"
+    r"팀\s*(?:프로젝트|과제|플|별|작업|발표|보고서|활동|단위)"
+    r"|조\s*별|조\s*(?:과제|프로젝트|발표|활동|단위)"
+    r"|그룹\s*(?:프로젝트|과제|발표|활동|별)"
+    r"|협업\s*(?:프로젝트|과제)"
+    r")"
+    r"|\b(?:team|group)\s*(?:project|work|assignment|presentation)s?\b|\bteamwork\b",
+    re.IGNORECASE,
+)
+_NEG = re.compile(
+    r"없음|없다|없습니다|없으며|없고|없는|없이|하지\s*않|않습니다|않음|미실시|해당\s*없|"
+    r"(?<!\d)0\s*%|\bnone\b|\bnot\b|\bno\s+(?:team|group)",
+    re.IGNORECASE,
+)
+_NEG_BEFORE = re.compile(r"\b(?:no|without|not)\s+(?:a\s+)?$", re.IGNORECASE)
+_SPLIT = re.compile(r"[\n\r]+|(?<=[.!?。])\s+|\s*[·•▪■□◦]\s*")
+
+YES, NO, NOT_MENTIONED = "yes", "no", "not_mentioned"
+
+
+def classify_syllabus(text: str) -> tuple[str, str | None]:
+    """강의계획서 글 → (yes | no | not_mentioned, 근거 문장)."""
+    no_evidence = None
+    for raw in _SPLIT.split(text or ""):
+        sent = re.sub(r"\s+", " ", raw).strip()
+        m = _TEAM.search(sent)
+        if not m:
+            continue
+        before = sent[max(0, m.start() - 12) : m.start()]
+        # 한국어 부정은 뒤에("팀 프로젝트: 없음", "조별 과제는 하지 않는다"), 영어는 앞에("no team project")
+        if _NEG.search(sent[m.start() :]) or _NEG_BEFORE.search(before):
+            no_evidence = no_evidence or sent[:300]
+            continue
+        return YES, sent[:300]
+    if no_evidence:
+        return NO, no_evidence
+    return NOT_MENTIONED, None
+
+
+# ---------- 라벨 ----------
+
+# 화면에 보이는 값
+LABEL_YES, LABEL_NO, LABEL_LIKELY_NO, LABEL_UNKNOWN = "yes", "no", "likely_no", "unknown"
+MIN_VOTES = (
+    2  # 수강생 응답으로 라벨을 정하려면 이만큼 모여야 한다(한 명의 실수·장난에 흔들리지 않게)
+)
+
+
+@dataclass
+class TermLabel:
+    year: str
+    sem_cd: str
+    term: str
+    label: str  # yes | no | likely_no(계획서에 언급 없음) | unknown
+    source: str | None  # admin | students | syllabus | None
+    evidence: str | None = None  # 계획서 근거 문장
+    note: str | None = None  # 운영진 메모
+    syllabus: str | None = None  # 계획서 판정(yes | no | not_mentioned | None)
+    differs_from_syllabus: bool = False  # 실제(제보·운영진)가 계획서와 다름
+    yes_votes: int = 0
+    no_votes: int = 0
+    dvcls: list[str] = field(default_factory=list)
+
+
+def decide(
+    syllabus: str | None, yes: int, no: int, override: bool | None = None
+) -> tuple[str, str | None]:
+    """(라벨, 근거 종류). 운영진 > 수강생 응답(2명 이상, 과반) > 강의계획서."""
+    if override is not None:
+        return (LABEL_YES if override else LABEL_NO), "admin"
+    if yes + no >= MIN_VOTES and yes != no:
+        return (LABEL_YES if yes > no else LABEL_NO), "students"
+    if syllabus == YES:
+        return LABEL_YES, "syllabus"
+    if syllabus == NO:
+        return LABEL_NO, "syllabus"
+    if syllabus == NOT_MENTIONED:
+        return LABEL_LIKELY_NO, "syllabus"
+    return LABEL_UNKNOWN, None
+
+
+def differs(syllabus: str | None, label: str, source: str | None) -> bool:
+    """계획서와 실제가 다른가. 계획서에 언급이 없었는데 실제로 있었던 경우도 포함."""
+    if source not in ("admin", "students") or syllabus is None:
+        return False
+    if syllabus == YES:
+        return label == LABEL_NO
+    return label == LABEL_YES  # 계획서 없음/언급 없음인데 실제로 있었음
+
+
+def _merge_syllabus(rows: list[CatalogOffering]) -> tuple[str | None, str | None]:
+    """한 강좌의 여러 분반: 하나라도 있으면 있음."""
+    for want in (YES, NO, NOT_MENTIONED):
+        for r in rows:
+            if r.team_project == want:
+                return want, r.team_evidence
+    return None, None
+
+
+def offerings_by(
+    session: Session, sbj_no: str, emp_no: str | None, emp_nm: str | None
+) -> list[CatalogOffering]:
+    """과목+교수의 모든 학기 개설 목록 행. 교원번호가 있으면 교원번호로, 없으면 이름으로."""
+    q = select(CatalogOffering).where(CatalogOffering.sbj_no == sbj_no)
+    q = (
+        q.where(CatalogOffering.emp_no == emp_no)
+        if emp_no
+        else q.where(CatalogOffering.emp_nm == emp_nm)
+    )
+    return list(session.exec(q).all())
+
+
+def offerings_of(session: Session, course: Course) -> list[CatalogOffering]:
+    """이 강좌(과목+교수)의 개설 목록 행."""
+    subject = session.get(Subject, course.subject_id)
+    prof = session.get(Professor, course.professor_id)
+    if subject is None or not subject.code or prof is None:
+        return []
+    return offerings_by(session, subject.code, prof.emp_no, prof.name)
+
+
+Term = tuple[str, str]
+
+
+Votes = dict[Term, tuple[int, int]]
+
+
+def votes_many(session: Session, course_ids: list[int]) -> dict[int, Votes]:
+    """강좌별·학기별 (있었다, 없었다) 수. 한 학생은 한 표: 제보 버튼 응답이 있으면 그것, 없으면 후기 응답.
+    강좌 여러 개를 조회 2번(후기 응답, 제보)으로 센다."""
+    if not course_ids:
+        return {}
+    by_user: dict[tuple[int, Term, int], bool] = {}
+    for r in session.exec(
+        select(CourseReview).where(
+            CourseReview.course_id.in_(course_ids),  # type: ignore[attr-defined]
+            CourseReview.is_deleted == False,  # noqa: E712
+            CourseReview.team_project.is_not(None),  # type: ignore[union-attr]
+        )
+    ).all():
+        by_user[(r.course_id, (r.year, r.sem_cd), r.user_id)] = bool(r.team_project)
+    for p in session.exec(
+        select(TeamProjectReport).where(TeamProjectReport.course_id.in_(course_ids))  # type: ignore[attr-defined]
+    ).all():
+        by_user[(p.course_id, (p.year, p.sem_cd), p.user_id)] = p.team_project
+    out: dict[int, dict[Term, list[int]]] = {}
+    for (cid, term, _), v in by_user.items():
+        out.setdefault(cid, {}).setdefault(term, [0, 0])[0 if v else 1] += 1
+    return {cid: {t: (a, b) for t, (a, b) in d.items()} for cid, d in out.items()}
+
+
+def votes(session: Session, course_id: int) -> Votes:
+    return votes_many(session, [course_id]).get(course_id, {})
+
+
+Overrides = dict[Term, TeamProjectOverride]
+
+
+def overrides_many(session: Session, course_ids: list[int]) -> dict[int, Overrides]:
+    if not course_ids:
+        return {}
+    out: dict[int, Overrides] = {}
+    for o in session.exec(
+        select(TeamProjectOverride).where(TeamProjectOverride.course_id.in_(course_ids))  # type: ignore[attr-defined]
+    ).all():
+        out.setdefault(o.course_id, {})[(o.year, o.sem_cd)] = o
+    return out
+
+
+def overrides(session: Session, course_id: int) -> Overrides:
+    return overrides_many(session, [course_id]).get(course_id, {})
+
+
+def _label(
+    term: Term,
+    rows: list[CatalogOffering],
+    vote: tuple[int, int],
+    override: TeamProjectOverride | None,
+) -> TermLabel:
+    syl, ev = _merge_syllabus(rows)
+    yes, no = vote
+    label, source = decide(syl, yes, no, override.team_project if override else None)
+    return TermLabel(
+        year=term[0],
+        sem_cd=term[1],
+        term=term_label(*term),
+        label=label,
+        source=source,
+        evidence=ev,
+        note=override.note if override else None,
+        syllabus=syl,
+        differs_from_syllabus=differs(syl, label, source),
+        yes_votes=yes,
+        no_votes=no,
+        dvcls=sorted(r.dvcls for r in rows),
+    )
+
+
+def _labels(
+    session: Session, offerings: list[CatalogOffering], course_id: int | None
+) -> list[TermLabel]:
+    v = votes(session, course_id) if course_id else {}
+    ov = overrides(session, course_id) if course_id else {}
+    return _labels_from(offerings, v, ov)
+
+
+def _labels_from(offerings: list[CatalogOffering], v: Votes, ov: Overrides) -> list[TermLabel]:
+    """학기별 라벨 계산(조회 없음). 단건 조회와 강좌 찾기 묶음 조회가 같은 계산을 쓴다."""
+    by_term: dict[Term, list[CatalogOffering]] = {}
+    for o in offerings:
+        by_term.setdefault((o.year, o.sem_cd), []).append(o)
+    out = []
+    for term in sorted(set(by_term) | set(v) | set(ov), reverse=True):
+        t = _label(term, by_term.get(term, []), v.get(term, (0, 0)), ov.get(term))
+        if t.syllabus is None and t.source is None and not (t.yes_votes or t.no_votes):
+            continue  # 계획서는 아직 판정 전이고 응답도 없음
+        out.append(t)
+    return out
+
+
+def term_labels(session: Session, course: Course) -> list[TermLabel]:
+    """학기별 라벨, 최근 학기부터. 계획서·응답·운영진 지정이 하나도 없는 학기는 넣지 않는다."""
+    return _labels(session, offerings_of(session, course), course.id)
+
+
+def latest_label(session: Session, course: Course) -> TermLabel | None:
+    """가장 최근 학기 라벨(목록 배지용)."""
+    labels = term_labels(session, course)
+    return labels[0] if labels else None
+
+
+def offering_group_label(
+    session: Session, group: list[CatalogOffering], course_id: int | None
+) -> TermLabel:
+    """개설 목록 화면의 한 줄(같은 학기·과목·교수의 분반 묶음)."""
+    term = (group[0].year, group[0].sem_cd)
+    vote = votes(session, course_id).get(term, (0, 0)) if course_id else (0, 0)
+    override = overrides(session, course_id).get(term) if course_id else None
+    return _label(term, group, vote, override)
+
+
+# ---------- 최근 3년 ----------
+# 라벨은 수강신청 전에 보려는 것이다. 이번 학기 라벨은 아직 비어 있기 쉬우므로
+# 같은 교수·같은 과목의 최근 3개 연도(기준 연도 포함) 학기별 기록을 함께 보인다.
+YEARS = 3
+SUMMARY_MIXED = "mixed"  # 학기마다 다름
+
+
+@dataclass
+class TeamHistory:
+    summary: str  # yes | no | likely_no | mixed | unknown
+    from_year: str
+    to_year: str
+    terms: list[TermLabel]  # 최근 학기부터
+
+
+def summarize(terms: list[TermLabel]) -> str:
+    known = {t.label for t in terms} - {LABEL_UNKNOWN}
+    if not known:
+        return LABEL_UNKNOWN
+    if LABEL_YES in known:
+        return LABEL_YES if known == {LABEL_YES} else SUMMARY_MIXED
+    return LABEL_NO if LABEL_NO in known else LABEL_LIKELY_NO
+
+
+def _history(labels: list[TermLabel], anchor: str) -> TeamHistory:
+    lo = str(int(anchor) - YEARS + 1)
+    terms = [t for t in labels if lo <= t.year <= anchor]
+    return TeamHistory(summarize(terms), lo, anchor, terms)
+
+
+def latest_catalog_year(session: Session) -> str:
+    """개설 목록에 들어온 가장 최근 연도(없으면 올해)."""
+    y = session.exec(select(func.max(CatalogOffering.year))).one()
+    return y or str(datetime.now(UTC).year)
+
+
+def course_history(session: Session, course: Course, anchor: str | None = None) -> TeamHistory:
+    return _history(term_labels(session, course), anchor or latest_catalog_year(session))
+
+
+def group_history(
+    session: Session, group: list[CatalogOffering], course_id: int | None
+) -> TeamHistory:
+    """개설 목록의 한 줄(과목+교수): 조회한 학기 연도를 기준으로 최근 3년."""
+    o = group[0]
+    rows = offerings_by(session, o.sbj_no, o.emp_no, o.emp_nm)
+    return _history(_labels(session, rows, course_id), o.year)
+
+
+def catalog_labels(
+    session: Session, groups: list[tuple[list[CatalogOffering], int | None]]
+) -> list[tuple[TermLabel, TeamHistory]]:
+    """강좌 찾기 한 페이지의 (그 학기 라벨, 최근 3년)을 한꺼번에 계산한다.
+    그룹 수와 상관없이 조회 4번: 개설 목록(그 과목들, 3년치), 후기 응답, 제보, 운영진 지정.
+    결과는 그룹마다 offering_group_label·group_history를 부른 것과 같다."""
+    if not groups:
+        return []
+    ids = sorted({cid for _, cid in groups if cid})
+    v_all, ov_all = votes_many(session, ids), overrides_many(session, ids)
+    years = [int(g[0].year) for g, _ in groups]
+    lo, hi = str(min(years) - YEARS + 1), str(max(years))
+    codes = sorted({g[0].sbj_no for g, _ in groups})
+    by_no: dict[tuple[str, str], list[CatalogOffering]] = {}
+    by_nm: dict[tuple[str, str], list[CatalogOffering]] = {}
+    for o in session.exec(
+        select(CatalogOffering).where(
+            CatalogOffering.sbj_no.in_(codes),  # type: ignore[attr-defined]
+            CatalogOffering.year >= lo,
+            CatalogOffering.year <= hi,
+        )
+    ).all():
+        if o.emp_no:
+            by_no.setdefault((o.sbj_no, o.emp_no), []).append(o)
+        if o.emp_nm is not None:
+            by_nm.setdefault((o.sbj_no, o.emp_nm), []).append(o)
+    out = []
+    for group, cid in groups:
+        o = group[0]
+        term = (o.year, o.sem_cd)
+        v = v_all.get(cid, {}) if cid else {}
+        ov = ov_all.get(cid, {}) if cid else {}
+        # offerings_by와 같은 규칙: 교원번호가 있으면 교원번호로, 없으면 이름으로
+        if o.emp_no:
+            rows = by_no.get((o.sbj_no, o.emp_no), [])
+        else:
+            rows = by_nm.get((o.sbj_no, o.emp_nm), []) if o.emp_nm is not None else []
+        out.append(
+            (
+                _label(term, group, v.get(term, (0, 0)), ov.get(term)),
+                _history(_labels_from(rows, v, ov), o.year),
+            )
+        )
+    return out

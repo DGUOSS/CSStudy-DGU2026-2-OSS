@@ -2098,6 +2098,28 @@
         }
       }
     },
+    "/api/v1/catalog/site-codes": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Site Codes",
+        "description": "사이트에 있는 과목의 학수번호. 엔드림스 창에서만 읽을 수 있게 그 주소만 허용한다.",
+        "operationId": "site_codes_api_v1_catalog_site_codes_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteCodesOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/catalog/terms": {
       "get": {
         "tags": [
@@ -5186,6 +5208,263 @@
           }
         }
       }
+    },
+    "/api/v1/courses/{course_id}/team-project": {
+      "get": {
+        "tags": [
+          "team-project"
+        ],
+        "summary": "Course Team Project",
+        "description": "학기별 팀 프로젝트 라벨. 수강 기록이 없어도 볼 수 있다(수강 전에 고르는 데 쓰는 정보).",
+        "operationId": "course_team_project_api_v1_courses__course_id__team_project_get",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseTeamOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/courses/{course_id}/team-project/report": {
+      "put": {
+        "tags": [
+          "team-project"
+        ],
+        "summary": "Report Team Project",
+        "description": "팀플 제보. 그 학기 이 강좌 수강 기록이 있어야 한다. 다시 보내면 바뀐다.",
+        "operationId": "report_team_project_api_v1_courses__course_id__team_project_report_put",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TermAnswerIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseTeamOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/courses/{course_id}/team-project": {
+      "put": {
+        "tags": [
+          "team-project"
+        ],
+        "summary": "Set Override",
+        "description": "운영진 지정. team_project=null이면 지정을 지워 계획서·제보로 돌아간다.",
+        "operationId": "set_override_api_v1_admin_courses__course_id__team_project_put",
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OverrideIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseTeamOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/catalog/syllabi": {
+      "post": {
+        "tags": [
+          "team-project"
+        ],
+        "summary": "Import Syllabi",
+        "description": "엔드림스 강의계획서 글을 받아 팀 프로젝트 여부만 판정해 저장한다. 계획서 원문은 저장하지 않는다.",
+        "operationId": "import_syllabi_api_v1_admin_catalog_syllabi_post",
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyllabusImportIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyllabusImportOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6046,6 +6325,26 @@
             "type": "boolean",
             "title": "Is Public",
             "default": false
+          },
+          "team_project": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TeamLabelOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "team_history": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TeamHistoryOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -6218,6 +6517,45 @@
           "reviewed_at"
         ],
         "title": "CourseRequestOut"
+      },
+      "CourseTeamOut": {
+        "properties": {
+          "latest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TeamLabelOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "terms": {
+            "items": {
+              "$ref": "#/components/schemas/TeamLabelOut"
+            },
+            "type": "array",
+            "title": "Terms"
+          },
+          "my_terms": {
+            "items": {
+              "$ref": "#/components/schemas/MyTermOut"
+            },
+            "type": "array",
+            "title": "My Terms"
+          },
+          "history": {
+            "$ref": "#/components/schemas/TeamHistoryOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "latest",
+          "terms",
+          "my_terms",
+          "history"
+        ],
+        "title": "CourseTeamOut"
       },
       "CourseUpdate": {
         "properties": {
@@ -7389,6 +7727,42 @@
         ],
         "title": "MyTake"
       },
+      "MyTermOut": {
+        "properties": {
+          "year": {
+            "type": "string",
+            "title": "Year"
+          },
+          "sem_cd": {
+            "type": "string",
+            "title": "Sem Cd"
+          },
+          "term": {
+            "type": "string",
+            "title": "Term"
+          },
+          "my_answer": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "My Answer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "sem_cd",
+          "term",
+          "my_answer"
+        ],
+        "title": "MyTermOut",
+        "description": "내 수강 기록이 있는 학기와 내 응답(제보 버튼, 없으면 후기에서 한 답)."
+      },
       "NoteIn": {
         "properties": {
           "note": {
@@ -7664,6 +8038,12 @@
           "mine": {
             "type": "boolean",
             "title": "Mine"
+          },
+          "team_project": {
+            "$ref": "#/components/schemas/TeamLabelOut"
+          },
+          "team_history": {
+            "$ref": "#/components/schemas/TeamHistoryOut"
           }
         },
         "type": "object",
@@ -7686,7 +8066,9 @@
           "course_id",
           "request_count",
           "requested_by_me",
-          "mine"
+          "mine",
+          "team_project",
+          "team_history"
         ],
         "title": "OfferingGroupOut",
         "description": "같은 과목·교수의 분반을 한 줄로 묶은 결과. 사이트의 강좌 하나에 해당한다."
@@ -7883,6 +8265,46 @@
           "sbj_nm"
         ],
         "title": "OfferingIn"
+      },
+      "OverrideIn": {
+        "properties": {
+          "year": {
+            "type": "string",
+            "pattern": "^\\d{4}$",
+            "title": "Year"
+          },
+          "sem_cd": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Sem Cd"
+          },
+          "team_project": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Project",
+            "description": "있었다 / 없었다 / null = 응답 지우기"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "sem_cd",
+          "team_project"
+        ],
+        "title": "OverrideIn"
       },
       "PaperIn": {
         "properties": {
@@ -8813,6 +9235,18 @@
             "minimum": 1.0,
             "title": "Workload"
           },
+          "team_project": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Project",
+            "description": "그 학기에 팀 프로젝트(조별 과제)가 있었나. null = 답하지 않음"
+          },
           "content": {
             "type": "string",
             "maxLength": 3000,
@@ -8853,6 +9287,18 @@
             "maximum": 5.0,
             "minimum": 1.0,
             "title": "Workload"
+          },
+          "team_project": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Project",
+            "description": "그 학기에 팀 프로젝트(조별 과제)가 있었나. null = 답하지 않음"
           },
           "content": {
             "type": "string",
@@ -9136,6 +9582,22 @@
           "password"
         ],
         "title": "SignupIn"
+      },
+      "SiteCodesOut": {
+        "properties": {
+          "codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Codes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "codes"
+        ],
+        "title": "SiteCodesOut"
       },
       "SourceOut": {
         "properties": {
@@ -9554,6 +10016,96 @@
         ],
         "title": "SubmitIn"
       },
+      "SyllabusImportIn": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/SyllabusIn"
+            },
+            "type": "array",
+            "maxItems": 5000,
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rows"
+        ],
+        "title": "SyllabusImportIn"
+      },
+      "SyllabusImportOut": {
+        "properties": {
+          "checked": {
+            "type": "integer",
+            "title": "Checked"
+          },
+          "missing": {
+            "type": "integer",
+            "title": "Missing"
+          },
+          "yes": {
+            "type": "integer",
+            "title": "Yes"
+          },
+          "no": {
+            "type": "integer",
+            "title": "No"
+          },
+          "not_mentioned": {
+            "type": "integer",
+            "title": "Not Mentioned"
+          }
+        },
+        "type": "object",
+        "required": [
+          "checked",
+          "missing",
+          "yes",
+          "no",
+          "not_mentioned"
+        ],
+        "title": "SyllabusImportOut"
+      },
+      "SyllabusIn": {
+        "properties": {
+          "year": {
+            "type": "string",
+            "pattern": "^\\d{4}$",
+            "title": "Year"
+          },
+          "sem_cd": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Sem Cd"
+          },
+          "sbj_no": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Sbj No"
+          },
+          "dvcls": {
+            "type": "string",
+            "maxLength": 10,
+            "title": "Dvcls",
+            "default": ""
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "sem_cd",
+          "sbj_no",
+          "text"
+        ],
+        "title": "SyllabusIn"
+      },
       "TakeOut": {
         "properties": {
           "id": {
@@ -9607,6 +10159,177 @@
           "remaining_sec"
         ],
         "title": "TakeOut"
+      },
+      "TeamHistoryOut": {
+        "properties": {
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "description": "yes | no | likely_no | mixed(학기마다 다름) | unknown"
+          },
+          "from_year": {
+            "type": "string",
+            "title": "From Year"
+          },
+          "to_year": {
+            "type": "string",
+            "title": "To Year"
+          },
+          "terms": {
+            "items": {
+              "$ref": "#/components/schemas/TeamLabelOut"
+            },
+            "type": "array",
+            "title": "Terms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary",
+          "from_year",
+          "to_year",
+          "terms"
+        ],
+        "title": "TeamHistoryOut",
+        "description": "같은 교수·같은 과목의 최근 3개 연도 학기별 라벨. 수강신청 전에 보는 용도."
+      },
+      "TeamLabelOut": {
+        "properties": {
+          "year": {
+            "type": "string",
+            "title": "Year"
+          },
+          "sem_cd": {
+            "type": "string",
+            "title": "Sem Cd"
+          },
+          "term": {
+            "type": "string",
+            "title": "Term"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "yes | no | likely_no(계획서에 언급 없음) | unknown"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source",
+            "description": "admin | students | syllabus | null"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence",
+            "description": "강의계획서 근거 문장"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note",
+            "description": "운영진 메모"
+          },
+          "syllabus": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Syllabus",
+            "description": "계획서 판정: yes | no | not_mentioned | null"
+          },
+          "differs_from_syllabus": {
+            "type": "boolean",
+            "title": "Differs From Syllabus"
+          },
+          "yes_votes": {
+            "type": "integer",
+            "title": "Yes Votes"
+          },
+          "no_votes": {
+            "type": "integer",
+            "title": "No Votes"
+          },
+          "dvcls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dvcls"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "sem_cd",
+          "term",
+          "label",
+          "source",
+          "evidence",
+          "note",
+          "syllabus",
+          "differs_from_syllabus",
+          "yes_votes",
+          "no_votes",
+          "dvcls"
+        ],
+        "title": "TeamLabelOut"
+      },
+      "TermAnswerIn": {
+        "properties": {
+          "year": {
+            "type": "string",
+            "pattern": "^\\d{4}$",
+            "title": "Year"
+          },
+          "sem_cd": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Sem Cd"
+          },
+          "team_project": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Project",
+            "description": "있었다 / 없었다 / null = 응답 지우기"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "sem_cd",
+          "team_project"
+        ],
+        "title": "TermAnswerIn"
       },
       "TermOut": {
         "properties": {

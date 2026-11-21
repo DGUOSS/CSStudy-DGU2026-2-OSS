@@ -4,6 +4,7 @@ import { ErrorText } from '@/components/States'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useAuth } from '@/features/auth/useAuth'
+import { useSubjects } from '@/features/courses/queries'
 import {
   bookmarkletHref,
   MESSAGE_TYPE,
@@ -12,6 +13,7 @@ import {
   type NdrimsPayload,
 } from './bookmarklet'
 import { useImportNdrims } from './queries'
+import { SyllabusResult } from './SyllabusResult'
 
 /**
  * 엔드림스 수강 기록 가져오기 안내.
@@ -22,11 +24,15 @@ export function ImportPanel({ compact = false }: { compact?: boolean }) {
   const isAdmin = user?.role === 'admin'
   const save = useImportNdrims(isAdmin)
   const linkRef = useRef<HTMLAnchorElement>(null)
+  // 관리자 버튼에는 사이트 과목코드를 넣어 둔다(그 과목의 강의계획서만 가져오도록)
+  const subjects = useSubjects()
+  const codes = isAdmin ? (subjects.data ?? []).map((s) => s.code).filter((c): c is string => !!c) : []
+  const codeKey = codes.join(',')
 
   // React는 javascript: 주소를 막으므로 직접 넣는다
   useEffect(() => {
-    linkRef.current?.setAttribute('href', bookmarkletHref(window.location.origin, isAdmin))
-  }, [isAdmin])
+    linkRef.current?.setAttribute('href', bookmarkletHref(window.location.origin, isAdmin, codeKey ? codeKey.split(',') : []))
+  }, [isAdmin, codeKey])
 
   // 엔드림스 창에서 보낸 기록을 받는다
   useEffect(() => {
@@ -89,8 +95,9 @@ export function ImportPanel({ compact = false }: { compact?: boolean }) {
           </details>
           {isAdmin && (
             <p className="text-muted-foreground">
-              관리자: 수업/강의평가 → 종합강의시간표조회를 열고 상자의 [보내기]를 누르면 개설
-              목록이 저장됩니다.
+              관리자: 상자의 [최근 3년 강의계획서 한 번에 가져오기]를 누르면 사이트에 있는 과목의
+              최근 3년 1·2학기 계획서로 팀플 여부를 판정합니다(1분 안쪽). 과목 목록은 누를 때마다
+              사이트에서 새로 받습니다. 학기를 골라 [개설 목록 전체 가져오기]도 할 수 있습니다.
             </p>
           )}
         </Step>
@@ -100,7 +107,7 @@ export function ImportPanel({ compact = false }: { compact?: boolean }) {
       {r && (
         <div className="rounded-lg border bg-muted/40 p-3 text-sm">
           {r.catalogError && (
-            <p className="text-destructive">개설 목록은 저장하지 못했습니다: {r.catalogError.message}</p>
+            <p className="text-destructive">개설 목록·계획서는 저장하지 못했습니다: {r.catalogError.message}</p>
           )}
           {r.catalog && (
             <p>
@@ -108,6 +115,7 @@ export function ImportPanel({ compact = false }: { compact?: boolean }) {
               {r.catalog.updated}건 저장
             </p>
           )}
+          <SyllabusResult r={r.syllabi} />
           {r.mine && (
             <p>
               수강 기록 {r.mine.received}건을 받았습니다(새로 {r.mine.added}건). 들어갈 수 있는 강좌{' '}

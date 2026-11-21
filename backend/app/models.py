@@ -215,7 +215,38 @@ class CourseReview(SQLModel, table=True):
     difficulty: int
     workload: int
     content: str = Field(sa_column=Column(Text, nullable=False))
+    # 그 학기 수업에 팀 프로젝트(조별 과제)가 있었는가. None = 답하지 않음(옛 후기 포함)
+    team_project: bool | None = None
     created_at: datetime = Field(default_factory=_now)
+
+
+class TeamProjectReport(SQLModel, table=True):
+    """수강생의 팀플 제보: 그 학기 수업에 팀 프로젝트가 있었는가. 학생당 (강좌, 학기)마다 하나, 바꿀 수 있다."""
+
+    __tablename__ = "team_project_reports"
+    __table_args__ = (UniqueConstraint("user_id", "course_id", "year", "sem_cd"),)
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    course_id: int = Field(foreign_key="courses.id", index=True)
+    year: str = Field(max_length=4)
+    sem_cd: str = Field(max_length=20)
+    team_project: bool
+    updated_at: datetime = Field(default_factory=_now)
+
+
+class TeamProjectOverride(SQLModel, table=True):
+    """운영진이 직접 정한 팀플 여부. 계획서·제보보다 우선한다."""
+
+    __tablename__ = "team_project_overrides"
+    __table_args__ = (UniqueConstraint("course_id", "year", "sem_cd"),)
+    id: int | None = Field(default=None, primary_key=True)
+    course_id: int = Field(foreign_key="courses.id", index=True)
+    year: str = Field(max_length=4)
+    sem_cd: str = Field(max_length=20)
+    team_project: bool
+    note: str = Field(default="", max_length=300)
+    set_by: int | None = Field(default=None, foreign_key="users.id")
+    updated_at: datetime = Field(default_factory=_now)
 
 
 class CatalogOffering(SQLModel, table=True):
@@ -243,6 +274,11 @@ class CatalogOffering(SQLModel, table=True):
     proj_rate: int | None = None
     plan_url: str | None = Field(default=None, max_length=500)
     imported_at: datetime = Field(default_factory=_now)
+    # 강의계획서로 판정한 팀 프로젝트 여부(features/team_project). 시간표를 다시 가져와도 지우지 않는다.
+    # yes(있음) | no(없다고 적힘) | not_mentioned(계획서에 언급 없음) | None(계획서 아직 안 봄)
+    team_project: str | None = Field(default=None, max_length=20)
+    team_evidence: str | None = Field(default=None, max_length=300)  # 판정 근거 문장
+    syllabus_checked_at: datetime | None = None
 
 
 class MaterialVote(SQLModel, table=True):

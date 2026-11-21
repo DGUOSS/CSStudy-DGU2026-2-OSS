@@ -19,6 +19,7 @@ from app.features.problems.router import router as problems_router
 from app.features.reviews.router import router as reviews_router
 from app.features.structure import service as _structure_hooks  # noqa: F401  (교안 저장 시 자동 챕터·개념)
 from app.features.study_groups.router import router as study_groups_router
+from app.features.team_project.router import router as team_project_router
 from app.services import llm
 
 
@@ -77,5 +78,6 @@ api.include_router(notices_router)
 api.include_router(department_notices_router)
 
 api.include_router(study_groups_router)
+api.include_router(team_project_router)
 
 app.include_router(api)
