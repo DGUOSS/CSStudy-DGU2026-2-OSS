@@ -24,8 +24,10 @@ def _setup(tmp_path, monkeypatch, src_page: SourceRef):
     def gen(item, *a, **k):
         calls["generator"] += 1
         choices = [f"보기{i}" for i in range(1, 6)] if item.qtype == "객관식" else None
+        essay = item.qtype != "객관식"
         return Question(item_id=item.item_id, qtype=item.qtype, stem=f"{item.topic} 문제", choices=choices,
-                        answer="1", sources=[src_page])
+                        answer="1", sources=[src_page], model_answer="m" if essay else None,
+                        rubric=["핵심 — 10점"] if essay else None)
 
     def never(name):
         def f(*a, **k):
@@ -126,3 +128,33 @@ def test_detail_level_jiyeopjeok_doubles_k_and_excludes_used_pages(tmp_path, mon
 def test_other_detail_levels_unchanged(tmp_path, monkeypatch):
     calls, _ = _run_with_detail(tmp_path, monkeypatch, "중간")
     assert calls == [(llm.CFG["pipeline"]["retrieval_top_k"], set())] * 2
+
+
+def _verify_run(tmp_path, monkeypatch, verdict: str, bad_source: bool = False):
+    from qgen.ingest import load_chunks
+    from qgen.schemas import Review, SolverOutput
+
+    first = load_chunks(llm.ROOT / "data" / "demo", verbose=False)[0].source
+    src = SourceRef(file="없는파일.pdf", page=1) if bad_source else first
+    calls = _setup(tmp_path, monkeypatch, src)
+    monkeypatch.setattr(agents, "solver", lambda q, ctx: (calls.__setitem__("solver", calls["solver"] + 1),
+                        SolverOutput(item_id=q.item_id, reasoning="r", answer="1", confidence=0.9, is_ambiguous=False))[1])
+    monkeypatch.setattr(agents, "reviewer", lambda *a, **k: (calls.__setitem__("reviewer", calls["reviewer"] + 1),
+                        Review(item_id="", verdict=verdict, answer_match="불일치", grounded=True, profile_fit=True,
+                               issues=["x"], feedback="고쳐"))[1])
+    out = pipeline.run("demo", run_id="t", verify=True)
+    return calls, out
+
+
+def test_no_wasted_generator_call_after_last_revise(tmp_path, monkeypatch):
+    calls, out = _verify_run(tmp_path, monkeypatch, "revise")
+    tries = llm.CFG["pipeline"]["max_revisions"] + 1
+    # 문항당: 첫 생성 1 + 수정 (tries-1)번. 마지막 검토 뒤에는 부르지 않음
+    assert calls == {"generator": 2 * tries, "solver": 2 * tries, "reviewer": 2 * tries}
+    assert json.loads((out / "exam.json").read_text(encoding="utf-8")) == {}
+
+
+def test_no_wasted_generator_call_after_last_rule_issue(tmp_path, monkeypatch):
+    calls, _ = _verify_run(tmp_path, monkeypatch, "pass", bad_source=True)
+    tries = llm.CFG["pipeline"]["max_revisions"] + 1
+    assert calls == {"generator": 2 * tries, "solver": 0, "reviewer": 0}

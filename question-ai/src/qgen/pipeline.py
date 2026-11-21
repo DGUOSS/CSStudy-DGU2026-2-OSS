@@ -117,11 +117,15 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
             continue
         regens = 0
         for attempt in range(cfg["max_revisions"] + 1):
+            # 마지막 시도에서는 고쳐도 다시 검사할 기회가 없으므로 generator를 부르지 않는다 (실패 문항마다 약 12초·9천 토큰 낭비였음)
+            last = attempt == cfg["max_revisions"]
             rule_issues = checks.run(q, item, ctx) + checks.copy_issues(q, past_texts, copy_threshold)
             if rule_issues:
                 print(f"  attempt {attempt}: 규칙 위반 {rule_issues}")
                 hist.append(f"규칙위반({len(rule_issues)})")
                 trace.append({"item": item.item_id, "attempt": attempt, "rule_issues": rule_issues, "question": q.model_dump()})
+                if last:
+                    break
                 q = agents.generator(item, ctx, profile, examples, images=ex_images, prev=q, feedback="\n".join(rule_issues))
                 continue
             s = agents.solver(q, ctx)
@@ -133,6 +137,8 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
                           "solver": s.model_dump(), "review": r.model_dump()})
             if r.verdict == "pass":
                 accepted[item.item_id] = q
+                break
+            if last:
                 break
             if r.verdict == "reject" and regens < cfg["max_regenerations"]:
                 regens += 1
