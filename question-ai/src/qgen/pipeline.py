@@ -135,6 +135,7 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
             print(f"  소요 {item_sec[item.item_id]}s")
             return True
         regens = 0
+        prev_issues: list[str] = []  # 직전 검토의 지적 (수정한 문항을 다시 검토할 때 전달, 문제사항 V-04)
         for attempt in range(cfg["max_revisions"] + 1):
             # 마지막 시도에서는 고쳐도 다시 검사할 기회가 없으므로 generator를 부르지 않는다 (실패 문항마다 약 12초·9천 토큰 낭비였음)
             last = attempt == cfg["max_revisions"]
@@ -152,7 +153,7 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
                 continue
             s = agents.solver(q, ctx)
             r = agents.reviewer(q, s, item, ctx, profile, past_examples=examples if profile.past_items else "",
-                                verified=vr.passed)
+                                verified=vr.passed, prev_issues=prev_issues)
             print(f"  attempt {attempt}: solver={s.answer[:40]!r} (conf {s.confidence:.2f}, 모호 {s.is_ambiguous}) "
                   f"→ {r.verdict} / {r.answer_match}")
             hist.append(f"{r.verdict}({r.answer_match})")
@@ -165,10 +166,12 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
                 break
             if r.verdict == "reject" and regens < cfg["max_regenerations"]:
                 regens += 1
+                prev_issues = []  # 새로 만든 문항은 이전 지적과 무관
                 q = agents.generator(item, ctx, profile, examples, images=ex_images, seed=regens)
                 continue
             if r.verdict == "reject":
                 break
+            prev_issues = r.issues
             q = agents.generator(item, ctx, profile, examples, images=ex_images, prev=q, feedback=r.feedback + "\n" + "\n".join(r.issues))
         if item.item_id not in accepted:
             hist.append("실패")

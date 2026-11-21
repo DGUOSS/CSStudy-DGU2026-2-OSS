@@ -112,3 +112,18 @@ def test_reviewer_gets_past_examples_appended(monkeypatch):
     agents.reviewer(q, s, _item("서술형"), [], _profile([]))
     assert seen[0].endswith("### 기출 6번\n원문") and "기출 예시 (출제자가" not in seen[1]
     assert "{{" not in seen[0]
+
+
+def test_review_schema_reasons_before_verdict_and_prev_issues_prompt(monkeypatch):
+    from qgen import agents, llm
+    from qgen.schemas import Question, Review, SolverOutput, SourceRef
+
+    fields = list(Review.model_fields)
+    assert fields.index("issues") < fields.index("verdict") and fields.index("past_comparison") < fields.index("verdict")
+    seen = []
+    monkeypatch.setattr(llm, "call", lambda role, p, schema, **k: seen.append(p) or Review(
+        item_id="", issues=[], answer_match="일치", grounded=True, profile_fit=True, verdict="pass", feedback=""))
+    q = Question(item_id="q1", qtype="서술형", stem="s", answer="a", sources=[SourceRef(file="a.pdf", page=1)])
+    s = SolverOutput(item_id="q1", reasoning="r", answer="a", confidence=0.9, is_ambiguous=False)
+    agents.reviewer(q, s, _item("서술형"), [], _profile([]), prev_issues=["기출 2번과 같은 질문: (2)"])
+    assert "이전 검토에서 지적한 사항" in seen[0] and "- 기출 2번과 같은 질문: (2)" in seen[0]

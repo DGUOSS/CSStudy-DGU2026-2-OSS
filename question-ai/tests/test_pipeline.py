@@ -260,3 +260,26 @@ def test_replacement_that_fails_is_not_replaced_again(tmp_path, monkeypatch):
     out = pipeline.run("demo", run_id="t", verify=True)
     assert n == ["q1", "q2"]  # 원래 문항마다 1번, 보충 문항(q1-r1, q2-r1)은 다시 보충 안 함
     assert json.loads((out / "exam.json").read_text(encoding="utf-8")) == {}
+
+
+def test_reviewer_gets_previous_issues_on_revision_only(tmp_path, monkeypatch):
+    from qgen.ingest import load_chunks
+    from qgen.schemas import Review, SolverOutput
+
+    first = load_chunks(llm.ROOT / "data" / "demo", verbose=False)[0].source
+    _setup(tmp_path, monkeypatch, first)
+    monkeypatch.setitem(llm.CFG["pipeline"], "max_replacements", 0)
+    monkeypatch.setattr(agents, "solver", lambda q, ctx: SolverOutput(item_id=q.item_id, reasoning="r", answer="1",
+                                                                     confidence=0.9, is_ambiguous=False))
+    seen = []
+    verdicts = iter(["revise", "reject", "pass", "pass"])  # q1: revise → reject(재생성) → pass / q2: pass
+
+    def rev(q, s, item, *a, prev_issues=None, **k):
+        seen.append((item.item_id, list(prev_issues or [])))
+        v = next(verdicts)
+        return Review(item_id="", issues=[f"지적-{len(seen)}"], answer_match="일치", grounded=True, profile_fit=True,
+                      verdict=v, feedback="f")
+
+    monkeypatch.setattr(agents, "reviewer", rev)
+    pipeline.run("demo", run_id="t", verify=True)
+    assert seen == [("q1", []), ("q1", ["지적-1"]), ("q1", []), ("q2", [])]
