@@ -92,10 +92,15 @@ def solver(q: Question, chunks: list[Chunk]) -> SolverOutput:
     return s
 
 
-def reviewer(q: Question, s: SolverOutput, item: PlannedItem, chunks: list[Chunk], profile: ExamProfile) -> Review:
+def reviewer(q: Question, s: SolverOutput, item: PlannedItem, chunks: list[Chunk], profile: ExamProfile,
+             past_examples: str = "") -> Review:
+    """past_examples: generator가 참고한 기출 문항 원문. 있으면 '같은 질문을 표현만 바꿨는지'도 보게 끝에 붙인다
+    (프롬프트 파일에 빈칸을 만들지 않아 같은 파일을 쓰는 백엔드에는 영향 없음)."""
     p = llm.render_prompt("reviewer", question=q.model_dump(), solver=s.model_dump(), item=item.model_dump(),
                           chunks=format_chunks(chunks),
                           profile=profile.model_dump(include={"difficulty", "detail_level", "phrasing_examples"}))
+    if past_examples:
+        p += f"\n\n## 기출 예시 (출제자가 참고한 것 — 같은 질문인지 확인)\n{past_examples}"
     r = llm.call("reviewer", p, Review)
     r.item_id = q.item_id
     return r

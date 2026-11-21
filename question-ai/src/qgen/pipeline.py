@@ -37,6 +37,9 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
     # 1) Analyst — 과목 공용 profile.json (사용자가 직접 수정 가능, 있으면 재사용). 기출·메모가 없으면 기본 프로필
     profile = exam_profile.load_or_make(course_dir, course, new=new_profile)
     past_inp = exam_profile.build_input(course_dir)  # 기출 원문 줄·이미지 (past_items 원문을 잘라 올 때)
+    # 베끼기 검사 대상: 기출 문항 전부 (참고로 준 문항만이 아니라)
+    past_texts = [(f"{p.number}번", exam_profile.past_item_text(p, past_inp)) for p in profile.past_items]
+    copy_threshold = cfg.get("copy_threshold", checks.COPY_THRESHOLD)
     if profile.past_items:
         print(f"[analyst] 기출 문항 {len(profile.past_items)}개: "
               + ", ".join(f"{p.item_id}={p.number}번 {p.qtype}" for p in profile.past_items))
@@ -102,7 +105,7 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
             examples, ex_images = past[:3000], []
         q = agents.generator(item, ctx, profile, examples, images=ex_images)
         if not verify:
-            rule_issues = checks.run(q, item, ctx)
+            rule_issues = checks.run(q, item, ctx) + checks.copy_issues(q, past_texts, copy_threshold)
             if rule_issues:
                 print(f"  규칙 위반(검증 안 함, 기록만): {rule_issues}")
             hist.append(f"검증 안 함, 규칙위반 {len(rule_issues)}개" if rule_issues else "검증 안 함")
@@ -114,7 +117,7 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
             continue
         regens = 0
         for attempt in range(cfg["max_revisions"] + 1):
-            rule_issues = checks.run(q, item, ctx)
+            rule_issues = checks.run(q, item, ctx) + checks.copy_issues(q, past_texts, copy_threshold)
             if rule_issues:
                 print(f"  attempt {attempt}: 규칙 위반 {rule_issues}")
                 hist.append(f"규칙위반({len(rule_issues)})")
@@ -122,7 +125,7 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
                 q = agents.generator(item, ctx, profile, examples, images=ex_images, prev=q, feedback="\n".join(rule_issues))
                 continue
             s = agents.solver(q, ctx)
-            r = agents.reviewer(q, s, item, ctx, profile)
+            r = agents.reviewer(q, s, item, ctx, profile, past_examples=examples if profile.past_items else "")
             print(f"  attempt {attempt}: solver={s.answer[:40]!r} (conf {s.confidence:.2f}, 모호 {s.is_ambiguous}) "
                   f"→ {r.verdict} / {r.answer_match}")
             hist.append(f"{r.verdict}({r.answer_match})")

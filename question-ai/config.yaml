@@ -31,6 +31,7 @@ pipeline:
   # 앞 문항들이 근거(sources)로 이만큼 이상 쓴 쪽은 검색에서 뺀다 → 세부 내용 쪽까지 쓰게
   detail_top_k_factor: 2
   detail_reuse_limit: 1
+  copy_threshold: 0.25        # 기출 문항과 글자 3개 조각 겹침이 이 이상이면 베끼기 (checks.copy_issues 설명 참고)
   min_interval_sec:           # 회사별 호출 간 최소 간격(초). 무료 티어 분당 요청 제한 대응
     gemini: 7
     openai: 0

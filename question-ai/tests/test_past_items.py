@@ -80,3 +80,35 @@ def test_old_profile_without_past_items_still_loads():
     old = '{"course":"c","format_ratio":{"서술형":1.0},"num_questions":1,"detail_level":"중간","difficulty":"보통",' \
           '"recurring_patterns":[],"phrasing_examples":[],"emphasized_topics":[]}'
     assert ExamProfile.model_validate_json(old).past_items == []
+
+
+def test_copy_issues_catches_copied_sentences_only():
+    from qgen.checks import copy_issues, overlap
+    from qgen.schemas import Question, SourceRef
+
+    past = [("3번", "3. RAM과 flash memory의 차이점을 세 가지 기술하시오. (6%)")]
+
+    def q(stem):
+        return Question(item_id="q1", qtype="서술형", stem=stem, answer="a", sources=[SourceRef(file="a.pdf", page=1)])
+
+    copied = q("RAM과 flash memory의 차이점을 세 가지 기술하시오.")
+    other = q("캐시 메모리의 쓰기 정책 두 가지를 비교하고 장단점을 설명하시오.")
+    assert overlap(copied.stem, past[0][1]) > 0.9
+    assert copy_issues(copied, past) and "기출 3번" in copy_issues(copied, past)[0]
+    assert copy_issues(other, past) == []
+    assert copy_issues(copied, []) == []  # 기출 문항 목록이 없으면 검사 안 함
+
+
+def test_reviewer_gets_past_examples_appended(monkeypatch):
+    from qgen import agents, llm
+    from qgen.schemas import Question, Review, SolverOutput, SourceRef
+
+    seen = []
+    monkeypatch.setattr(llm, "call", lambda role, p, schema, **k: seen.append(p) or Review(
+        item_id="", verdict="pass", answer_match="일치", grounded=True, profile_fit=True, issues=[], feedback=""))
+    q = Question(item_id="q1", qtype="서술형", stem="s", answer="a", sources=[SourceRef(file="a.pdf", page=1)])
+    s = SolverOutput(item_id="q1", reasoning="r", answer="a", confidence=0.9, is_ambiguous=False)
+    agents.reviewer(q, s, _item("서술형"), [], _profile([]), past_examples="### 기출 6번\n원문")
+    agents.reviewer(q, s, _item("서술형"), [], _profile([]))
+    assert seen[0].endswith("### 기출 6번\n원문") and "기출 예시 (출제자가" not in seen[1]
+    assert "{{" not in seen[0]
