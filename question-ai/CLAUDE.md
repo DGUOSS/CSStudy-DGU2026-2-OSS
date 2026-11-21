@@ -246,6 +246,10 @@ render(exam)                                # exam.md (문제지), answers.md (�
 | `multi_no_loop` | Solver/Reviewer로 판정만 하고 수정 루프 없음 |
 
 **최종 품질 판정은 조건과 무관한 고정 평가자 모델**로 한다 (`config.yaml`의 `models.judge`). 생성에 쓴 모델과 겹치지 않게.
+- (2026-11-21 변경) judge는 API 대신 **채팅 채점**: `scripts/evaluate.py export`가 `question-ai/for judge/<이름>/`에 가린 채점 자료
+  (문항을 섞고 J001… 번호, 출제 모델·조건·실행 이름·검증 이력 없음, 모델 이름이 섞이면 만들기 중단)를 만들고, 사람이 채팅에 붙여 넣어
+  받은 JSON을 `scores_partNN.json`으로 저장 → `evaluate.py score`가 대응표(`outputs/<과목>/experiments/<이름>/judge_key.json`)로 조건별 표를 만든다.
+  `for judge/`는 교안 내용이 들어 있어 git에 올리지 않는다.
 
 ### 평가 지표 (`evaluate.py`)
 - **정답 오류율**: judge가 강의자료만 보고 풀었을 때 정답과 불일치하는 비율
