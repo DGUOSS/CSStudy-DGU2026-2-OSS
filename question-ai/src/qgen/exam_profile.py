@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .ingest.pdf_parser import parse_pdf, parse_text
-from .schemas import ExamProfile
+from .schemas import ExamProfile, PastItem, PlannedItem
 
 QTYPES = ("객관식", "단답형", "서술형", "계산형")
 TEXT_EXT = (".md", ".txt")
@@ -46,6 +46,7 @@ class AnalystInput:
     images: list[tuple[bytes, str]] = field(default_factory=list)  # (JPEG 바이트, MIME)
     image_ids: list[str] = field(default_factory=list)  # images와 같은 순서의 번호
     valid_ids: set[str] = field(default_factory=set)
+    lines: dict[str, str] = field(default_factory=dict)  # 글자 줄 번호 → 원문 (past_items 원문을 잘라 올 때)
     warnings: list[str] = field(default_factory=list)
 
     @property
@@ -75,7 +76,8 @@ def _jpeg_from_pdf_page(path: Path, page_no: int, dpi: int = 100) -> bytes:
         return doc[page_no - 1].get_pixmap(dpi=dpi).tobytes("jpeg", jpg_quality=80)
 
 
-def _numbered(prefix: str, lines: list[str], ids: set[str], start: int = 1) -> tuple[list[str], int]:
+def _numbered(prefix: str, lines: list[str], ids: set[str], start: int = 1,
+              texts: dict[str, str] | None = None) -> tuple[list[str], int]:
     out, n = [], start
     for ln in lines:
         ln = ln.strip()
@@ -83,6 +85,8 @@ def _numbered(prefix: str, lines: list[str], ids: set[str], start: int = 1) -> t
             continue
         iid = f"{prefix}{n}"
         ids.add(iid)
+        if texts is not None:
+            texts[iid] = ln
         out.append(f"[{iid}] {ln}")
         n += 1
     return out, n
@@ -119,7 +123,7 @@ def build_input(course_dir: Path, max_images: int = MAX_IMAGES) -> AnalystInput:
                 inp.valid_ids.add(iid)
                 pending_images.append((iid, f, pg.page))
                 lines_out.append(f"(p.{pg.page}: 글자가 부족하거나 그림이 있어 첨부 이미지 [{iid}]로도 보냄)")
-            numbered, n = _numbered(f"E{f_no}.", pg.text.splitlines(), inp.valid_ids, n)
+            numbered, n = _numbered(f"E{f_no}.", pg.text.splitlines(), inp.valid_ids, n, inp.lines)
             lines_out += numbered
         blocks.append(head + "\n" + "\n".join(lines_out))
     inp.past_text = "\n\n".join(blocks)
@@ -172,6 +176,7 @@ def validate(profile: ExamProfile, inp: AnalystInput | None = None) -> list[str]
         return issues
     if not profile.evidence:
         issues.append("evidence가 비어 있음 (기출·메모가 있으면 근거를 적어야 함)")
+    issues += past_item_issues(profile, inp)
     for ev in profile.evidence:
         ids = evidence_ids(ev)
         if not ids:
@@ -180,6 +185,70 @@ def validate(profile: ExamProfile, inp: AnalystInput | None = None) -> list[str]
         if unknown:
             issues.append(f"없는 번호를 가리키는 evidence {unknown}: {ev!r}")
     return issues
+
+
+_LINE_REF = re.compile(r"^E(\d+)\.(\d+)$")
+MAX_PAST_LINES = 60  # 기출 한 문항 원문 줄 수 상한 (잘못된 범위로 시험지 전체가 들어가지 않게)
+MAX_PAST_EXAMPLES = 2  # generator에 주는 기출 문항 수 (명세 §5: 같은 유형 기출 예시 1~2개)
+
+
+def past_item_issues(profile: ExamProfile, inp: AnalystInput) -> list[str]:
+    """past_items 검사: item_id 중복, 없는 번호, 원문 위치 없음."""
+    issues = []
+    ids = [p.item_id for p in profile.past_items]
+    if len(set(ids)) != len(ids):
+        issues.append(f"past_items의 item_id가 겹침: {ids}")
+    for pi in profile.past_items:
+        if not pi.refs:
+            issues.append(f"past_items {pi.item_id}: refs(원문 위치)가 비어 있음")
+        unknown = [r for r in pi.refs if r not in inp.valid_ids]
+        if unknown:
+            issues.append(f"past_items {pi.item_id}: 없는 번호 {unknown}")
+    return issues
+
+
+def past_item_text(pi: PastItem, inp: AnalystInput) -> str:
+    """refs의 글자 줄 범위(파일별 첫 줄~마지막 줄)의 원문을 그대로 이어 붙인다."""
+    by_file: dict[int, list[int]] = {}
+    for r in pi.refs:
+        m = _LINE_REF.match(r)
+        if m:
+            by_file.setdefault(int(m.group(1)), []).append(int(m.group(2)))
+    out = []
+    for f_no, nums in sorted(by_file.items()):
+        lo, hi = min(nums), max(nums)
+        hi = min(hi, lo + MAX_PAST_LINES - 1)
+        out += [inp.lines[k] for n in range(lo, hi + 1) if (k := f"E{f_no}.{n}") in inp.lines]
+    return "\n".join(out)
+
+
+def past_item_images(pi: PastItem, inp: AnalystInput) -> list[tuple[bytes, str]]:
+    return [inp.images[inp.image_ids.index(r)] for r in pi.refs if r in inp.image_ids]
+
+
+def select_past_items(item: PlannedItem, profile: ExamProfile,
+                      max_items: int = MAX_PAST_EXAMPLES) -> tuple[list[PastItem], list[str]]:
+    """문항이 참고할 기출 문항 → (목록, 경고). planner가 고른 past_refs → 없으면 같은 유형 기출."""
+    by_id = {p.item_id: p for p in profile.past_items}
+    warns = [f"past_refs의 '{r}'이 기출 문항 목록에 없어 뺍니다." for r in item.past_refs if r not in by_id]
+    chosen = [by_id[r] for r in dict.fromkeys(item.past_refs) if r in by_id]
+    if not chosen:
+        chosen = [p for p in profile.past_items if p.qtype == item.qtype]
+    return chosen[:max_items], warns
+
+
+def format_past_examples(items: list[PastItem], inp: AnalystInput) -> tuple[str, list[tuple[bytes, str]]]:
+    """generator에 줄 기출 예시 글과 이미지."""
+    blocks, images = [], []
+    for pi in items:
+        head = f"### 기출 {pi.number}번 ({pi.qtype}{', ' + pi.points if pi.points else ''}) — {pi.topic}"
+        imgs = past_item_images(pi, inp)
+        body = past_item_text(pi, inp) or "(글자 없음)"
+        if imgs:
+            body += f"\n(이 문항의 그림 쪽 이미지 {len(imgs)}장을 첨부함)"
+        blocks.append(f"{head}\n{body}")
+        images += imgs
+    return "\n\n".join(blocks), images
 
 
 def profile_path(course: str) -> Path:

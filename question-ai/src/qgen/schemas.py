@@ -19,6 +19,16 @@ class Chunk(BaseModel):
     title: str = ""  # 슬라이드 제목 (Planner 주제 목록에 씀)
 
 
+class PastItem(BaseModel):
+    """기출 한 문항. 원문은 refs가 가리키는 줄·이미지에서 코드가 잘라 온다 (모델이 옮겨 적지 않음)."""
+    item_id: str                          # "P1", "P2", ... (planner가 past_refs로 가리킴)
+    number: str                           # 시험지의 문항 번호 그대로 ("6", "2-(1)")
+    qtype: Literal["객관식", "단답형", "서술형", "계산형"]
+    topic: str                            # 다루는 개념 (짧게)
+    points: str = ""                      # 시험지에 적힌 배점 그대로 ("6%", "10점"), 없으면 ""
+    refs: list[str]                       # 원문 위치: 글자 줄은 첫 줄과 마지막 줄 번호(["E1.93", "E1.95"]), 그림 쪽은 ["E1.p3"]
+
+
 class ExamProfile(BaseModel):
     course: str
     professor: str | None = None
@@ -31,6 +41,7 @@ class ExamProfile(BaseModel):
     emphasized_topics: list[str]
     notes: str = ""
     evidence: list[str] = []
+    past_items: list[PastItem] = []       # 기출 문항 목록 (예전 프로필에는 없음 → 빈 목록)
 
 
 class PlannedItem(BaseModel):
@@ -40,6 +51,8 @@ class PlannedItem(BaseModel):
     # 강의자료 주제 목록의 제목(1~최대 3개)을 번역 없이 그대로 복사한 것. 제목마다 검색해 결과를 번갈아 합친다
     # (교안 언어와 검색어 언어를 맞추기 위해). 예전 plan.json에는 없으므로 기본값은 빈 목록 → 그때는 topic으로 검색
     source_titles: list[str] = []
+    # 이 문항이 형식·난이도를 참고할 기출 문항(ExamProfile.past_items의 item_id, 0~2개). 원문을 generator에 준다
+    past_refs: list[str] = []
     bloom_level: Literal["기억", "이해", "적용", "분석", "평가", "창안"]
     difficulty: Literal["쉬움", "보통", "어려움"]
     points: int

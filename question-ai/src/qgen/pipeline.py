@@ -29,13 +29,19 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
     if not chunks:
         raise SystemExit(f"{course_dir/'lectures'}에 강의자료(.pdf/.md/.txt)가 없습니다.")
     retriever = Retriever(chunks)
-    past = load_text_dir(course_dir / "past_exams")  # Generator 예시용 (글자 기출만)
+    past = load_text_dir(course_dir / "past_exams")  # 기출 문항 목록이 없는 예전 프로필용 (글자 기출 앞 3000자)
     print(f"[ingest] 강의자료 청크 {len(chunks)}개, 기출 {len(past)}자")
     phase_sec: dict[str, float] = {"ingest": round(time.time() - t0, 1)}
     t_phase = time.time()
 
     # 1) Analyst — 과목 공용 profile.json (사용자가 직접 수정 가능, 있으면 재사용). 기출·메모가 없으면 기본 프로필
     profile = exam_profile.load_or_make(course_dir, course, new=new_profile)
+    past_inp = exam_profile.build_input(course_dir)  # 기출 원문 줄·이미지 (past_items 원문을 잘라 올 때)
+    if profile.past_items:
+        print(f"[analyst] 기출 문항 {len(profile.past_items)}개: "
+              + ", ".join(f"{p.item_id}={p.number}번 {p.qtype}" for p in profile.past_items))
+    elif past:
+        print("[analyst] 프로필에 기출 문항 목록이 없음 → 기출 앞 3000자를 예시로 씀 (--new-profile로 다시 만들면 문항별로 씀)")
     (out / "profile.json").write_text(profile.model_dump_json(indent=2), encoding="utf-8")
     phase_sec["analyst"] = round(time.time() - t_phase, 1)
     t_phase = time.time()
@@ -72,7 +78,17 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
             print(f"  [retrieval] {w}")
         print(f"  [retrieval] 검색어: {queries}")
         ctx = retriever.search_many(queries, k=cfg["retrieval_top_k"])
-        q = agents.generator(item, ctx, profile, past[:3000])
+        # 기출 예시: planner가 고른 기출 문항(없으면 같은 유형) 원문 1~2개. 문항 목록이 없는 예전 프로필은 앞 3000자
+        if profile.past_items:
+            chosen, warns = exam_profile.select_past_items(item, profile)
+            for w in warns:
+                print(f"  [past] {w}")
+            examples, ex_images = exam_profile.format_past_examples(chosen, past_inp)
+            print(f"  [past] 기출 예시: {[f'{p.number}번' for p in chosen] or '없음'}"
+                  + (f" (이미지 {len(ex_images)}장)" if ex_images else ""))
+        else:
+            examples, ex_images = past[:3000], []
+        q = agents.generator(item, ctx, profile, examples, images=ex_images)
         if not verify:
             rule_issues = checks.run(q, item, ctx)
             if rule_issues:
@@ -90,7 +106,7 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
                 print(f"  attempt {attempt}: 규칙 위반 {rule_issues}")
                 hist.append(f"규칙위반({len(rule_issues)})")
                 trace.append({"item": item.item_id, "attempt": attempt, "rule_issues": rule_issues, "question": q.model_dump()})
-                q = agents.generator(item, ctx, profile, past[:3000], prev=q, feedback="\n".join(rule_issues))
+                q = agents.generator(item, ctx, profile, examples, images=ex_images, prev=q, feedback="\n".join(rule_issues))
                 continue
             s = agents.solver(q, ctx)
             r = agents.reviewer(q, s, item, ctx, profile)
@@ -104,11 +120,11 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
                 break
             if r.verdict == "reject" and regens < cfg["max_regenerations"]:
                 regens += 1
-                q = agents.generator(item, ctx, profile, past[:3000], seed=regens)
+                q = agents.generator(item, ctx, profile, examples, images=ex_images, seed=regens)
                 continue
             if r.verdict == "reject":
                 break
-            q = agents.generator(item, ctx, profile, past[:3000], prev=q, feedback=r.feedback + "\n" + "\n".join(r.issues))
+            q = agents.generator(item, ctx, profile, examples, images=ex_images, prev=q, feedback=r.feedback + "\n" + "\n".join(r.issues))
         if item.item_id not in accepted:
             hist.append("실패")
             print("  ✗ 검증 실패 — 시험지에서 제외")

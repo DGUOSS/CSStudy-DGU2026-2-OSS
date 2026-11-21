@@ -66,14 +66,16 @@ def planner(profile: ExamProfile, topics: list[str], n: int, max_titles: int = 3
 
 
 def generator(item: PlannedItem, chunks: list[Chunk], profile: ExamProfile, examples: str,
-              prev: Question | None = None, feedback: str | None = None, seed: int = 0) -> Question:
+              prev: Question | None = None, feedback: str | None = None, seed: int = 0,
+              images: list[tuple[bytes, str]] | None = None) -> Question:
+    """images: 참고할 기출 문항의 그림 쪽 (예: 상태도). examples 글과 함께 보낸다."""
     revise = ""
     if prev is not None:
         revise = f"## 수정 모드\n이전 문항:\n{prev.model_dump_json(indent=1)}\n\n수정 지시:\n{feedback}\n위 지시를 반영해 문항을 고쳐라."
     p = llm.render_prompt("generator", item=item.model_dump(), chunks=format_chunks(chunks),
                           profile=profile.model_dump(include={"difficulty", "detail_level", "phrasing_examples", "recurring_patterns"}),
                           examples=examples or "(없음)", revise=revise)
-    q = llm.call("generator", p, Question, seed=seed)
+    q = llm.call("generator", p, Question, seed=seed, images=images or None)
     q.item_id, q.qtype = item.item_id, item.qtype
     return q
 
