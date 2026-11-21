@@ -47,6 +47,7 @@ python scripts/build_index.py --course <과목> --query "HTTP Status Codes"   # 
 python run.py --course <과목>               # 결과: outputs/<과목>/<실행시각>/
 python run.py --course demo --no-cache      # 캐시 없이 (시간 측정할 때)
 python run.py --course <과목> --new-profile # 출제 프로필 다시 만들기
+python run.py --course <과목> --no-verify   # 검증(풀이·검토·수정) 없이 생성만 (빠름, 비교 기준용)
 ```
 
 - 결과 파일: `exam.md`(시험지), `answers.md`(정답·채점 기준·근거 쪽), `trace.json`(문항별 풀이·검토 기록),

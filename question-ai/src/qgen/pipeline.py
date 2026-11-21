@@ -13,7 +13,10 @@ from .schemas import ExamPlan, Question
 ROOT = llm.ROOT
 
 
-def run(course: str, run_id: str | None = None, new_profile: bool = False, use_cache: bool = True) -> Path:
+def run(course: str, run_id: str | None = None, new_profile: bool = False, use_cache: bool = True,
+        verify: bool = True) -> Path:
+    """verify=False: 문항마다 generator 1번만 부르고 검증(solver·reviewer·수정) 없이 시험지를 만든다.
+    M3 완료 기준 확인용이자 M5 실험의 single 조건(베이스라인). 규칙 검사는 비용이 없어 결과만 기록한다."""
     cfg = llm.CFG["pipeline"]
     course_dir = ROOT / "data" / course
     run_id = run_id or time.strftime("%Y%m%d-%H%M%S")
@@ -70,6 +73,16 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
         print(f"  [retrieval] 검색어: {queries}")
         ctx = retriever.search_many(queries, k=cfg["retrieval_top_k"])
         q = agents.generator(item, ctx, profile, past[:3000])
+        if not verify:
+            rule_issues = checks.run(q, item, ctx)
+            if rule_issues:
+                print(f"  규칙 위반(검증 안 함, 기록만): {rule_issues}")
+            hist.append(f"검증 안 함, 규칙위반 {len(rule_issues)}개" if rule_issues else "검증 안 함")
+            trace.append({"item": item.item_id, "attempt": 0, "rule_issues": rule_issues, "question": q.model_dump()})
+            accepted[item.item_id] = q
+            item_sec[item.item_id] = round(time.time() - t_item, 1)
+            print(f"  소요 {item_sec[item.item_id]}s")
+            continue
         regens = 0
         for attempt in range(cfg["max_revisions"] + 1):
             rule_issues = checks.run(q, item, ctx)
@@ -111,7 +124,7 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
     type_counts = {"target": counts, "planned": dict(Counter(i.qtype for i in plan.items)),
                    "accepted": dict(Counter(q.qtype for q in accepted.values()))}
     summary = {**llm.stats(), "accepted": len(accepted), "planned": len(plan.items), "sec": round(time.time() - t0, 1),
-               "type_counts": type_counts, "phase_sec": phase_sec, "item_sec": item_sec}
+               "verify": verify, "type_counts": type_counts, "phase_sec": phase_sec, "item_sec": item_sec}
     (out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\n[done] {summary}\n→ {out}")
     return out
