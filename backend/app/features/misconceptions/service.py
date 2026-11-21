@@ -1,13 +1,17 @@
 """오개념 붙이기: 객관식 문제의 틀린 보기마다 '왜 골랐을까'를 Claude로 한 번 만들어 저장한다.
 
-- 지금은 관리자가 [오개념 만들기]로 강좌의 기존 문제에 붙인다.
-- 문제 생성기를 연결하면 새 문제를 저장한 직후 attach_misconceptions(session, [새 문제 id들])를 부르면 된다.
+- 객관식이 DB에 저장되면 어디서 들어왔든(자동 보충, 관리자, 시드) 커밋 직후 뒤에서 자동으로 붙인다
+  (_collect_new_mcq / _attach_after_commit). 문제를 저장하는 쪽은 오개념을 몰라도 된다.
+- 빠진 것 채우기: 시험지를 만들 때 그 시험지의 객관식(ensure_for), 서버를 켤 때 전체(backfill).
 - 학생이 풀 때는 저장된 것을 꺼내기만 한다(visible_for). API를 부르지 않는다.
 """
 
 import logging
 import re
+import threading
 
+from sqlalchemy import event
+from sqlalchemy.orm import Session as OrmSession
 from sqlmodel import Session, select
 
 from app.core.config import settings
@@ -56,9 +60,16 @@ def attach_one(session: Session, p: Problem, labels: list[str]) -> int:
     if p.qtype != "mcq":
         return 0
     text = page_text(session, p)
-    drafts = llm.draft_misconceptions(
-        p.question, p.choices, p.answer_index, p.explanation, text, labels
+    question, choices, answer_index, explanation = (
+        p.question,
+        list(p.choices),
+        p.answer_index,
+        p.explanation,
     )
+    # AI 응답을 기다리는 동안(수십 초) DB 연결을 붙잡고 있지 않게 트랜잭션을 끝내 연결을 돌려준다.
+    # 끝나고 다시 쓸 때는 새 연결을 받는다(연결이 끊겨도 다시 연결).
+    session.commit()
+    drafts = llm.draft_misconceptions(question, choices, answer_index, explanation, text, labels)
     if not drafts:
         return 0
     n = 0
@@ -134,3 +145,80 @@ def visible_for(session: Session, problem_ids: list[int]) -> dict[tuple[int, int
         for m in rows
         if m.status == "approved" or (m.status == "auto" and m.evidence_found)
     }
+
+
+# ---------- 자동으로 붙이기 ----------
+
+_attach_lock = threading.Lock()  # 같은 문제를 두 스레드가 동시에 만들지 않게(한 번에 하나씩)
+BACKFILL_LIMIT = 40  # 서버를 켤 때 한 번에 채우는 최대 문제 수
+
+
+def enabled() -> bool:
+    return bool(settings.anthropic_api_key)
+
+
+def missing_mcq_ids(
+    session: Session, problem_ids: list[int] | None = None, limit: int | None = None
+) -> list[int]:
+    """오개념이 하나도 없는 객관식. problem_ids를 주면 그 안에서만."""
+    q = select(Problem.id).where(
+        Problem.qtype == "mcq", Problem.id.not_in(select(Misconception.problem_id))
+    )  # type: ignore[union-attr]
+    if problem_ids is not None:
+        q = q.where(Problem.id.in_(problem_ids))  # type: ignore[union-attr]
+    q = q.order_by(Problem.id)
+    if limit:
+        q = q.limit(limit)
+    return list(session.exec(q).all())
+
+
+def _run(bind, ids: list[int]) -> None:
+    with _attach_lock:
+        try:
+            with Session(bind) as s:
+                todo = missing_mcq_ids(s, ids)
+                n = attach_misconceptions(s, todo) if todo else 0
+            if todo:
+                log.info("문제 %d개에 오개념 %d개를 붙임", len(todo), n)
+        except llm.LLMNotConfigured:
+            pass
+        except Exception:
+            log.exception("오개념 자동 생성 실패: %s", ids)
+
+
+def spawn(bind, ids: list[int]) -> None:
+    """테스트에서는 바꿔 끼워 같은 스레드에서 돌린다."""
+    threading.Thread(target=_run, args=(bind, ids), daemon=True).start()
+
+
+def ensure_for(bind, problem_ids: list[int]) -> None:
+    """이 문제들 중 오개념이 빠진 객관식을 뒤에서 채운다(예: 시험지를 만들 때)."""
+    if enabled() and problem_ids:
+        spawn(bind, list(problem_ids))
+
+
+def backfill(bind) -> None:
+    """서버를 켤 때: 오개념이 없는 객관식을 BACKFILL_LIMIT개까지 채운다."""
+    with Session(bind) as s:
+        ids = missing_mcq_ids(s, limit=BACKFILL_LIMIT)
+    if ids:
+        _run(bind, ids)
+
+
+@event.listens_for(OrmSession, "after_flush")
+def _collect_new_mcq(session, _ctx) -> None:
+    new = [o.id for o in session.new if isinstance(o, Problem) and o.qtype == "mcq" and o.id]
+    if new:
+        session.info.setdefault("new_mcq_ids", set()).update(new)
+
+
+@event.listens_for(OrmSession, "after_rollback")
+def _forget_mcq(session) -> None:
+    session.info.pop("new_mcq_ids", None)
+
+
+@event.listens_for(OrmSession, "after_commit")
+def _attach_after_commit(session) -> None:
+    ids = session.info.pop("new_mcq_ids", None)
+    if ids and enabled():
+        spawn(session.get_bind(), sorted(ids))

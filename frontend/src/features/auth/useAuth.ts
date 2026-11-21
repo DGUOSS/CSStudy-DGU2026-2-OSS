@@ -32,6 +32,12 @@ export function useAuth() {
     mutationFn: (body: Schemas['SignupIn']) => unwrap(api.POST('/api/v1/auth/signup', { body })),
     onSuccess: onLoggedIn,
   })
+  // 동국대 계정(Google) 로그인: Google이 준 ID 토큰을 서버가 검증한다
+  const googleLogin = useMutation({
+    mutationFn: (credential: string) =>
+      unwrap(api.POST('/api/v1/auth/google', { body: { credential } })),
+    onSuccess: onLoggedIn,
+  })
   const logout = useMutation({
     mutationFn: () => unwrap(api.POST('/api/v1/auth/logout')),
     onSuccess: () => {
@@ -40,5 +46,14 @@ export function useAuth() {
     },
   })
 
-  return { user: me.data ?? null, loading: me.isPending, login, signup, logout }
+  return { user: me.data ?? null, loading: me.isPending, login, signup, googleLogin, logout }
+}
+
+/** 학교 계정 로그인 설정. client_id가 비어 있으면 꺼져 있다 */
+export function useSchoolLoginConfig() {
+  return useQuery({
+    queryKey: ['google-config'],
+    queryFn: () => unwrap(api.GET('/api/v1/auth/google/config')),
+    staleTime: Infinity,
+  })
 }

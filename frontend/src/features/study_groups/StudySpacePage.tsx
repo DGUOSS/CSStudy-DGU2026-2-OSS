@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Users } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { api, unwrap, ApiError } from '@/api/client'
 import { Loading } from '@/components/States'
 import { AppShell } from '@/features/home/AppShell'
 import { useAuth } from '@/features/auth/useAuth'
+import { StudyChat } from './StudyChat'
 
 export function StudySpacePage({ design = false }: { design?: boolean }) {
   return design ? <AppShell><SpaceContent design /></AppShell> : <div className="flex flex-col gap-6"><SpaceContent design={false} /></div>
@@ -37,10 +38,6 @@ function SpaceContent({ design }: { design: boolean }) {
       <h1 className="mt-3 break-words text-2xl font-bold">{group.title}</h1>
       <p className="mt-2 text-sm text-ink-2">개설자와 승인된 참여자만 함께하는 스터디 공간이에요.</p>
     </header>
-    <section className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-home-line bg-white px-6 py-12 text-center">
-      <span className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-navy-tint text-navy"><Users size={28} aria-hidden="true" /></span>
-      <h2 className="text-lg font-bold">우리 스터디 공간</h2>
-      <p className="mt-2 text-sm leading-relaxed text-ink-2">아직 등록된 활동이 없어요.<br />함께 공부할 공간을 준비하고 있어요.</p>
-    </section>
+    <StudyChat groupId={group.id} />
   </>
 }

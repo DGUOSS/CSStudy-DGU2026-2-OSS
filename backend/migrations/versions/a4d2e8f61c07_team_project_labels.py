@@ -1,7 +1,7 @@
 """팀 프로젝트 라벨: 강의계획서 판정(catalog_offerings) + 후기 응답(course_reviews)
 
 Revision ID: a4d2e8f61c07
-Revises: e766111f9118
+Revises: c3f8a1d9e254
 Create Date: 2026-11-20
 """
 
@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "a4d2e8f61c07"
-down_revision = "e766111f9118"
+down_revision = "c3f8a1d9e254"  # 채팅(#27) 다음으로 이음
 branch_labels = None
 depends_on = None
 

@@ -175,6 +175,69 @@
         }
       }
     },
+    "/api/v1/auth/google/config": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Google Config",
+        "operationId": "google_config_api_v1_auth_google_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoogleConfigOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/google": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Google Login",
+        "description": "동국대 계정 로그인. 처음이면 가입되고, 같은 이메일로 가입한 계정이 있으면 그 계정으로 들어간다.",
+        "operationId": "google_login_api_v1_auth_google_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleLoginIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/subjects": {
       "get": {
         "tags": [
@@ -4458,6 +4521,20 @@
             }
           },
           {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "recommended",
+                "recent"
+              ],
+              "type": "string",
+              "default": "recommended",
+              "title": "Sort"
+            }
+          },
+          {
             "name": "access_token",
             "in": "cookie",
             "required": false,
@@ -4975,6 +5052,146 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/StudySpaceOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/study-groups/{group_id}/messages": {
+      "get": {
+        "tags": [
+          "study-groups"
+        ],
+        "summary": "List Messages",
+        "description": "채팅. after_id가 0이면 최근 50개, 아니면 그 뒤에 온 메시지(새로 고칠 때). 오래된 것부터 준다.",
+        "operationId": "list_messages_api_v1_study_groups__group_id__messages_get",
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "after_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "After Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MessageOut"
+                  },
+                  "title": "Response List Messages Api V1 Study Groups  Group Id  Messages Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "study-groups"
+        ],
+        "summary": "Send Message",
+        "operationId": "send_message_api_v1_study_groups__group_id__messages_post",
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageOut"
                 }
               }
             }
@@ -6708,6 +6925,39 @@
         "title": "Flow",
         "description": "틀린 객관식 하나가 이어지는 길: 문제 → 오개념 → 개념 → 다시 볼 교안 쪽(오답 흐름 차트)."
       },
+      "GoogleConfigOut": {
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "title": "Client Id"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_id",
+          "domain"
+        ],
+        "title": "GoogleConfigOut"
+      },
+      "GoogleLoginIn": {
+        "properties": {
+          "credential": {
+            "type": "string",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Credential"
+          }
+        },
+        "type": "object",
+        "required": [
+          "credential"
+        ],
+        "title": "GoogleLoginIn"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -7114,6 +7364,60 @@
         },
         "type": "object",
         "title": "MaterialUpdate"
+      },
+      "MessageIn": {
+        "properties": {
+          "body": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Body"
+          }
+        },
+        "type": "object",
+        "required": [
+          "body"
+        ],
+        "title": "MessageIn"
+      },
+      "MessageOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "user_name": {
+            "type": "string",
+            "title": "User Name"
+          },
+          "is_mine": {
+            "type": "boolean",
+            "title": "Is Mine"
+          },
+          "is_owner": {
+            "type": "boolean",
+            "title": "Is Owner"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_name",
+          "is_mine",
+          "is_owner",
+          "body",
+          "created_at"
+        ],
+        "title": "MessageOut"
       },
       "MineOut": {
         "properties": {
@@ -9409,6 +9713,14 @@
           "total": {
             "type": "integer",
             "title": "Total"
+          },
+          "my_weak": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "My Weak",
+            "default": []
           }
         },
         "type": "object",
@@ -9523,6 +9835,14 @@
               }
             ],
             "title": "My Application"
+          },
+          "shared_weak": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Shared Weak",
+            "default": []
           }
         },
         "additionalProperties": false,

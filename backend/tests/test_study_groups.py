@@ -22,7 +22,7 @@ def test_auth_access_and_invalid_course(client, login, enroll, course_with_probl
     assert client.post(url, json=BODY).status_code == 403
     assert client.get("/api/v1/subjects/999999/study-groups").status_code == 404
     enroll(c.subject_id)
-    assert client.get(url).json() == {"items": [], "total": 0}
+    assert client.get(url).json() == {"items": [], "total": 0, "my_weak": []}
 
 
 def test_create_close_lifecycle_and_idempotency(
@@ -108,7 +108,7 @@ def test_public_course_and_separate_lists(client, login, session, course_with_pr
     url = f"/api/v1/subjects/{c.subject_id}/study-groups"
     assert client.post(url, json=BODY).status_code == 201
     assert client.get(f"/api/v1/subjects/{other.subject_id}/study-groups").json()["items"] == []
-    assert client.get(url + "?limit=1&offset=1").json() == {"items": [], "total": 1}
+    assert client.get(url + "?limit=1&offset=1").json() == {"items": [], "total": 1, "my_weak": []}
 
 
 def test_owner_can_close_after_enrollment_removed(

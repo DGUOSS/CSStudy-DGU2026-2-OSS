@@ -89,6 +89,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/google/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Google Config */
+        get: operations["google_config_api_v1_auth_google_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/google": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Google Login
+         * @description 동국대 계정 로그인. 처음이면 가입되고, 같은 이메일로 가입한 계정이 있으면 그 계정으로 들어간다.
+         */
+        post: operations["google_login_api_v1_auth_google_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/subjects": {
         parameters: {
             query?: never;
@@ -1292,6 +1329,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/study-groups/{group_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Messages
+         * @description 채팅. after_id가 0이면 최근 50개, 아니면 그 뒤에 온 메시지(새로 고칠 때). 오래된 것부터 준다.
+         */
+        get: operations["list_messages_api_v1_study_groups__group_id__messages_get"];
+        put?: never;
+        /** Send Message */
+        post: operations["send_message_api_v1_study_groups__group_id__messages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/courses/{course_id}/team-project": {
         parameters: {
             query?: never;
@@ -1873,6 +1931,18 @@ export interface components {
             /** Page */
             page: string | null;
         };
+        /** GoogleConfigOut */
+        GoogleConfigOut: {
+            /** Client Id */
+            client_id: string;
+            /** Domain */
+            domain: string;
+        };
+        /** GoogleLoginIn */
+        GoogleLoginIn: {
+            /** Credential */
+            credential: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -2012,6 +2082,29 @@ export interface components {
             title?: string | null;
             /** Kind */
             kind?: ("lecture" | "exam" | "note") | null;
+        };
+        /** MessageIn */
+        MessageIn: {
+            /** Body */
+            body: string;
+        };
+        /** MessageOut */
+        MessageOut: {
+            /** Id */
+            id: number;
+            /** User Name */
+            user_name: string;
+            /** Is Mine */
+            is_mine: boolean;
+            /** Is Owner */
+            is_owner: boolean;
+            /** Body */
+            body: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** MineOut */
         MineOut: {
@@ -2780,6 +2873,11 @@ export interface components {
             items: components["schemas"]["StudyOut"][];
             /** Total */
             total: number;
+            /**
+             * My Weak
+             * @default []
+             */
+            my_weak?: string[];
         };
         /** StudyOut */
         StudyOut: {
@@ -2819,6 +2917,11 @@ export interface components {
             pending_count: number | null;
             /** My Application */
             my_application: ("pending" | "approved" | "rejected" | "cancelled") | null;
+            /**
+             * Shared Weak
+             * @default []
+             */
+            shared_weak?: string[];
         };
         /** StudySpaceOut */
         StudySpaceOut: {
@@ -3259,6 +3362,59 @@ export interface operations {
             };
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    google_config_api_v1_auth_google_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleConfigOut"];
+                };
+            };
+        };
+    };
+    google_login_api_v1_auth_google_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleLoginIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -5549,6 +5705,7 @@ export interface operations {
                 state?: "all" | "open" | "closed";
                 offset?: number;
                 limit?: number;
+                sort?: "recommended" | "recent";
             };
             header?: never;
             path: {
@@ -5818,6 +5975,78 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StudySpaceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_messages_api_v1_study_groups__group_id__messages_get: {
+        parameters: {
+            query?: {
+                after_id?: number;
+            };
+            header?: never;
+            path: {
+                group_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_message_api_v1_study_groups__group_id__messages_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: number;
+            };
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessageIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageOut"];
                 };
             };
             /** @description Validation Error */

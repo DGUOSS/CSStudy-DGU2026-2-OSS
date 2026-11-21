@@ -9,7 +9,8 @@ from sqlmodel import func, select
 from app.core.db import SessionDep
 from app.core.security import CurrentUser
 from app.features.enrollments.service import can_enter
-from app.models import Course, StudyApplication, StudyGroup, Subject, User, _now
+from app.features.mastery.service import weak_concepts_by_user
+from app.models import Course, StudyApplication, StudyGroup, StudyMessage, Subject, User, _now
 
 router = APIRouter(tags=["study-groups"])
 
@@ -47,11 +48,14 @@ class StudyOut(StudyCreate):
     participant_count: int
     pending_count: int | None
     my_application: Literal["pending", "approved", "rejected", "cancelled"] | None
+    # 나와 이 스터디(개설자·승인된 참여자)의 약점이 겹치는 개념 이름. 다른 사람의 점수나 누구의 약점인지는 주지 않는다
+    shared_weak: list[str] = []
 
 
 class StudyList(BaseModel):
     items: list[StudyOut]
     total: int
+    my_weak: list[str] = []  # 이 과목에서 내 약점 개념(추천 기준)
 
 
 def output(session, row, owner_name, user_id):
@@ -100,6 +104,7 @@ def list_groups(
     state: Literal["all", "open", "closed"] = "open",
     offset: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=50),
+    sort: Literal["recommended", "recent"] = "recommended",
 ) -> StudyList:
     require_subject_access(session, user, subject_id)
     conditions = [StudyGroup.subject_id == subject_id]
@@ -113,10 +118,46 @@ def list_groups(
         .join(User, User.id == StudyGroup.owner_id)
         .where(*conditions)
         .order_by(StudyGroup.created_at.desc(), StudyGroup.id.desc())
-        .offset(offset)
-        .limit(limit)
     ).all()
-    return StudyList(items=[output(session, r, name, user.id) for r, name in rows], total=total)
+    members = _members(session, [r.id for r, _ in rows])
+    weak = weak_concepts_by_user(
+        session, [user.id, *{u for ids in members.values() for u in ids}], subject_id
+    )
+    mine = weak.get(user.id, set())
+    shared = {
+        r.id: sorted(mine & set().union(*(weak.get(u, set()) for u in members[r.id] - {user.id})))
+        for r, _ in rows
+    }
+    if sort == "recommended":
+        # 약점이 많이 겹치는 스터디가 위로(같으면 최신순). 정렬이 안정적이라 최신순이 유지된다
+        rows = sorted(rows, key=lambda rn: -len(shared[rn[0].id]))
+    page = rows[offset : offset + limit]
+    return StudyList(
+        items=[
+            output(session, r, name, user.id).model_copy(update={"shared_weak": shared[r.id]})
+            for r, name in page
+        ],
+        total=total,
+        my_weak=sorted(mine),
+    )
+
+
+def _members(session, group_ids: list[int]) -> dict[int, set[int]]:
+    """스터디별 개설자 + 승인된 참여자."""
+    out: dict[int, set[int]] = {g: set() for g in group_ids}
+    if not group_ids:
+        return out
+    for gid, owner in session.exec(
+        select(StudyGroup.id, StudyGroup.owner_id).where(StudyGroup.id.in_(group_ids))
+    ).all():
+        out[gid].add(owner)
+    for gid, uid in session.exec(
+        select(StudyApplication.group_id, StudyApplication.user_id).where(
+            StudyApplication.group_id.in_(group_ids), StudyApplication.status == "approved"
+        )
+    ).all():
+        out[gid].add(uid)
+    return out
 
 
 @router.post("/subjects/{subject_id}/study-groups", status_code=201)
@@ -297,8 +338,8 @@ class StudySpaceOut(BaseModel):
     is_owner: bool
 
 
-@router.get("/study-groups/{group_id}/space")
-def study_space(group_id: int, session: SessionDep, user: CurrentUser) -> StudySpaceOut:
+def require_member(session, group_id: int, user) -> tuple[StudyGroup, bool]:
+    """스터디 공간에 들어갈 수 있는지(개설자 또는 승인된 참여자). (스터디, 개설자인가)"""
     group = session.get(StudyGroup, group_id)
     if group is None:
         raise HTTPException(404, "스터디를 찾을 수 없습니다")
@@ -312,6 +353,12 @@ def study_space(group_id: int, session: SessionDep, user: CurrentUser) -> StudyS
     ).first()
     if not is_owner and approved is None:
         raise HTTPException(403, "개설자와 승인된 참여자만 입장할 수 있습니다")
+    return group, is_owner
+
+
+@router.get("/study-groups/{group_id}/space")
+def study_space(group_id: int, session: SessionDep, user: CurrentUser) -> StudySpaceOut:
+    group, is_owner = require_member(session, group_id, user)
     subject = session.get(Subject, group.subject_id)
     return StudySpaceOut(
         id=group.id,
@@ -319,4 +366,76 @@ def study_space(group_id: int, session: SessionDep, user: CurrentUser) -> StudyS
         subject_name=subject.name,
         title=group.title,
         is_owner=is_owner,
+    )
+
+
+class MessageIn(BaseModel):
+    body: str = Field(min_length=1, max_length=1000)
+
+    @field_validator("body", mode="before")
+    @classmethod
+    def trim(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
+
+class MessageOut(BaseModel):
+    id: int
+    user_name: str
+    is_mine: bool
+    is_owner: bool  # 보낸 사람이 개설자인가
+    body: str
+    created_at: datetime
+
+
+MESSAGE_PAGE = 50
+
+
+@router.get("/study-groups/{group_id}/messages")
+def list_messages(
+    group_id: int,
+    session: SessionDep,
+    user: CurrentUser,
+    after_id: int = Query(0, ge=0),
+) -> list[MessageOut]:
+    """채팅. after_id가 0이면 최근 50개, 아니면 그 뒤에 온 메시지(새로 고칠 때). 오래된 것부터 준다."""
+    group, _ = require_member(session, group_id, user)
+    q = (
+        select(StudyMessage, User.name)
+        .join(User, User.id == StudyMessage.user_id)
+        .where(StudyMessage.group_id == group_id)
+    )
+    if after_id:
+        q = q.where(StudyMessage.id > after_id).order_by(StudyMessage.id).limit(200)
+        rows = session.exec(q).all()
+    else:
+        rows = session.exec(q.order_by(StudyMessage.id.desc()).limit(MESSAGE_PAGE)).all()[::-1]
+    return [
+        MessageOut(
+            id=m.id,
+            user_name=name,
+            is_mine=m.user_id == user.id,
+            is_owner=m.user_id == group.owner_id,
+            body=m.body,
+            created_at=m.created_at,
+        )
+        for m, name in rows
+    ]
+
+
+@router.post("/study-groups/{group_id}/messages", status_code=201)
+def send_message(
+    group_id: int, body: MessageIn, session: SessionDep, user: CurrentUser
+) -> MessageOut:
+    group, is_owner = require_member(session, group_id, user)
+    m = StudyMessage(group_id=group_id, user_id=user.id, body=body.body)
+    session.add(m)
+    session.commit()
+    session.refresh(m)
+    return MessageOut(
+        id=m.id,
+        user_name=user.name,
+        is_mine=True,
+        is_owner=is_owner,
+        body=m.body,
+        created_at=m.created_at,
     )

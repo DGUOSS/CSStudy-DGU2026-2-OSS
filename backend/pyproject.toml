@@ -15,13 +15,16 @@ dependencies = [
     "pwdlib[argon2]>=0.3.1",
     "pybkt>=1.4.3",
     "pydantic-settings>=2.16.2",
-    "pyjwt>=2.15.1",
+    "pyjwt[crypto]>=2.15.1",
     "pypdf>=6.21.4",
     "python-multipart>=0.0.33",
     "rapidfuzz>=3.14.6",
     "scikit-learn<1.7",
     "sqlmodel>=0.0.48",
     "uvicorn[standard]>=0.54.0",
+    "qgen",
+    "pyyaml>=6.0.3",
+    "python-dotenv>=1.2.4",
 ]
 
 [dependency-groups]
@@ -44,3 +47,6 @@ extend-exclude = ["migrations"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
 ignore = ["E501"]  # 긴 줄은 ruff format이 정리한다
+
+[tool.uv.sources]
+qgen = { git = "https://github.com/DGUOSS/CSStudy-DGU2026-2-OSS", rev = "13bffc28194c834f07e110fa2eb15636cd590b73", subdirectory = "question-ai" }

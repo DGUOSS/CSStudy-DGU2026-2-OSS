@@ -14,10 +14,25 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, ValidationError
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def _resource_dir() -> Path:
+    """프롬프트·설정이 있는 곳. 저장소에서 실행하면 question-ai/ 그대로,
+    패키지로 설치했으면 설치 때 같이 담긴 <환경>/share/qgen. QGEN_HOME으로 직접 지정할 수도 있다."""
+    import os
+    import sys
+
+    for d in (os.environ.get("QGEN_HOME"), ROOT, Path(sys.prefix) / "share" / "qgen"):
+        if d and (Path(d) / "config.yaml").exists():
+            return Path(d)
+    return ROOT
+
+
+RESOURCE_DIR = _resource_dir()
 load_dotenv(ROOT / ".env")
-CFG = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
+CFG = yaml.safe_load((RESOURCE_DIR / "config.yaml").read_text(encoding="utf-8"))
 CACHE_DIR = ROOT / "cache"
-PROMPT_DIR = ROOT / "prompts"
+PROMPT_DIR = RESOURCE_DIR / "prompts"
 
 T = TypeVar("T", bound=BaseModel)
 

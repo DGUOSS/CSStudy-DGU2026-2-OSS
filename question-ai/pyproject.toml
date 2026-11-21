@@ -12,5 +12,11 @@ requires-python = ">=3.11"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# 패키지로 설치(pip/uv, git 설치 포함)해도 프롬프트·설정을 찾을 수 있게 같이 담는다.
+# 원본은 그대로 question-ai/prompts, question-ai/config.yaml 에서 고친다. 설치본은 <환경>/share/qgen 아래로 들어간다.
+[tool.setuptools.data-files]
+"share/qgen" = ["config.yaml"]
+"share/qgen/prompts" = ["prompts/*.md"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
