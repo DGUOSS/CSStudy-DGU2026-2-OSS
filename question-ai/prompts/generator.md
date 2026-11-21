@@ -18,6 +18,7 @@
     - form: "SOP" / "POS" / "any", minimal: 문제에 "최소" 조건이 있으면 true
   - IEEE 754 변환 → kind "ieee754": value(10진수), precision("single"/"double"), expected(16진수는 0x로 시작)
   - 정수의 보수·부호-크기 표현 → kind "int_repr": value, bits, repr("2s"/"1s"/"sm"), expected(2진수)
+  - 위 세 가지가 아닌 것(MUX 입력값, 게이트·MUX 개수, 상태표 등)은 적지 않는다. function에는 **문제에서 준 원래 함수**를 적는다 (정답과 같은 식을 적으면 검산 의미 없음)
   - 예: {"kind": "bool_expr", "label": "(1)", "variables": ["A","B","C"], "minterms": [1,3,6,7], "expected": "A'C + AB", "form": "SOP", "minimal": true}
 
 ## 계획된 문항
