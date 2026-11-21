@@ -65,6 +65,13 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
 
     # 3) 문항별 생성 → 규칙검사 → 블라인드 풀이 → 검토 → 수정 루프
     accepted: dict[str, Question] = {}
+    # "지엽적" 검색 규칙 (명세 §5, M3): 더 많이 검색하고, 앞 문항이 이미 근거로 쓴 쪽은 뺀다
+    detail = profile.detail_level == "지엽적"
+    top_k = cfg["retrieval_top_k"] * (cfg.get("detail_top_k_factor", 2) if detail else 1)
+    reuse_limit = cfg.get("detail_reuse_limit", 1)
+    used_pages: Counter[tuple[str, int]] = Counter()  # 통과한 문항들의 근거 쪽 (파일, 쪽) → 횟수
+    if detail:
+        print(f"[retrieval] 지엽적 출제: 검색 {top_k}쪽, 앞 문항이 {reuse_limit}번 이상 쓴 쪽은 제외")
     history: dict[str, list[str]] = {}
     trace = []
     for item in plan.items:
@@ -77,7 +84,12 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
         for w in warns:
             print(f"  [retrieval] {w}")
         print(f"  [retrieval] 검색어: {queries}")
-        ctx = retriever.search_many(queries, k=cfg["retrieval_top_k"])
+        exclude = None
+        if detail:
+            exclude = {c.chunk_id for c in chunks if used_pages[(c.source.file, c.source.page)] >= reuse_limit}
+            if exclude:
+                print(f"  [retrieval] 앞 문항이 쓴 청크 {len(exclude)}개 제외")
+        ctx = retriever.search_many(queries, k=top_k, exclude=exclude)
         # 기출 예시: planner가 고른 기출 문항(없으면 같은 유형) 원문 1~2개. 문항 목록이 없는 예전 프로필은 앞 3000자
         if profile.past_items:
             chosen, warns = exam_profile.select_past_items(item, profile)
@@ -96,6 +108,7 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
             hist.append(f"검증 안 함, 규칙위반 {len(rule_issues)}개" if rule_issues else "검증 안 함")
             trace.append({"item": item.item_id, "attempt": 0, "rule_issues": rule_issues, "question": q.model_dump()})
             accepted[item.item_id] = q
+            used_pages.update({(s.file, s.page) for s in q.sources})
             item_sec[item.item_id] = round(time.time() - t_item, 1)
             print(f"  소요 {item_sec[item.item_id]}s")
             continue
@@ -128,6 +141,8 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
         if item.item_id not in accepted:
             hist.append("실패")
             print("  ✗ 검증 실패 — 시험지에서 제외")
+        if item.item_id in accepted:
+            used_pages.update({(s.file, s.page) for s in accepted[item.item_id].sources})
         item_sec[item.item_id] = round(time.time() - t_item, 1)
         print(f"  소요 {item_sec[item.item_id]}s")
     phase_sec["items"] = round(time.time() - t_phase, 1)

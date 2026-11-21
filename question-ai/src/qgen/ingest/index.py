@@ -164,14 +164,16 @@ class Retriever:
     def search(self, query: str, k: int = 4) -> list[Chunk]:
         return [self.chunks[i] for i in self._ranked(query)[:k]]
 
-    def search_many(self, queries: list[str], k: int = 4) -> list[Chunk]:
+    def search_many(self, queries: list[str], k: int = 4, exclude: set[str] | None = None) -> list[Chunk]:
         """검색어마다 순위를 매긴 뒤 번갈아 하나씩 뽑아 k개를 채운다 (중복 제외).
 
         한 검색어가 자리를 독차지하지 않게: 검색어 2개면 2쪽씩, 3개면 2·1·1쪽.
+        exclude: 빼고 뽑을 chunk_id ("지엽적" 출제에서 앞 문항이 이미 쓴 쪽).
         """
         if not queries:
             return []
-        ranked = [self._ranked(q) for q in queries]
+        ex = exclude or set()
+        ranked = [[i for i in self._ranked(q) if self.chunks[i].chunk_id not in ex] for q in queries]
         pos = [0] * len(ranked)
         picked: list[int] = []
         while len(picked) < min(k, len(self.chunks)):

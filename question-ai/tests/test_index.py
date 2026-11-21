@@ -120,3 +120,17 @@ def test_title_missing_from_text_is_searchable(fake_encoder):
     assert int(idx.scores("Half Adder", fake_encoder).argmax()) == 0
     # 제목이 바뀌면 지문도 바뀐다 → 예전 인덱스를 잘못 쓰지 않는다
     assert fingerprint(chunks) != fingerprint([chunks[0].model_copy(update={"title": "X"}), *chunks[1:]])
+
+
+def test_search_many_exclude_skips_used_chunks():
+    from qgen.schemas import Chunk, SourceRef
+
+    chunks = [Chunk(chunk_id=f"p{n}", course_id="c", text=t, source=SourceRef(file="a.pdf", page=n))
+              for n, t in enumerate(["cache basics cache", "cache details expiry", "cookie session", "cache headers"], 1)]
+    from pathlib import Path
+
+    r = Retriever(chunks, index_dir=Path("_no_index_"), verbose=False)  # BM25
+    top = [c.chunk_id for c in r.search_many(["cache"], k=2)]
+    rest = [c.chunk_id for c in r.search_many(["cache"], k=2, exclude=set(top))]
+    assert len(top) == 2 and not set(top) & set(rest) and len(rest) == 2
+    assert [c.chunk_id for c in r.search_many(["cache"], k=2, exclude=None)] == top  # 기존 동작 그대로

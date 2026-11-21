@@ -93,3 +93,36 @@ def test_generator_gets_matching_past_item_not_whole_exam(tmp_path, monkeypatch)
     # planner가 past_refs를 안 줬으므로 같은 유형 기출 원문만
     assert "기출 객관식 원문" in seen["q1"] and "서술형 원문" not in seen["q1"]
     assert "기출 서술형 원문" in seen["q2"] and "객관식 원문" not in seen["q2"]
+
+
+def _run_with_detail(tmp_path, monkeypatch, detail_level: str):
+    from qgen.ingest import Retriever, load_chunks
+
+    chunks = load_chunks(llm.ROOT / "data" / "demo", verbose=False)
+    first = chunks[0].source
+    _setup(tmp_path, monkeypatch, first)  # 모든 문항이 첫 쪽을 근거로 씀
+    monkeypatch.setattr(exam_profile, "load_or_make",
+                        lambda *a, **k: PROFILE.model_copy(update={"detail_level": detail_level}))
+    calls = []
+    orig = Retriever.search_many
+
+    def spy(self, queries, k=4, exclude=None):
+        calls.append((k, set(exclude or ())))
+        return orig(self, queries, k=k, exclude=exclude)
+
+    monkeypatch.setattr(Retriever, "search_many", spy)
+    pipeline.run("demo", run_id="t", verify=False)
+    first_ids = {c.chunk_id for c in chunks if (c.source.file, c.source.page) == (first.file, first.page)}
+    return calls, first_ids
+
+
+def test_detail_level_jiyeopjeok_doubles_k_and_excludes_used_pages(tmp_path, monkeypatch):
+    calls, first_ids = _run_with_detail(tmp_path, monkeypatch, "지엽적")
+    k = llm.CFG["pipeline"]["retrieval_top_k"] * llm.CFG["pipeline"]["detail_top_k_factor"]
+    assert calls[0] == (k, set())          # 첫 문항: 뺄 쪽 없음
+    assert calls[1] == (k, first_ids)      # 둘째 문항: 첫 문항이 쓴 쪽 제외
+
+
+def test_other_detail_levels_unchanged(tmp_path, monkeypatch):
+    calls, _ = _run_with_detail(tmp_path, monkeypatch, "중간")
+    assert calls == [(llm.CFG["pipeline"]["retrieval_top_k"], set())] * 2
