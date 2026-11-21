@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import time
+from collections import Counter
 from pathlib import Path
 
 from . import agents, checks, exam_profile, llm
@@ -39,8 +40,12 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
     # 2) Planner
     n = cfg.get("num_questions_override") or profile.num_questions
     plan_f = out / "plan.json"
+    counts = agents.type_counts(profile.format_ratio, n)
     if plan_f.exists():
         plan = ExamPlan.model_validate_json(plan_f.read_text(encoding="utf-8"))
+        # 사용자가 고친 계획일 수 있어 다시 만들지 않고 알리기만 한다
+        for w in agents.plan_issues(plan, counts, n):
+            print(f"[planner] 경고(저장된 plan.json): {w}")
     else:
         plan = agents.planner(profile, topic_list(chunks), n, cfg.get("max_source_titles") or MAX_SOURCE_TITLES)
         plan_f.write_text(plan.model_dump_json(indent=2), encoding="utf-8")
@@ -103,8 +108,10 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
     (out / "trace.json").write_text(json.dumps(trace, ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "exam.md").write_text(render_exam(profile.course, plan, accepted), encoding="utf-8")
     (out / "answers.md").write_text(render_answers(profile.course, plan, accepted, history), encoding="utf-8")
+    type_counts = {"target": counts, "planned": dict(Counter(i.qtype for i in plan.items)),
+                   "accepted": dict(Counter(q.qtype for q in accepted.values()))}
     summary = {**llm.stats(), "accepted": len(accepted), "planned": len(plan.items), "sec": round(time.time() - t0, 1),
-               "phase_sec": phase_sec, "item_sec": item_sec}
+               "type_counts": type_counts, "phase_sec": phase_sec, "item_sec": item_sec}
     (out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\n[done] {summary}\n→ {out}")
     return out
