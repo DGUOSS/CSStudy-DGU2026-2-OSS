@@ -6,11 +6,23 @@ from collections import Counter
 from pathlib import Path
 
 from . import agents, checks, exam_profile, llm
+from . import verify as verify_mod  # run()의 verify 인자와 이름이 겹치지 않게
 from .ingest import MAX_SOURCE_TITLES, Retriever, load_chunks, load_text_dir, search_queries, topic_list
 from .render import render_answers, render_exam
 from .schemas import ExamPlan, Question
 
 ROOT = llm.ROOT
+
+
+def _check_summary(vr: "verify_mod.VerifyResult") -> str:
+    parts = []
+    if vr.passed:
+        parts.append(f"맞음 {len(vr.passed)}개")
+    if vr.issues:
+        parts.append(f"틀림 {len(vr.issues)}개")
+    if vr.unreadable:
+        parts.append(f"읽지 못함 {len(vr.unreadable)}개 ({'; '.join(vr.unreadable)})")
+    return ", ".join(parts)
 
 
 def run(course: str, run_id: str | None = None, new_profile: bool = False, use_cache: bool = True,
@@ -68,6 +80,7 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
 
     # 3) 문항별 생성 → 규칙검사 → 블라인드 풀이 → 검토 → 수정 루프
     accepted: dict[str, Question] = {}
+    code_checks: dict[str, str] = {}  # 문항 → 코드 검산 요약 (answers.md)
     # "지엽적" 검색 규칙 (명세 §5, M3): 더 많이 검색하고, 앞 문항이 이미 근거로 쓴 쪽은 뺀다
     detail = profile.detail_level == "지엽적"
     top_k = cfg["retrieval_top_k"] * (cfg.get("detail_top_k_factor", 2) if detail else 1)
@@ -105,11 +118,14 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
             examples, ex_images = past[:3000], []
         q = agents.generator(item, ctx, profile, examples, images=ex_images)
         if not verify:
-            rule_issues = checks.run(q, item, ctx) + checks.copy_issues(q, past_texts, copy_threshold)
+            vr = verify_mod.run(q)
+            code_checks[item.item_id] = _check_summary(vr)
+            rule_issues = checks.run(q, item, ctx) + checks.copy_issues(q, past_texts, copy_threshold) + vr.issues
             if rule_issues:
                 print(f"  규칙 위반(검증 안 함, 기록만): {rule_issues}")
             hist.append(f"검증 안 함, 규칙위반 {len(rule_issues)}개" if rule_issues else "검증 안 함")
-            trace.append({"item": item.item_id, "attempt": 0, "rule_issues": rule_issues, "question": q.model_dump()})
+            trace.append({"item": item.item_id, "attempt": 0, "rule_issues": rule_issues, "question": q.model_dump(),
+                          "code_check": vr.__dict__})
             accepted[item.item_id] = q
             used_pages.update({(s.file, s.page) for s in q.sources})
             item_sec[item.item_id] = round(time.time() - t_item, 1)
@@ -119,22 +135,26 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
         for attempt in range(cfg["max_revisions"] + 1):
             # 마지막 시도에서는 고쳐도 다시 검사할 기회가 없으므로 generator를 부르지 않는다 (실패 문항마다 약 12초·9천 토큰 낭비였음)
             last = attempt == cfg["max_revisions"]
-            rule_issues = checks.run(q, item, ctx) + checks.copy_issues(q, past_texts, copy_threshold)
+            vr = verify_mod.run(q)
+            code_checks[item.item_id] = _check_summary(vr)
+            rule_issues = checks.run(q, item, ctx) + checks.copy_issues(q, past_texts, copy_threshold) + vr.issues
             if rule_issues:
                 print(f"  attempt {attempt}: 규칙 위반 {rule_issues}")
                 hist.append(f"규칙위반({len(rule_issues)})")
-                trace.append({"item": item.item_id, "attempt": attempt, "rule_issues": rule_issues, "question": q.model_dump()})
+                trace.append({"item": item.item_id, "attempt": attempt, "rule_issues": rule_issues, "question": q.model_dump(),
+                              "code_check": vr.__dict__})
                 if last:
                     break
                 q = agents.generator(item, ctx, profile, examples, images=ex_images, prev=q, feedback="\n".join(rule_issues))
                 continue
             s = agents.solver(q, ctx)
-            r = agents.reviewer(q, s, item, ctx, profile, past_examples=examples if profile.past_items else "")
+            r = agents.reviewer(q, s, item, ctx, profile, past_examples=examples if profile.past_items else "",
+                                verified=vr.passed)
             print(f"  attempt {attempt}: solver={s.answer[:40]!r} (conf {s.confidence:.2f}, 모호 {s.is_ambiguous}) "
                   f"→ {r.verdict} / {r.answer_match}")
             hist.append(f"{r.verdict}({r.answer_match})")
             trace.append({"item": item.item_id, "attempt": attempt, "question": q.model_dump(),
-                          "solver": s.model_dump(), "review": r.model_dump()})
+                          "solver": s.model_dump(), "review": r.model_dump(), "code_check": vr.__dict__})
             if r.verdict == "pass":
                 accepted[item.item_id] = q
                 break
@@ -160,7 +180,7 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
     (out / "exam.json").write_text(json.dumps({k: v.model_dump() for k, v in accepted.items()}, ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "trace.json").write_text(json.dumps(trace, ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "exam.md").write_text(render_exam(profile.course, plan, accepted), encoding="utf-8")
-    (out / "answers.md").write_text(render_answers(profile.course, plan, accepted, history), encoding="utf-8")
+    (out / "answers.md").write_text(render_answers(profile.course, plan, accepted, history, code_checks), encoding="utf-8")
     type_counts = {"target": counts, "planned": dict(Counter(i.qtype for i in plan.items)),
                    "accepted": dict(Counter(q.qtype for q in accepted.values()))}
     summary = {**llm.stats(), "accepted": len(accepted), "planned": len(plan.items), "sec": round(time.time() - t0, 1),

@@ -63,6 +63,25 @@ class ExamPlan(BaseModel):
     items: list[PlannedItem]
 
 
+class Verification(BaseModel):
+    """코드로 검산할 정답 하나 (verify.py). 해당하는 칸만 채운다."""
+    kind: Literal["bool_expr", "ieee754", "int_repr"]
+    label: str = ""                       # 어느 소문항인지 ("(1)")
+    expected: str                         # 검산할 출제 정답: 불 식, 또는 비트열(16진수는 0x로 시작)
+    # bool_expr: 변수 순서 = 민텀 번호의 비트 순서(첫 변수가 최상위 비트)
+    variables: list[str] = []
+    minterms: list[int] | None = None     # 함수를 민텀으로 줄 때 (Σm)
+    dont_cares: list[int] = []
+    function: str | None = None           # 함수를 식으로 줄 때 (minterms 대신)
+    form: Literal["SOP", "POS", "any"] = "any"
+    minimal: bool = False                 # "최소" 조건이 있으면 true
+    # ieee754 / int_repr
+    value: str = ""                       # 10진수 값 ("-118.625", "-5")
+    precision: Literal["single", "double"] = "single"
+    repr: Literal["2s", "1s", "sm"] = "2s"  # 2의 보수 / 1의 보수 / 부호-크기
+    bits: int | None = None
+
+
 class Question(BaseModel):
     item_id: str
     qtype: str
@@ -73,6 +92,8 @@ class Question(BaseModel):
     rubric: list[str] | None = None
     sources: list[SourceRef]
     figure_ref: SourceRef | None = None
+    # 불 대수 간소화·수 표현 변환처럼 코드로 확인할 수 있는 정답 (없으면 빈 목록)
+    verifications: list[Verification] = []
 
 
 class SolverOutput(BaseModel):

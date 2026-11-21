@@ -93,7 +93,7 @@ def solver(q: Question, chunks: list[Chunk]) -> SolverOutput:
 
 
 def reviewer(q: Question, s: SolverOutput, item: PlannedItem, chunks: list[Chunk], profile: ExamProfile,
-             past_examples: str = "") -> Review:
+             past_examples: str = "", verified: list[str] | None = None) -> Review:
     """past_examples: generator가 참고한 기출 문항 원문. 있으면 '같은 질문을 표현만 바꿨는지'도 보게 끝에 붙인다
     (프롬프트 파일에 빈칸을 만들지 않아 같은 파일을 쓰는 백엔드에는 영향 없음)."""
     p = llm.render_prompt("reviewer", question=q.model_dump(), solver=s.model_dump(), item=item.model_dump(),
@@ -101,6 +101,11 @@ def reviewer(q: Question, s: SolverOutput, item: PlannedItem, chunks: list[Chunk
                           profile=profile.model_dump(include={"difficulty", "detail_level", "phrasing_examples"}))
     if past_examples:
         p += f"\n\n## 기출 예시 (출제자가 참고한 것 — 같은 질문인지 확인)\n{past_examples}"
+    if verified:
+        p += ("\n\n## 코드 검산 결과 (verify.py, 모든 입력 대입)\n"
+              "아래 출제 정답은 문항의 verifications에 적힌 원래 함수·값 기준으로 코드가 확인해 **맞음**. "
+              "verifications의 원래 함수·값이 문제 본문과 같은지만 확인하라. 같다면 풀이자 답이 다를 때 출제 정답 오류가 아니다.\n"
+              + "\n".join(f"- {v}" for v in verified))
     r = llm.call("reviewer", p, Review)
     r.item_id = q.item_id
     return r

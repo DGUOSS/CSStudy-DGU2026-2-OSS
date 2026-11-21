@@ -10,6 +10,15 @@
 - 계산형: 수치를 구체적으로 주고, answer는 최종 값, model_answer에 풀이 과정.
 - 서술형: answer는 핵심 요약, model_answer는 모범답안, rubric은 "항목 — n점" 형식 배점 목록.
 - 수식은 LaTeX($...$). 문제만 보고도 답이 하나로 정해지도록 조건을 빠짐없이 적는다.
+- verifications: 정답에 아래 계산이 들어가면 **소문항마다 하나씩** 적는다. 코드가 검산하고, 틀리면 수정 요청이 온다. 해당 없으면 [].
+  - 불 대수 간소화·변환·등가 → kind "bool_expr"
+    - variables: 문제의 변수. 순서 = 민텀 번호의 비트 순서 (첫 변수가 최상위 비트, 문제와 같게)
+    - 원래 함수: 문제에서 Σm으로 줬으면 minterms(+dont_cares), 식으로 줬으면 function에 그 식
+    - expected: 정답 식. 부정은 A' , OR는 + , AND는 붙여 쓰기(AB), XOR는 \oplus
+    - form: "SOP" / "POS" / "any", minimal: 문제에 "최소" 조건이 있으면 true
+  - IEEE 754 변환 → kind "ieee754": value(10진수), precision("single"/"double"), expected(16진수는 0x로 시작)
+  - 정수의 보수·부호-크기 표현 → kind "int_repr": value, bits, repr("2s"/"1s"/"sm"), expected(2진수)
+  - 예: {"kind": "bool_expr", "label": "(1)", "variables": ["A","B","C"], "minterms": [1,3,6,7], "expected": "A'C + AB", "form": "SOP", "minimal": true}
 
 ## 계획된 문항
 {{item}}

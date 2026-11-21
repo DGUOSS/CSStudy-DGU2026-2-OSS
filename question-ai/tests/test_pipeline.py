@@ -158,3 +158,50 @@ def test_no_wasted_generator_call_after_last_rule_issue(tmp_path, monkeypatch):
     calls, _ = _verify_run(tmp_path, monkeypatch, "pass", bad_source=True)
     tries = llm.CFG["pipeline"]["max_revisions"] + 1
     assert calls == {"generator": 2 * tries, "solver": 0, "reviewer": 0}
+
+
+def _with_verification(monkeypatch, first, expected):
+    from qgen.schemas import Verification
+
+    def gen(item, *a, **k):
+        essay = item.qtype != "객관식"
+        return Question(item_id=item.item_id, qtype=item.qtype, stem="F=Σm(1,3,6,7)을 간소화", answer="A'C+AB",
+                        choices=None if essay else [f"보기{i}" for i in range(1, 6)], sources=[first],
+                        model_answer="m" if essay else None, rubric=["핵심 — 10점"] if essay else None,
+                        verifications=[Verification(kind="bool_expr", variables=["A", "B", "C"], minterms=[1, 3, 6, 7],
+                                                    expected=expected, form="SOP", minimal=True)])
+
+    monkeypatch.setattr(agents, "generator", gen)
+
+
+def test_code_check_failure_becomes_rule_issue(tmp_path, monkeypatch):
+    from qgen.ingest import load_chunks
+
+    first = load_chunks(llm.ROOT / "data" / "demo", verbose=False)[0].source
+    _setup(tmp_path, monkeypatch, first)
+    _with_verification(monkeypatch, first, "A'C + B")  # 틀린 정답
+    out = pipeline.run("demo", run_id="t", verify=False)
+    trace = json.loads((out / "trace.json").read_text(encoding="utf-8"))
+    assert all(any("코드 검산 실패" in i for i in t["rule_issues"]) for t in trace)
+    assert "**코드 검산**: 틀림 1개" in (out / "answers.md").read_text(encoding="utf-8")
+
+
+def test_reviewer_is_told_verified_answers(tmp_path, monkeypatch):
+    from qgen.ingest import load_chunks
+    from qgen.schemas import Review, SolverOutput
+
+    first = load_chunks(llm.ROOT / "data" / "demo", verbose=False)[0].source
+    _setup(tmp_path, monkeypatch, first)
+    _with_verification(monkeypatch, first, "A'C + AB")  # 맞는 정답
+    seen = []
+    monkeypatch.setattr(agents, "solver", lambda q, ctx: SolverOutput(item_id=q.item_id, reasoning="r", answer="x",
+                                                                     confidence=0.5, is_ambiguous=False))
+
+    def rev(*a, verified=None, **k):
+        seen.append(verified)
+        return Review(item_id="", verdict="pass", answer_match="일치", grounded=True, profile_fit=True, issues=[], feedback="")
+
+    monkeypatch.setattr(agents, "reviewer", rev)
+    out = pipeline.run("demo", run_id="t", verify=True)
+    assert seen and all(v and "Σm(1, 3, 6, 7)" in v[0] for v in seen)
+    assert "**코드 검산**: 맞음 1개" in (out / "answers.md").read_text(encoding="utf-8")

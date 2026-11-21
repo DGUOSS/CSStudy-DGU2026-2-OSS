@@ -19,7 +19,8 @@ def render_exam(course: str, plan: ExamPlan, questions: dict[str, Question]) -> 
     return "\n".join(out)
 
 
-def render_answers(course: str, plan: ExamPlan, questions: dict[str, Question], history: dict[str, list]) -> str:
+def render_answers(course: str, plan: ExamPlan, questions: dict[str, Question], history: dict[str, list],
+                   code_checks: dict[str, str] | None = None) -> str:
     out = [f"# {course} 모의고사 — 정답 및 채점 기준\n"]
     n = 0
     for item in plan.items:
@@ -35,5 +36,7 @@ def render_answers(course: str, plan: ExamPlan, questions: dict[str, Question], 
         if q.rubric:
             out.append("- **채점 기준**:\n" + "\n".join(f"  - {r}" for r in q.rubric))
         out.append("- **근거**: " + ", ".join(f"{s.file} p.{s.page}" for s in q.sources))
+        if code_checks and code_checks.get(item.item_id):
+            out.append(f"- **코드 검산**: {code_checks[item.item_id]}")
         out.append(f"- **검증 이력**: {' → '.join(history.get(item.item_id, []))}\n")
     return "\n".join(out)
