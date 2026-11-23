@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, ThumbsDown, ThumbsUp } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { type Schemas, api, unwrap } from '@/api/client'
-import { ErrorText, Loading } from '@/components/States'
+import { ErrorText } from '@/components/States'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -59,7 +59,8 @@ export function ExamPicker({ courseId }: { courseId: number }) {
       ),
   })
 
-  if (exams.isPending) return <Loading />
+  // 챕터 목록 위에 붙는 작은 상자라 불러오는 동안은 자리를 차지하지 않는다(큰 '불러오는 중…'이 목록을 밀어냄)
+  if (exams.isPending) return null
   if (!exams.data) return <ErrorText error={exams.error} />
 
   const saved = new Set(exams.data.filter((e) => e.selected).map((e) => e.id))

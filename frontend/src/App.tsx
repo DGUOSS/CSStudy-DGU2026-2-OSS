@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate, RouterProvider } from 'react-router'
 import { StudySpacePage } from '@/features/study_groups/StudySpacePage'
 import { StudyGroupsPage } from '@/features/study_groups/StudyGroupsPage'
 import { Layout } from '@/components/Layout'
+import { NotFound, RouteError } from '@/components/NotFound'
 import { AdminCatalogPage } from '@/features/admin/AdminCatalogPage'
 import { AdminCoursesPage } from '@/features/admin/AdminCoursesPage'
 import { AuthPage } from '@/features/auth/AuthPage'
@@ -28,34 +29,41 @@ const designFirst = import.meta.env.VITE_DESIGN === 'on'
 
 // 새 화면은 여기에 경로를 한 줄 추가한다
 const router = createBrowserRouter([
-  { path: '/login', element: <AuthPage mode="login" /> },
-  { path: '/signup', element: <AuthPage mode="signup" /> },
-  { path: '/study/groups/:groupId', element: <StudySpacePage design /> },
-  { path: '/study/subjects/:subjectId/groups', element: <StudyGroupsPage design /> },
-  { path: '/home', element: <DesignHomePage /> },
-  { path: '/study', element: <StudyPage /> },
-  { path: '/study/find', element: <FindPage /> },
-  { path: '/study/import', element: <ImportPage /> },
-  { path: '/study/courses/:courseId', element: <CourseChaptersPage /> },
-  { path: '/study/courses/:courseId/quiz', element: <StudyQuizPage /> },
   {
-    element: <Layout />,
+    // 모든 화면의 오류·없는 주소는 개발자용 기본 화면 대신 안내 화면으로
+    errorElement: <RouteError />,
     children: [
-      { path: "/subjects/:subjectId/groups", element: <StudyGroupsPage /> },
-      { path: "/groups/:groupId", element: <StudySpacePage /> },
-      { path: '/', element: designFirst ? <Navigate to="/home" replace /> : <HomePage /> },
-      { path: '/find', element: <CatalogPage /> },
-      { path: '/ndrims', element: <ReceivePage /> },
-      { path: '/subjects/:subjectId', element: <SubjectCoursesPage /> },
-      { path: '/courses/:courseId', element: <CoursePage /> },
-      { path: '/courses/:courseId/chapters/:chapterId/quiz', element: <QuizPage /> },
-      { path: '/papers/:paperId', element: <PaperPage /> },
-      { path: '/papers/:paperId/print', element: <PrintPage /> },
-      { path: '/requests', element: <MyRequestsPage /> },
-      { path: '/requests/new', element: <RequestCoursePage /> },
-      { path: '/admin/courses', element: <AdminCoursesPage /> },
-      { path: '/admin/requests', element: <AdminRequestsPage /> },
-      { path: '/admin/catalog', element: <AdminCatalogPage /> },
+      { path: '/login', element: <AuthPage mode="login" /> },
+      { path: '/signup', element: <AuthPage mode="signup" /> },
+      { path: '/study/groups/:groupId', element: <StudySpacePage design /> },
+      { path: '/study/subjects/:subjectId/groups', element: <StudyGroupsPage design /> },
+      { path: '/home', element: <DesignHomePage /> },
+      { path: '/study', element: <StudyPage /> },
+      { path: '/study/find', element: <FindPage /> },
+      { path: '/study/import', element: <ImportPage /> },
+      { path: '/study/courses/:courseId', element: <CourseChaptersPage /> },
+      { path: '/study/courses/:courseId/quiz', element: <StudyQuizPage /> },
+      {
+        element: <Layout />,
+        children: [
+          { path: '/subjects/:subjectId/groups', element: <StudyGroupsPage /> },
+          { path: '/groups/:groupId', element: <StudySpacePage /> },
+          { path: '/', element: designFirst ? <Navigate to="/home" replace /> : <HomePage /> },
+          { path: '/find', element: <CatalogPage /> },
+          { path: '/ndrims', element: <ReceivePage /> },
+          { path: '/subjects/:subjectId', element: <SubjectCoursesPage /> },
+          { path: '/courses/:courseId', element: <CoursePage /> },
+          { path: '/courses/:courseId/chapters/:chapterId/quiz', element: <QuizPage /> },
+          { path: '/papers/:paperId', element: <PaperPage /> },
+          { path: '/papers/:paperId/print', element: <PrintPage /> },
+          { path: '/requests', element: <MyRequestsPage /> },
+          { path: '/requests/new', element: <RequestCoursePage /> },
+          { path: '/admin/courses', element: <AdminCoursesPage /> },
+          { path: '/admin/requests', element: <AdminRequestsPage /> },
+          { path: '/admin/catalog', element: <AdminCatalogPage /> },
+          { path: '*', element: <NotFound /> },
+        ],
+      },
     ],
   },
 ])
