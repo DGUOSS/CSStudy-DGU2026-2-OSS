@@ -1483,6 +1483,23 @@ export interface components {
             /** Chosen Index */
             chosen_index: number;
         };
+        /**
+         * AttemptMisconception
+         * @description 고른 오답에 미리 붙여 둔 오개념(보여 줘도 되는 것만).
+         */
+        AttemptMisconception: {
+            /** Label */
+            label: string;
+            /** Hypothesis */
+            hypothesis: string;
+            /** Explanation */
+            explanation: string;
+            /** Evidence */
+            evidence: string | null;
+            source: components["schemas"]["SourceOut"] | null;
+            /** Status */
+            status: string;
+        };
         /** AttemptResult */
         AttemptResult: {
             /** Correct */
@@ -1496,6 +1513,7 @@ export interface components {
             source: components["schemas"]["SourceOut"] | null;
             /** Mastery */
             mastery: components["schemas"]["MasteryChange"][];
+            misconception?: components["schemas"]["AttemptMisconception"] | null;
         };
         /** BoardPage */
         BoardPage: {
