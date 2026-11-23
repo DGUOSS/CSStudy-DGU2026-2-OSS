@@ -118,3 +118,10 @@ def test_verify_credential_checks_real_signature(monkeypatch):
         google.verify_credential(jwt.encode(claims, other, algorithm="RS256"))
     with pytest.raises(jwt.PyJWTError):  # 다른 앱용 토큰
         google.verify_credential(jwt.encode({**claims, "aud": "x"}, key, algorithm="RS256"))
+
+
+def test_school_login_without_google_name_uses_email_id(client, fake_google):
+    fake_google.update(school("2022113582@dgu.ac.kr", name="  "))
+    assert (
+        client.post("/api/v1/auth/google", json={"credential": "x"}).json()["name"] == "2022113582"
+    )

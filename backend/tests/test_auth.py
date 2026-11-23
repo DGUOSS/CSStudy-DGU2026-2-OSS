@@ -35,3 +35,16 @@ def test_short_password_rejected(client):
 def test_bad_token_rejected(client):
     client.cookies.set("access_token", "garbage")
     assert client.get("/api/v1/auth/me").status_code == 401
+
+
+def test_blank_name_rejected_and_trimmed(client):
+    r = client.post(
+        "/api/v1/auth/signup",
+        json={"email": "b@dgu.ac.kr", "name": "   ", "password": "password123"},
+    )
+    assert r.status_code == 422
+    r = client.post(
+        "/api/v1/auth/signup",
+        json={"email": "b@dgu.ac.kr", "name": "  민제  ", "password": "password123"},
+    )
+    assert r.status_code == 201 and r.json()["name"] == "민제"
