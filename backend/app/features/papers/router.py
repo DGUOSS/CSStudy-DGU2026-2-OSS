@@ -478,7 +478,7 @@ async def scan_sheet(
             )
         images.append(data)
     try:
-        return ScanOut.model_validate(omr.read_sheet(images, lay))
+        return ScanOut.model_validate(omr.read_sheet(images, lay, paper.id))
     except omr.SheetError as e:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e)) from None
 

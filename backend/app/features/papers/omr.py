@@ -32,6 +32,11 @@ ESSAY_H = 52.0  # 서술형 칸 높이(번호 줄 포함)
 PX = 8  # 인식할 때 1mm = 8px
 DICT = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 MAX_PAGES = 12  # 표시 50개 / 4
+# 시험지 번호 표시: 이름 칸 오른쪽에 네모 16칸(번호 12비트 + 검사 4비트). 다른 시험지의 답안지를 거르는 데 쓴다.
+# 이 표시가 생기기 전에 인쇄한 답안지는 이 자리가 비어 있어 검사를 건너뛴다.
+ID_BITS, CHECK_BITS = 12, 4
+ID_CELL, ID_GAP = 3.4, 1.1  # 네모 한 변, 간격(mm)
+ID_X0, ID_Y = 112.0, 37.3  # 첫 네모의 왼쪽 위
 
 
 @dataclass
@@ -112,6 +117,29 @@ def _marker_svg(marker_id: int, cx: float, cy: float) -> str:
     return '<g fill="#000">' + "".join(rects) + "</g>"
 
 
+def _id_bits(paper_id: int) -> list[int]:
+    """시험지 번호 → 16칸(1=칠함). 검사값은 번호 세 묶음(4비트씩)의 합 % 16."""
+    pid = paper_id % (1 << ID_BITS)
+    check = (
+        (pid & 15) + ((pid >> 4) & 15) + ((pid >> 8) & 15) + 5
+    ) % 16  # +5: 번호 0도 칸이 칠해지게
+    return [(pid >> i) & 1 for i in range(ID_BITS)] + [(check >> i) & 1 for i in range(CHECK_BITS)]
+
+
+def _id_cells() -> list[tuple[float, float]]:
+    """각 칸의 왼쪽 위(mm)."""
+    return [(ID_X0 + i * (ID_CELL + ID_GAP), ID_Y) for i in range(ID_BITS + CHECK_BITS)]
+
+
+def _id_svg(paper_id: int) -> str:
+    rects = [
+        f'<rect x="{x:.2f}" y="{y:.2f}" width="{ID_CELL}" height="{ID_CELL}" '
+        + ('fill="#000"/>' if b else 'fill="none" stroke="#bbb" stroke-width="0.15"/>')
+        for (x, y), b in zip(_id_cells(), _id_bits(paper_id), strict=True)
+    ]
+    return "<g>" + "".join(rects) + "</g>"
+
+
 def sheet_svgs(lay: Layout, title: str, paper_id: int, info: str) -> list[str]:
     """쪽별 답안지 SVG(A4)."""
     out = []
@@ -131,6 +159,7 @@ def sheet_svgs(lay: Layout, title: str, paper_id: int, info: str) -> list[str]:
             f"{p + 1}/{lay.pages}쪽</text>"
         )
         parts.append('<text x="30" y="40" font-size="3.6">이름</text>')
+        parts.append(_id_svg(paper_id))
         parts.append(
             '<rect x="40" y="35" width="60" height="8" fill="none" stroke="#000" stroke-width="0.3"/>'
         )
@@ -170,6 +199,8 @@ class SheetError(ValueError):
 
 
 def _decode(data: bytes) -> np.ndarray:
+    if not data:
+        raise SheetError("사진 파일이 비어 있습니다. 답안지를 다시 찍어 올려 주세요")
     img = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
     if img is None:
         raise SheetError(
@@ -215,8 +246,35 @@ def _fill_ratio(dark: np.ndarray, cx: float, cy: float) -> float:
     return float((patch[mask > 0] > 0).mean())
 
 
-def read_sheet(images: list[bytes], lay: Layout) -> dict:
-    """답안지 사진(쪽마다 한 장)을 읽는다. 저장은 하지 않는다."""
+def _read_paper_id(dark: np.ndarray) -> int | None:
+    """번호 표시를 읽는다. 표시가 없거나(예전 답안지) 검사값이 안 맞으면 None."""
+    bits = []
+    for x, y in _id_cells():
+        m = ID_CELL * 0.25
+        patch = dark[
+            int((y + m) * PX) : int((y + ID_CELL - m) * PX),
+            int((x + m) * PX) : int((x + ID_CELL - m) * PX),
+        ]
+        bits.append(1 if patch.size and (patch > 0).mean() >= 0.5 else 0)
+    if not any(bits):
+        return None
+    pid = sum(b << i for i, b in enumerate(bits[:ID_BITS]))
+    return pid if _id_bits(pid) == bits else None
+
+
+def _dark(warped: np.ndarray) -> np.ndarray:
+    gray = cv2.GaussianBlur(cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY), (5, 5), 0)
+    # 조명이 고르지 않아도 되게 주변보다 어두운 곳을 칠한 곳으로 본다
+    return cv2.adaptiveThreshold(
+        gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 61, 18
+    )
+
+
+def read_sheet(images: list[bytes], lay: Layout, paper_id: int | None = None) -> dict:
+    """답안지 사진(쪽마다 한 장)을 읽는다. 저장은 하지 않는다.
+
+    paper_id를 주면 답안지의 번호 표시와 대조해 다른 시험지의 답안지를 거절한다.
+    """
     pages: dict[int, np.ndarray] = {}
     for data in images:
         found = _find_page(_decode(data))
@@ -227,13 +285,17 @@ def read_sheet(images: list[bytes], lay: Layout) -> dict:
             "답안지의 네 귀퉁이 검은 네모를 찾지 못했습니다. 네모가 모두 나오게 밝은 곳에서 다시 찍어 주세요"
         )
 
+    darks = {p: _dark(w) for p, w in pages.items()}
+    if paper_id is not None:
+        for d in darks.values():
+            found = _read_paper_id(d)
+            if found is not None and found != paper_id % (1 << ID_BITS):
+                raise SheetError(
+                    f"다른 시험지(#{found})의 답안지입니다. 지금 보는 시험지 #{paper_id}의 답안지를 찍어 주세요"
+                )
+
     mcq_out = []
-    for p, warped in pages.items():
-        gray = cv2.GaussianBlur(cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY), (5, 5), 0)
-        # 조명이 고르지 않아도 되게 주변보다 어두운 곳을 칠한 곳으로 본다
-        dark = cv2.adaptiveThreshold(
-            gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 61, 18
-        )
+    for p, dark in darks.items():
         slots = [s for s in lay.mcq if s.page == p]
         ratios = {s.no: [_fill_ratio(dark, cx, cy) for cx, cy in s.bubbles] for s in slots}
         flat = sorted(r for rs in ratios.values() for r in rs)
@@ -283,7 +345,11 @@ def read_sheet(images: list[bytes], lay: Layout) -> dict:
 
 
 def render_page_image(
-    lay: Layout, page: int, marks: dict[int, list[int]], scribble: bool = False
+    lay: Layout,
+    page: int,
+    marks: dict[int, list[int]],
+    scribble: bool = False,
+    paper_id: int | None = None,
 ) -> np.ndarray:
     """marks: 번호 → 칠할 보기(0부터). 인쇄물을 흉내 낸 이미지(1mm=PX px)."""
     img = np.full((int(PAGE_H * PX), int(PAGE_W * PX), 3), 255, np.uint8)
@@ -292,6 +358,14 @@ def render_page_image(
         m = cv2.resize(_marker_bits(4 * page + k), (side, side), interpolation=cv2.INTER_NEAREST)
         x0, y0 = int((cx - MARK / 2) * PX), int((cy - MARK / 2) * PX)
         img[y0 : y0 + side, x0 : x0 + side] = cv2.cvtColor(m, cv2.COLOR_GRAY2BGR)
+    if paper_id is not None:
+        for (x, y), b in zip(_id_cells(), _id_bits(paper_id), strict=True):
+            if b:
+                p0, p1 = (
+                    (int(x * PX), int(y * PX)),
+                    (int((x + ID_CELL) * PX), int((y + ID_CELL) * PX)),
+                )
+                cv2.rectangle(img, p0, p1, (0, 0, 0), -1)
     for s in (m for m in lay.mcq if m.page == page):
         for j, (cx, cy) in enumerate(s.bubbles):
             c = (int(cx * PX), int(cy * PX))
