@@ -173,10 +173,15 @@ async def create_request(
             CourseRequest.subject_name == subject_name,
             CourseRequest.professor_name == professor_name,
             CourseRequest.status == "pending",
+            CourseRequest.requester_id == user.id,
         )
     ).first()
+    # 같은 강좌를 다른 학생이 이미 요청했어도 막지 않는다: 요청이 쌓여 관리자가 수요를 보고, 승인하면 함께 처리된다
     if dup:
-        raise HTTPException(status.HTTP_409_CONFLICT, "같은 강좌 요청이 이미 대기 중입니다")
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "이미 이 강좌를 요청하셨습니다. 내 요청에서 진행 상황을 볼 수 있어요",
+        )
     material_files = []
     for f in files or []:
         if f.filename:

@@ -53,6 +53,7 @@ export function AdminCoursesPage() {
 function CreateCourseCard({ subjectNames }: { subjectNames: string[] }) {
   const qc = useQueryClient()
   const fileRef = useRef<HTMLInputElement>(null)
+  const [picked, setPicked] = useState<string[]>([])
   const [subjectName, setSubjectName] = useState('')
   const [subjectCode, setSubjectCode] = useState('')
   const [professorName, setProfessorName] = useState('')
@@ -76,6 +77,7 @@ function CreateCourseCard({ subjectNames }: { subjectNames: string[] }) {
     },
     onSuccess: () => {
       if (fileRef.current) fileRef.current.value = ''
+      setPicked([])
       qc.invalidateQueries({ queryKey: ['subjects'] })
       qc.invalidateQueries({ queryKey: ['courses'] })
     },
@@ -139,7 +141,21 @@ function CreateCourseCard({ subjectNames }: { subjectNames: string[] }) {
                 </Button>
               ))}
             </div>
-            <Input ref={fileRef} type="file" accept="application/pdf,.pdf" multiple aria-label="PDF" />
+            {/* 브라우저 기본 파일 버튼은 영어(Choose Files)라 한국어 버튼으로 감싼다 */}
+            <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2 text-sm hover:bg-accent focus-within:ring-2 focus-within:ring-ring">
+              <input
+                ref={fileRef}
+                type="file"
+                accept="application/pdf,.pdf"
+                multiple
+                className="sr-only"
+                onChange={(e) => setPicked(Array.from(e.target.files ?? []).map((f) => f.name))}
+              />
+              <span className="font-medium">PDF 고르기</span>
+              <span className="min-w-0 truncate text-muted-foreground">
+                {picked.length ? picked.join(', ') : '선택한 파일 없음'}
+              </span>
+            </label>
             <p className="text-xs text-muted-foreground">
               이미 있는 강좌를 적으면 강좌는 그대로 두고 자료만 붙입니다. 제목은 '과목명 종류 번호'로 자동으로 붙습니다.
             </p>

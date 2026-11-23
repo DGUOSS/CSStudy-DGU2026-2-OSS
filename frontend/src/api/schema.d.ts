@@ -2488,6 +2488,8 @@ export interface components {
             created_at: string;
             /** Created By Me */
             created_by_me: boolean;
+            /** Creator Name */
+            creator_name: string | null;
             /** Takers */
             takers: number;
             /** My Best */

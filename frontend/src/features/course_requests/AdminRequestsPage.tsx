@@ -102,7 +102,7 @@ function RequestCard({ r }: { r: CourseRequest }) {
     <Card className="flex flex-col gap-3 p-4">
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm text-muted-foreground">
-          #{r.id} · {r.requester_name ?? '알 수 없음'} · {new Date(r.created_at).toLocaleString()}
+          #{r.id} · {r.requester_name ?? '알 수 없음'} · {new Date(r.created_at).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
         </div>
         <Badge variant={r.status === 'pending' ? 'outline' : 'secondary'}>
           {STATUS_LABEL[r.status] ?? r.status}

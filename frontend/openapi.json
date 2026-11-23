@@ -8526,6 +8526,17 @@
             "type": "boolean",
             "title": "Created By Me"
           },
+          "creator_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Creator Name"
+          },
           "takers": {
             "type": "integer",
             "title": "Takers"
@@ -8566,6 +8577,7 @@
           "time_limit_min",
           "created_at",
           "created_by_me",
+          "creator_name",
           "takers",
           "my_best",
           "total_points",

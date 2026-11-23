@@ -246,3 +246,19 @@ def test_pause_restart_abandon(client, login, session, public_course):
     client.post(f"/api/v1/takes/{t2['id']}/submit", json={"answers": []})
     rk = client.get(f"/api/v1/papers/{paper['id']}/ranking").json()["entries"]
     assert len(rk) == 1 and rk[0]["paused"] is True
+
+
+def test_paper_list_shows_creator(client, login, enroll, course_with_problems):
+    login("maker@dgu.ac.kr", "출제자")
+    c = course_with_problems["course"]
+    enroll(c.subject_id)
+    ch = course_with_problems["chapter"].id
+    assert (
+        client.post(
+            f"/api/v1/courses/{c.id}/papers",
+            json={"title": "모의", "chapter_ids": [ch], "mcq_count": 2, "time_limit_min": 10},
+        ).status_code
+        == 201
+    )
+    [p] = client.get(f"/api/v1/courses/{c.id}/papers").json()
+    assert p["creator_name"] == "출제자" and p["created_by_me"]

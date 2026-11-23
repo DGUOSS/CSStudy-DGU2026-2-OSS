@@ -44,7 +44,8 @@ export function PapersTab({ courseId }: { courseId: number }) {
                   <div className="font-semibold">{p.title}</div>
                   <div className="text-xs text-muted-foreground">
                     {p.n_questions}문항{p.n_essay > 0 && `(서술형 ${p.n_essay})`} ·{' '}
-                    {p.time_limit_min}분 · 응시 {p.takers}명{p.created_by_me && ' · 내가 만듦'}
+                    {p.time_limit_min}분 · 응시 {p.takers}명 ·{' '}
+                    {p.created_by_me ? '내가 만듦' : `${p.creator_name ?? '알 수 없음'} 만듦`}
                   </div>
                 </div>
                 {p.my_open_take_id && <Badge>푸는 중</Badge>}
