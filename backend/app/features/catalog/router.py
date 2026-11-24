@@ -15,6 +15,7 @@ from app.core.security import AdminUser, CurrentUser
 from app.features.course_requests.router import create_keyed_request
 from app.features.enrollments.service import (
     catalog_row,
+    current_term,
     find_course,
     find_subject,
     norm_code,
@@ -398,3 +399,136 @@ def request_from_catalog(
     )
     session.commit()
     return RequestCreatedOut(request_id=r.id)
+
+
+class ProfessorCatalogItem(BaseModel):
+    emp_no: str
+    name: str
+    subject_count: int
+
+
+class ProfessorCatalogSearch(BaseModel):
+    start_year: str
+    end_year: str
+    total: int
+    items: list[ProfessorCatalogItem]
+
+
+class ProfessorOfferingTerm(BaseModel):
+    year: str
+    sem_cd: str
+    label: str
+    sections: list[str]
+
+
+class ProfessorOfferingSubject(BaseModel):
+    code: str
+    name: str
+    departments: list[str]
+    terms: list[ProfessorOfferingTerm]
+
+
+class ProfessorOfferingHistory(BaseModel):
+    emp_no: str
+    name: str
+    start_year: str
+    end_year: str
+    subjects: list[ProfessorOfferingSubject]
+
+
+def _recent_catalog_years() -> tuple[str, str]:
+    end = current_term()[0]
+    return str(int(end) - 2), end
+
+
+@router.get("/catalog/professors")
+def search_catalog_professors(
+    session: SessionDep,
+    _: CurrentUser,
+    q: Annotated[str, Query(min_length=1, max_length=50)],
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=50)] = 20,
+) -> ProfessorCatalogSearch:
+    start, end = _recent_catalog_years()
+    name = q.strip()
+    if not name:
+        raise HTTPException(422, "교수명을 입력해 주세요")
+    # 개설 목록에는 서비스 강좌로 아직 만들어지지 않은 교수도 포함된다.
+    stmt = (
+        select(
+            CatalogOffering.emp_no,
+            func.max(CatalogOffering.emp_nm).label("name"),
+            func.count(func.distinct(CatalogOffering.sbj_no)).label("subject_count"),
+        )
+        .where(
+            CatalogOffering.year >= start,
+            CatalogOffering.year <= end,
+            CatalogOffering.emp_no.is_not(None),
+            CatalogOffering.emp_no != "",
+            CatalogOffering.emp_nm.contains(name, autoescape=True),
+        )
+        .group_by(CatalogOffering.emp_no)
+    )
+    total = session.exec(select(func.count()).select_from(stmt.subquery())).one()
+    rows = session.exec(
+        stmt.order_by(func.max(CatalogOffering.emp_nm), CatalogOffering.emp_no)
+        .offset(offset)
+        .limit(limit)
+    ).all()
+    return ProfessorCatalogSearch(
+        start_year=start,
+        end_year=end,
+        total=total,
+        items=[ProfessorCatalogItem(emp_no=emp, name=nm, subject_count=n) for emp, nm, n in rows],
+    )
+
+
+@router.get("/catalog/professor-offerings")
+def professor_offerings(
+    session: SessionDep,
+    _: CurrentUser,
+    emp_no: Annotated[str, Query(min_length=1, max_length=20)],
+) -> ProfessorOfferingHistory:
+    start, end = _recent_catalog_years()
+    rows = session.exec(
+        select(CatalogOffering)
+        .where(
+            CatalogOffering.emp_no == emp_no,
+            CatalogOffering.year >= start,
+            CatalogOffering.year <= end,
+        )
+        .order_by(CatalogOffering.year.desc(), CatalogOffering.sem_cd.desc(), CatalogOffering.dvcls)
+    ).all()
+    if not rows:
+        raise HTTPException(404, "최근 3년 개설목록에서 해당 교수의 자료를 찾지 못했습니다")
+    groups: dict[str, list[CatalogOffering]] = defaultdict(list)
+    for row in rows:
+        groups[row.sbj_no].append(row)
+    subjects = []
+    for code, offerings in groups.items():
+        terms: dict[tuple[str, str], list[str]] = defaultdict(list)
+        for row in offerings:
+            terms[(row.year, row.sem_cd)].append(row.dvcls)
+        subjects.append(
+            ProfessorOfferingSubject(
+                code=code,
+                name=offerings[0].sbj_nm,
+                departments=sorted({o.dpt_nm for o in offerings if o.dpt_nm}),
+                terms=[
+                    ProfessorOfferingTerm(
+                        year=y,
+                        sem_cd=s,
+                        label=term_label(y, s),
+                        sections=sorted(set(sections)),
+                    )
+                    for (y, s), sections in terms.items()
+                ],
+            )
+        )
+    return ProfessorOfferingHistory(
+        emp_no=emp_no,
+        name=next((o.emp_nm for o in rows if o.emp_nm), "이름 미등록"),
+        start_year=start,
+        end_year=end,
+        subjects=sorted(subjects, key=lambda s: (s.name, s.code)),
+    )

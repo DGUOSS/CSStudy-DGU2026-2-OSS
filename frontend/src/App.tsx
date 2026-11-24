@@ -1,3 +1,4 @@
+import { ProfessorsPage } from '@/features/catalog/ProfessorsPage'
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router'
 import { StudySpacePage } from '@/features/study_groups/StudySpacePage'
 import { StudyGroupsPage } from '@/features/study_groups/StudyGroupsPage'
@@ -39,6 +40,7 @@ const router = createBrowserRouter([
       { path: '/study/subjects/:subjectId/groups', element: <StudyGroupsPage design /> },
       { path: '/home', element: <DesignHomePage /> },
       { path: '/study', element: <StudyPage /> },
+      { path: '/study/professors', element: <ProfessorsPage design /> },
       { path: '/study/find', element: <FindPage /> },
       { path: '/study/import', element: <ImportPage /> },
       { path: '/study/courses/:courseId', element: <CourseChaptersPage /> },
@@ -49,6 +51,7 @@ const router = createBrowserRouter([
           { path: '/subjects/:subjectId/groups', element: <StudyGroupsPage /> },
           { path: '/groups/:groupId', element: <StudySpacePage /> },
           { path: '/', element: designFirst ? <Navigate to="/home" replace /> : <HomePage /> },
+          { path: '/professors', element: <ProfessorsPage /> },
           { path: '/find', element: <CatalogPage /> },
           { path: '/ndrims', element: <ReceivePage /> },
           { path: '/subjects/:subjectId', element: <SubjectCoursesPage /> },

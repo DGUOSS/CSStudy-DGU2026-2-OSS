@@ -2473,6 +2473,149 @@
         }
       }
     },
+    "/api/v1/catalog/professors": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Search Catalog Professors",
+        "operationId": "search_catalog_professors_api_v1_catalog_professors_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 50,
+              "title": "Q"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfessorCatalogSearch"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalog/professor-offerings": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Professor Offerings",
+        "operationId": "professor_offerings_api_v1_catalog_professor_offerings_get",
+        "parameters": [
+          {
+            "name": "emp_no",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "title": "Emp No"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfessorOfferingHistory"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/courses/{course_id}/exams": {
       "get": {
         "tags": [
@@ -8662,6 +8805,161 @@
         ],
         "title": "ProblemOut",
         "description": "풀이 화면용. 정답은 넣지 않는다."
+      },
+      "ProfessorCatalogItem": {
+        "properties": {
+          "emp_no": {
+            "type": "string",
+            "title": "Emp No"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "subject_count": {
+            "type": "integer",
+            "title": "Subject Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "emp_no",
+          "name",
+          "subject_count"
+        ],
+        "title": "ProfessorCatalogItem"
+      },
+      "ProfessorCatalogSearch": {
+        "properties": {
+          "start_year": {
+            "type": "string",
+            "title": "Start Year"
+          },
+          "end_year": {
+            "type": "string",
+            "title": "End Year"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProfessorCatalogItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start_year",
+          "end_year",
+          "total",
+          "items"
+        ],
+        "title": "ProfessorCatalogSearch"
+      },
+      "ProfessorOfferingHistory": {
+        "properties": {
+          "emp_no": {
+            "type": "string",
+            "title": "Emp No"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "start_year": {
+            "type": "string",
+            "title": "Start Year"
+          },
+          "end_year": {
+            "type": "string",
+            "title": "End Year"
+          },
+          "subjects": {
+            "items": {
+              "$ref": "#/components/schemas/ProfessorOfferingSubject"
+            },
+            "type": "array",
+            "title": "Subjects"
+          }
+        },
+        "type": "object",
+        "required": [
+          "emp_no",
+          "name",
+          "start_year",
+          "end_year",
+          "subjects"
+        ],
+        "title": "ProfessorOfferingHistory"
+      },
+      "ProfessorOfferingSubject": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "departments": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Departments"
+          },
+          "terms": {
+            "items": {
+              "$ref": "#/components/schemas/ProfessorOfferingTerm"
+            },
+            "type": "array",
+            "title": "Terms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "departments",
+          "terms"
+        ],
+        "title": "ProfessorOfferingSubject"
+      },
+      "ProfessorOfferingTerm": {
+        "properties": {
+          "year": {
+            "type": "string",
+            "title": "Year"
+          },
+          "sem_cd": {
+            "type": "string",
+            "title": "Sem Cd"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "sections": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sections"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "sem_cd",
+          "label",
+          "sections"
+        ],
+        "title": "ProfessorOfferingTerm"
       },
       "PublicCourseOut": {
         "properties": {
