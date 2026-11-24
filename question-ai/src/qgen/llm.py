@@ -71,6 +71,10 @@ def _log(record: dict) -> None:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
+class LLMError(RuntimeError):
+    """재요청해도 쓸 수 있는 응답을 못 받음 (형식 오류 반복, 안전 필터 차단 등). 파이프라인은 그 문항만 실패 처리."""
+
+
 def _provider(model: str) -> str:
     return model.split("/", 1)[0]
 
@@ -118,7 +122,9 @@ def _raw_call(model: str, messages: list[dict], temperature: float) -> tuple[str
             usage = getattr(r, "usage", None)
             tokens = getattr(usage, "total_tokens", 0) or 0
             _state["tokens"] += tokens
-            return r.choices[0].message.content or "", tokens, waited
+            ch = r.choices[0]
+            _state["finish_reason"] = getattr(ch, "finish_reason", None)  # 빈 응답 원인 확인용
+            return ch.message.content or "", tokens, waited
         except Exception as e:  # rate limit / 일시 오류 → 지수 백오프
             name = type(e).__name__
             transient = any(s in name for s in ("RateLimit", "ServiceUnavailable", "InternalServer", "Timeout", "APIConnection"))
@@ -135,8 +141,16 @@ def _parse_json(text: str) -> object:
     text = text.strip()
     m = re.search(r"```(?:json)?\s*(.*?)```", text, re.S)
     if m:
-        text = m.group(1)
-    return json.loads(text)
+        text = m.group(1).strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        # 앞뒤에 설명 문장이 붙은 경우 (Claude가 solver일 때 관찰): 첫 '{'부터 객체 하나만 읽는다
+        start = text.find("{")
+        if start < 0:
+            raise
+        obj, _ = json.JSONDecoder().raw_decode(text[start:])
+        return obj
 
 
 def image_part(data: bytes, mime: str = "image/jpeg") -> dict:
@@ -191,12 +205,18 @@ def call(role: str, prompt: str, schema: type[T], seed: int = 0,
         sec = time.time() - t0
         # sec = 전체, wait_sec = 간격 대기·백오프, api_sec = 실제 모델 응답 시간
         timing = {"sec": round(sec, 2), "wait_sec": round(waited, 2), "api_sec": round(sec - waited, 2)}
+        if _state.get("finish_reason") == "content_filter":
+            # 회사 쪽 안전 검사가 응답을 끊음. 같은 요청은 다시 보내도 계속 끊겨서(11-21 7번 중 7번) 바로 실패 처리 (문제사항 V-13)
+            _log({"role": role, "model": model, "error": "응답 차단(content_filter)", "attempt": attempt,
+                  "tokens": tokens, "head": content[:200], "finish": "content_filter", **timing})
+            raise LLMError(f"{role}({model}): 응답 차단(finish_reason=content_filter) — 다시 보내지 않음")
         try:
             data = _parse_json(content)
             obj = schema.model_validate(data)
         except (json.JSONDecodeError, ValidationError) as e:
             last_err = str(e)[:1500]
-            _log({"role": role, "model": model, "error": last_err, "attempt": attempt, "tokens": tokens, **timing})
+            _log({"role": role, "model": model, "error": last_err, "attempt": attempt, "tokens": tokens,
+                  "head": content[:200], "finish": _state.get("finish_reason"), **timing})  # 응답 앞부분 (형식 오류 원인 확인용)
             messages = messages + [
                 {"role": "assistant", "content": content},
                 {"role": "user", "content": f"출력이 스키마 검증에 실패했다. 오류:\n{last_err}\n수정한 JSON만 다시 출력하라."},
@@ -207,7 +227,9 @@ def call(role: str, prompt: str, schema: type[T], seed: int = 0,
         _log({"role": role, "model": model, "cached": False, "schema": schema.__name__,
               "tokens": tokens, **timing})
         return obj
-    raise RuntimeError(f"{role}: JSON 검증 3회 실패: {last_err}")
+    finish = _state.get("finish_reason")
+    raise LLMError(f"{role}({model}): JSON 검증 3회 실패"
+                   + (f", 응답 차단(finish_reason={finish})" if finish == "content_filter" else "") + f": {last_err[:200]}")
 
 
 if __name__ == "__main__":  # python -m qgen.llm --ping

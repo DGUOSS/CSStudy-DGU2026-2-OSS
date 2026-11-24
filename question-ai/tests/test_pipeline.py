@@ -381,3 +381,26 @@ def test_copied_sentences_count_as_variant_while_budget_left(tmp_path, monkeypat
     assert list(summary["past_variants"]) == ["q1"] and "문장 겹침" in summary["past_variants"]["q1"]
     # q2: 허용 개수를 다 써서 글자 겹침이 규칙 위반으로 막힘 → 계속 고치다 실패
     assert summary["accepted"] == 1 and all(f[0] == "q2" for f in feedbacks)
+
+
+def test_solver_blocked_fails_only_that_item(tmp_path, monkeypatch):
+    """검증 모델이 응답을 못 주면(예: 안전 필터 차단) 실행 전체가 멈추지 않고 그 문항만 실패."""
+    from qgen.ingest import load_chunks
+    from qgen.schemas import Review, SolverOutput
+
+    first = load_chunks(llm.ROOT / "data" / "demo", verbose=False)[0].source
+    _setup(tmp_path, monkeypatch, first)
+    monkeypatch.setitem(llm.CFG["pipeline"], "max_replacements", 0)
+
+    def solver(q, ctx):
+        if q.item_id == "q1":
+            raise llm.LLMError("solver: 응답 차단(finish_reason=content_filter)")
+        return SolverOutput(item_id=q.item_id, reasoning="r", answer="1", confidence=0.9, is_ambiguous=False)
+
+    monkeypatch.setattr(agents, "solver", solver)
+    monkeypatch.setattr(agents, "reviewer", lambda *a, **k: Review(
+        item_id="", verdict="pass", answer_match="일치", grounded=True, profile_fit=True, issues=[], feedback=""))
+    out = pipeline.run("demo", run_id="t", verify=True)
+    assert set(json.loads((out / "exam.json").read_text(encoding="utf-8"))) == {"q2"}
+    trace = json.loads((out / "trace.json").read_text(encoding="utf-8"))
+    assert any("응답 실패" in i for t in trace if t["item"] == "q1" for i in t.get("rule_issues") or [])

@@ -163,9 +163,16 @@ def run(course: str, run_id: str | None = None, new_profile: bool = False, use_c
                     break
                 q = agents.generator(item, ctx, profile, examples, images=ex_images, prev=q, feedback="\n".join(rule_issues))
                 continue
-            s = agents.solver(q, ctx)
-            r = agents.reviewer(q, s, item, ctx, profile, past_examples=examples if profile.past_items else "",
-                                verified=vr.passed, prev_issues=prev_issues)
+            try:
+                s = agents.solver(q, ctx)
+                r = agents.reviewer(q, s, item, ctx, profile, past_examples=examples if profile.past_items else "",
+                                    verified=vr.passed, prev_issues=prev_issues)
+            except llm.LLMError as e:  # 모델이 응답을 못 줌 (예: 안전 필터 차단) → 이 문항만 실패로 남기고 계속
+                print(f"  attempt {attempt}: 검증 모델 응답 실패 — {e}")
+                hist.append("검증 모델 응답 실패")
+                trace.append({"item": item.item_id, "attempt": attempt, "rule_issues": [f"검증 모델 응답 실패: {e}"],
+                              "question": q.model_dump(), "code_check": vr.__dict__})
+                break
             print(f"  attempt {attempt}: solver={s.answer[:40]!r} (conf {s.confidence:.2f}, 모호 {s.is_ambiguous}) "
                   f"→ {r.verdict} / {r.answer_match}")
             hist.append(f"{r.verdict}({r.answer_match})")

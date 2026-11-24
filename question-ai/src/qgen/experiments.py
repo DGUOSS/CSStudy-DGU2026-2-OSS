@@ -14,7 +14,9 @@
 """
 from __future__ import annotations
 
+import itertools
 import json
+import shutil
 import time
 from contextlib import contextmanager
 from pathlib import Path
@@ -25,11 +27,30 @@ from .schemas import ExamPlan
 
 CONDITIONS = ["single", "multi_same", "multi_cross", "multi_no_loop"]
 
+# 모델 바꿔 넣기 실험: config의 세 모델(generator·solver·reviewer 자리)을 세 역할에 돌려 넣는 6가지.
+# 이름은 짧은 별명 (실행 폴더·대응표에만 쓰임, 채점 자료에는 안 나옴)
+SWAP_ALIASES = {"gemini": "generator", "gpt": "solver", "claude": "reviewer"}  # 별명 → config에서 그 모델을 가져올 역할
+SWAP_CONDITIONS = [f"gen_{g}-sol_{s}-rev_{r}" for g, s, r in itertools.permutations(SWAP_ALIASES)]
+# --swap 기본: 세 모델이 세 역할을 한 번씩 맡는 3가지 (돌려 넣기). 6가지 전부는 --conditions로
+SWAP_ROTATIONS = ["gen_gemini-sol_gpt-rev_claude", "gen_gpt-sol_claude-rev_gemini", "gen_claude-sol_gemini-rev_gpt"]
+
+
+def swap_models(cond: str) -> dict:
+    """'gen_gpt-sol_claude-rev_gemini' → {generator: <gpt 모델>, solver: ..., reviewer: ...}."""
+    base = {alias: llm.CFG["models"][role] for alias, role in SWAP_ALIASES.items()}
+    out = {}
+    for part, role in zip(cond.split("-"), ("generator", "solver", "reviewer")):
+        alias = part.split("_", 1)[1]
+        out[role] = base[alias]
+    return out
+
 
 def condition_overrides(cond: str) -> tuple[bool, dict, dict]:
     """→ (검증 여부, pipeline 설정 덮어쓰기, models 덮어쓰기)."""
     models = llm.CFG["models"]
     common = {"max_replacements": 0}
+    if cond in SWAP_CONDITIONS:  # 전체 루프 (multi_cross와 같은 설정), 모델 자리만 바꿈
+        return True, common, swap_models(cond)
     if cond == "single":
         return False, common, {}
     if cond == "multi_same":
@@ -80,13 +101,19 @@ def make_plan(course: str, exp_dir: Path) -> ExamPlan:
 
 
 def run(course: str, name: str, sets: int = 3, conditions: list[str] | None = None,
-        judge_root: Path | None = None, use_cache: bool = True) -> Path:
+        judge_root: Path | None = None, use_cache: bool = True, plan_from: str | None = None) -> Path:
+    """plan_from: 다른 실험 이름 — 그 실험의 plan.json을 그대로 써서 두 실험 결과를 비교할 수 있게."""
     conditions = conditions or CONDITIONS
     for c in conditions:
         condition_overrides(c)  # 이름 검사
     exp_rel = Path("experiments") / name
     exp_dir = llm.ROOT / "outputs" / course / exp_rel
     exp_dir.mkdir(parents=True, exist_ok=True)
+    if plan_from and not (exp_dir / "plan.json").exists():
+        src = llm.ROOT / "outputs" / course / "experiments" / plan_from / "plan.json"
+        if not src.exists():
+            raise FileNotFoundError(f"계획 없음: {src}")
+        shutil.copy(src, exp_dir / "plan.json")
     plan = make_plan(course, exp_dir)
     print(f"[exp] {name}: 조건 {conditions} × {sets}세트, 계획 {len(plan.items)}문항 "
           + ", ".join(f"{i.qtype}/{i.topic}" for i in plan.items))

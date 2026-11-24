@@ -81,3 +81,24 @@ def test_seed_base_changes_cache_key(tmp_path, monkeypatch):
         llm.call("reviewer", "같은 프롬프트", Review)
     assert len(seen) == 3  # 0·1·2 세트마다 한 번씩만 실제 호출, 같은 세트는 캐시
     llm.configure()
+
+
+def test_swap_conditions_rotate_config_models():
+    from qgen import experiments as ex
+    from qgen import llm
+
+    m = llm.CFG["models"]
+    assert len(ex.SWAP_CONDITIONS) == 6
+    seen = set()
+    for c in ex.SWAP_CONDITIONS:
+        verify, p, mo = ex.condition_overrides(c)
+        assert verify and p["max_replacements"] == 0
+        assert sorted(mo.values()) == sorted([m["generator"], m["solver"], m["reviewer"]])
+        seen.add((mo["generator"], mo["solver"], mo["reviewer"]))
+    assert len(seen) == 6
+    # 돌려 넣기 3가지: 역할마다 세 모델이 한 번씩
+    rot = [ex.condition_overrides(c)[2] for c in ex.SWAP_ROTATIONS]
+    for role in ("generator", "solver", "reviewer"):
+        assert len({r[role] for r in rot}) == 3
+    assert ex.swap_models("gen_gemini-sol_gpt-rev_claude") == {
+        "generator": m["generator"], "solver": m["solver"], "reviewer": m["reviewer"]}
