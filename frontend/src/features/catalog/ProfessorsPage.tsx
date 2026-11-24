@@ -1,9 +1,11 @@
+import { ArrowLeft } from 'lucide-react'
+import { ProfessorSummary } from '@/features/professor_summaries/ProfessorSummary'
 import { useQuery } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { api, unwrap } from '@/api/client'
 import { Empty, ErrorText, Loading } from '@/components/States'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { AppShell } from '@/features/home/AppShell'
@@ -34,11 +36,14 @@ function ProfessorSearch({ design }: { design: boolean }) {
     if (input.trim()) setParams({ q: input.trim() })
   }
   return <div className="flex flex-col gap-5">
+    <Link to={design ? '/study/find' : '/find'} className="inline-flex min-h-9 items-center gap-1.5 self-start rounded-sm text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <ArrowLeft className="size-4" aria-hidden="true" />
+      이전 화면으로
+    </Link>
     <div>
-      <h1 className="text-2xl font-bold">교수별 개설과목</h1>
+      <h1 className="text-2xl font-bold">교수 찾기</h1>
       <p className="mt-1 text-sm text-muted-foreground">교수명을 검색해 최근 3개 학년도에 개설된 과목을 확인하세요.</p>
     </div>
-    <Link to={design ? '/study/find' : '/find'} className={buttonVariants({ variant: 'outline', className: 'self-start' })}>강좌 찾기로 돌아가기</Link>
     <Card className="p-4">
       <form onSubmit={submit} className="flex gap-2">
         <Input aria-label="교수명" placeholder="교수명을 입력하세요" maxLength={50} value={input} onChange={e => setInput(e.target.value)} />
@@ -67,8 +72,9 @@ function ProfessorSearch({ design }: { design: boolean }) {
     <ErrorText error={history.error} />
     {emp && history.isFetching && <Loading />}
     {history.data && <section className="flex flex-col gap-3" aria-label="선택한 교수의 개설과목">
+      <ProfessorSummary key={emp} empNo={emp} />
       <h2 className="text-xl font-bold">{history.data.name} 교수 · 개설과목 {history.data.subjects.length}개</h2>
-      <p className="text-sm text-muted-foreground">{history.data.start_year}~{history.data.end_year}학년도 · 같은 학수번호는 한 과목으로 묶었습니다.</p>
+      <p className="text-sm text-muted-foreground">{history.data.start_year}~{history.data.end_year}학년도</p>
       {history.data.subjects.map(s => <Card key={s.code} className="p-4">
         <h3 className="font-semibold">{s.name} <span className="text-sm font-normal text-muted-foreground">{s.code}</span></h3>
         <p className="mb-3 text-xs text-muted-foreground">{s.departments.join(' · ')}</p>

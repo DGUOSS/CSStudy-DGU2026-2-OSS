@@ -16,6 +16,7 @@ from app.features.misconceptions.router import router as misconceptions_router
 from app.features.notices.router import router as notices_router
 from app.features.papers.router import router as papers_router
 from app.features.problems.router import router as problems_router
+from app.features.professor_summaries.router import router as professor_summaries_router
 from app.features.reviews.router import router as reviews_router
 from app.features.structure import service as _structure_hooks  # noqa: F401  (교안 저장 시 자동 챕터·개념)
 from app.features.study_groups.router import router as study_groups_router
@@ -68,6 +69,7 @@ api.include_router(course_requests_router)
 api.include_router(admin_router)
 api.include_router(enrollments_router)
 api.include_router(catalog_router)
+api.include_router(professor_summaries_router)
 api.include_router(exams_router)
 api.include_router(reviews_router)
 api.include_router(papers_router)

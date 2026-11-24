@@ -2616,6 +2616,124 @@
         }
       }
     },
+    "/api/v1/catalog/professor-summary": {
+      "get": {
+        "tags": [
+          "professor_summaries"
+        ],
+        "summary": "Get Summary",
+        "operationId": "get_summary_api_v1_catalog_professor_summary_get",
+        "parameters": [
+          {
+            "name": "emp_no",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "title": "Emp No"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfessorSummaryOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "professor_summaries"
+        ],
+        "summary": "Generate Summary",
+        "operationId": "generate_summary_api_v1_catalog_professor_summary_post",
+        "parameters": [
+          {
+            "name": "emp_no",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "title": "Emp No"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfessorSummaryOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/courses/{course_id}/exams": {
       "get": {
         "tags": [
@@ -8961,6 +9079,134 @@
         ],
         "title": "ProfessorOfferingTerm"
       },
+      "ProfessorSummaryClaim": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 600,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "review_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Review Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "review_ids"
+        ],
+        "title": "ProfessorSummaryClaim"
+      },
+      "ProfessorSummaryDraft": {
+        "properties": {
+          "overview": {
+            "$ref": "#/components/schemas/ProfessorSummaryClaim"
+          },
+          "highlights": {
+            "items": {
+              "$ref": "#/components/schemas/ProfessorSummaryClaim"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Highlights"
+          },
+          "differences": {
+            "items": {
+              "$ref": "#/components/schemas/ProfessorSummaryClaim"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Differences"
+          }
+        },
+        "type": "object",
+        "required": [
+          "overview",
+          "highlights",
+          "differences"
+        ],
+        "title": "ProfessorSummaryDraft"
+      },
+      "ProfessorSummaryOut": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "not_generated",
+              "insufficient",
+              "unavailable"
+            ],
+            "title": "Status"
+          },
+          "start_year": {
+            "type": "string",
+            "title": "Start Year"
+          },
+          "end_year": {
+            "type": "string",
+            "title": "End Year"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/SummaryStats"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProfessorSummaryDraft"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SummarySource"
+            },
+            "type": "array",
+            "title": "Sources",
+            "default": []
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "start_year",
+          "end_year",
+          "stats"
+        ],
+        "title": "ProfessorSummaryOut"
+      },
       "PublicCourseOut": {
         "properties": {
           "subject_id": {
@@ -10387,6 +10633,93 @@
           "answers"
         ],
         "title": "SubmitIn"
+      },
+      "SummarySource": {
+        "properties": {
+          "review_id": {
+            "type": "integer",
+            "title": "Review Id"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "term": {
+            "type": "string",
+            "title": "Term"
+          }
+        },
+        "type": "object",
+        "required": [
+          "review_id",
+          "subject",
+          "term"
+        ],
+        "title": "SummarySource"
+      },
+      "SummaryStats": {
+        "properties": {
+          "review_count": {
+            "type": "integer",
+            "title": "Review Count"
+          },
+          "author_count": {
+            "type": "integer",
+            "title": "Author Count"
+          },
+          "course_count": {
+            "type": "integer",
+            "title": "Course Count"
+          },
+          "sampled_count": {
+            "type": "integer",
+            "title": "Sampled Count"
+          },
+          "recommendation": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendation"
+          },
+          "difficulty": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty"
+          },
+          "workload": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "review_count",
+          "author_count",
+          "course_count",
+          "sampled_count",
+          "recommendation",
+          "difficulty",
+          "workload"
+        ],
+        "title": "SummaryStats"
       },
       "SyllabusImportIn": {
         "properties": {
