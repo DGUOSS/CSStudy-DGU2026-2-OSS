@@ -28,6 +28,7 @@ class Page:
     page: int  # 1부터
     text: str
     title: str = ""  # PDF는 가장 큰 글씨 줄, 없으면 chunker가 첫 줄로 정함
+    title_from_text: bool = False  # PDF 위쪽 글자에서 제목을 직접 뽑았는지 (False면 앞 제목을 이어받았거나 없음)
     image_ratio: float = 0.0  # 큰 이미지 면적 합 / 쪽 면적 (최대 1)
     drawings: int = 0
     has_figure: bool = False
@@ -72,19 +73,44 @@ def _image_ratio(page) -> float:
     return min(total, 1.0)
 
 
-def _largest_font_title(page, max_len: int = 80) -> str:
-    """쪽에서 가장 큰 글씨의 글을 위→아래, 왼→오른 순서로 이어 붙인다 (슬라이드 제목).
+TITLE_ZONE = 0.25  # 제목 후보는 쪽 위쪽 이 비율 안의 글자만 (가운데 진리표·수식이 제목으로 뽑히지 않게)
+_PRIVATE_USE = re.compile(r"[-]")  # 글머리 기호 글꼴(Wingdings 등)이 쓰는 문자
+_HAS_WORD = re.compile(r"[A-Za-z가-힣]{2,}")  # 글자 2개 이상 이어진 단어가 있어야 제목 (숫자·기호뿐인 줄 제외)
 
-    텍스트를 그냥 뽑으면 첫 줄이 쪽 번호('3')나 날짜가 되는 교안이 있어 글씨 크기로 찾는다.
+
+def clean_title_text(s: str) -> str:
+    return re.sub(r"\s+", " ", _PRIVATE_USE.sub("", s)).strip()
+
+
+def is_title_like(s: str) -> bool:
+    return bool(_HAS_WORD.search(s))
+
+
+def _largest_font_title(page, max_len: int = 80) -> str:
+    """쪽 위쪽(TITLE_ZONE)에서 가장 큰 글씨의 글을 위→아래, 왼→오른 순서로 이어 붙인다 (슬라이드 제목).
+
+    - 텍스트를 그냥 뽑으면 첫 줄이 쪽 번호('3')나 날짜가 되는 교안이 있어 글씨 크기로 찾는다.
+    - 쪽 전체에서 가장 큰 글씨를 고르면, 제목이 그림이거나 없는 쪽에서 가운데 진리표·수식이 뽑힌다
+      (컴퓨터구성 교안 129쪽 중 55쪽) → 위쪽만 보고, 기호뿐인 글은 뺀다. 없으면 빈 문자열(parse_pdf가 앞 제목을 이어받음).
     """
-    spans = [(s["size"], s["bbox"][1], s["bbox"][0], s["text"].strip())
-             for b in page.get_text("dict")["blocks"] for ln in b.get("lines", []) for s in ln["spans"]
-             if s["text"].strip()]
-    if not spans:
+    limit = page.rect.y0 + page.rect.height * TITLE_ZONE
+    spans = []
+    for b in page.get_text("dict")["blocks"]:
+        for ln in b.get("lines", []):
+            for s in ln["spans"]:
+                t = clean_title_text(s["text"])
+                if t and s["bbox"][1] < limit:
+                    spans.append((s["size"], s["bbox"][1], s["bbox"][0], s["text"].strip()))
+    # 글자 크기는 '단어가 있는' 조각으로만 정한다 (큰 기호 하나가 제목 크기를 차지하지 않게).
+    # 단, 제목 안의 '1', '-', 'S' 같은 짧은 조각은 지우지 않도록 조각 단위로 거르지 않고 이어 붙인 뒤 검사한다.
+    sizes = [s[0] for s in spans if is_title_like(clean_title_text(s[3]))]
+    if not sizes:
         return ""
-    top = max(s[0] for s in spans)
-    parts = sorted((s for s in spans if s[0] >= top - 0.5), key=lambda s: (round(s[1] / 5), s[2]))
-    return " ".join(p[3] for p in parts)[:max_len].strip()
+    top = max(sizes)
+    # 제목 크기와 '같은' 조각만 잇는다 (더 큰 기호·숫자 조각이 제목 앞에 붙지 않게)
+    parts = sorted((s for s in spans if abs(s[0] - top) <= 0.5), key=lambda s: (round(s[1] / 5), s[2]))
+    title = clean_title_text(" ".join(p[3] for p in parts))[:max_len].strip()
+    return title if is_title_like(title) else ""
 
 
 def rel_path(path: Path, base: Path | None) -> str:
@@ -103,13 +129,19 @@ def parse_pdf(path: Path, render_dir: Path | None = None, dpi: int = 110,
     import pymupdf
 
     report = ParseReport(file=path.name)
+    last_title = ""
     with pymupdf.open(path) as doc:
         for i, pg in enumerate(doc, start=1):
             text = pg.get_text().strip()
             ratio = _image_ratio(pg)
             drawings = len(pg.get_drawings())
+            # 위쪽에 제목 글자가 없는 쪽(제목이 그림이거나 앞 슬라이드를 이어 가는 쪽)은 같은 파일의 앞 제목을 이어받는다.
+            # 그래야 진리표·수식 쪽이 앞의 개념 쪽과 같은 제목으로 함께 검색된다.
+            own = _largest_font_title(pg)
+            title = own or last_title
+            last_title = title or last_title
             p = Page(
-                file=path.name, page=i, text=text, title=_largest_font_title(pg),
+                file=path.name, page=i, text=text, title=title, title_from_text=bool(own),
                 image_ratio=round(ratio, 3), drawings=drawings,
                 has_figure=ratio >= FIGURE_IMAGE_RATIO or drawings >= FIGURE_DRAWINGS,
                 figure_heavy=ratio >= FIGURE_HEAVY_RATIO,

@@ -53,3 +53,8 @@ def test_title_and_topic_list_dedup():
     chunks = chunk_pages([_page(1, "제목A\n\n" + body), _page(2, "제목B\n이 쪽은 나뉘지 않는 짧은 쪽입니다.")], "c1", max_chars=800)
     assert len(chunks) > 2
     assert topic_list(chunks) == ["제목A (lec.pdf p.1)", "제목B (lec.pdf p.2)"]
+
+
+def test_title_skips_symbol_lines_and_bullet_chars():
+    assert title_of("= + 1\n Memory Hierarchy\n본문") == "Memory Hierarchy"
+    assert title_of("\n12 / 3\n") == ""

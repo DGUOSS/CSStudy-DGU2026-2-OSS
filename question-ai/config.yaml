@@ -8,8 +8,13 @@ models:
   # 2026-11-18 Gemini → Claude haiku. demo 측정: 속도 비슷(호출당 5.9s → 6.8s), 근거 밖 내용을 더 엄격히 잡음(수정 증가), 유료
   reviewer:  "anthropic/claude-haiku-5-5"
   # 최종 품질 평가자 (M5). 생성에 쓰는 모델과 겹치지 않아야 함 (명세 §7, §10)
-  # TODO(M5): reviewer가 haiku라 judge와 같은 모델 → M5 실험 전에 judge를 다른 모델로 바꿀 것
+  # judge는 API로 부르지 않음 (2026-11-21 결정): scripts/evaluate.py export로 가린 채점 자료를 'for judge/'에 만들고
+  # 사람이 채팅에 붙여 넣어 채점 → evaluate.py score. 아래 값은 쓰이지 않음
   judge:     "anthropic/claude-haiku-5-5"
+  # 제목이 도형·그림인 교안의 제목 읽기 (build_index 때만, 결과는 index/titles.json에 저장). 2026-11-20 Gemini로 결정
+  title_reader: "gemini/gemini-3-flash-preview"
+  # 그림 위주·글자 부족 쪽의 내용 읽기 (build_index 때만, 결과는 index/page_texts.json에 저장, 문제사항 R-03)
+  page_reader: "gemini/gemini-3-flash-preview"
 
 retrieval:
   embedding_model: "intfloat/multilingual-e5-small"   # CPU, 8GB RAM에서 동작
@@ -24,7 +29,15 @@ pipeline:
   num_questions_override: 4   # 무료 한도 절약용. null이면 프로필의 num_questions 사용
   max_revisions: 2
   max_regenerations: 1
+  max_replacements: 1         # 검증 실패 문항을 같은 유형·다른 주제로 다시 계획해 보충하는 횟수 (문항당, 0이면 안 함)
   retrieval_top_k: 4
+  # 프로필 detail_level이 "지엽적"일 때 (명세 §5): 검색 쪽 수 = retrieval_top_k × 이 배수,
+  # 앞 문항들이 근거(sources)로 이만큼 이상 쓴 쪽은 검색에서 뺀다 → 세부 내용 쪽까지 쓰게
+  detail_top_k_factor: 2
+  detail_reuse_limit: 1
+  past_variant_ratio: 0.25    # 기출과 같은 질문(숫자만 바꾼 것 포함)을 시험 문항 수의 이 비율까지 허용 (4문항 → 1개, 내림). 0이면 허용 안 함
+  past_same_ratio: 0.5        # reviewer가 센 소문항 중 기출과 같은 과제가 이 비율 이상이면 "같은 질문"
+  copy_threshold: 0.25        # 기출 문항과 글자 3개 조각 겹침이 이 이상이면 베끼기 (checks.copy_issues 설명 참고)
   min_interval_sec:           # 회사별 호출 간 최소 간격(초). 무료 티어 분당 요청 제한 대응
     gemini: 7
     openai: 0

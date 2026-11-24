@@ -27,3 +27,6 @@ data/*/past_exams/*.png
 data/*/past_exams/*.jpg
 data/*/past_exams/*.jpeg
 data/*/past_exams/*.webp
+
+# M5 채점 자료 (교안 내용·시험 문항 포함 → 저작권, 각자 생성)
+for judge/

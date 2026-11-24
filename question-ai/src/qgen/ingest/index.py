@@ -23,12 +23,23 @@ Encoder = Callable[[list[str]], np.ndarray]  # 글 목록 → (개수, 차원) �
 _MODELS: dict[str, object] = {}
 
 
+def search_text(c: Chunk) -> str:
+    """검색에 쓰는 글: 본문에 제목이 없으면 제목을 앞에 붙인다.
+
+    제목이 도형인 교안(컴퓨터구성 Chap1-2 등)은 본문에 제목 글자가 없어서, 이미지로 읽은 제목을 붙여야
+    'Half Adder' 같은 제목 검색어로 그 쪽을 찾는다.
+    """
+    if c.title and c.title.lower() not in c.text.lower():
+        return f"{c.title}\n{c.text}"
+    return c.text
+
+
 def fingerprint(chunks: list[Chunk]) -> str:
     h = hashlib.sha256()
     for c in chunks:
         h.update(c.chunk_id.encode())
         h.update(b"\0")
-        h.update(c.text.encode())
+        h.update(search_text(c).encode())
         h.update(b"\0")
     return h.hexdigest()
 
@@ -55,7 +66,7 @@ class EmbeddingIndex:
 
     @classmethod
     def build(cls, chunks: list[Chunk], encoder: Encoder, model_name: str) -> "EmbeddingIndex":
-        vecs = encoder([f"passage: {c.text}" for c in chunks])
+        vecs = encoder([f"passage: {search_text(c)}" for c in chunks])
         meta = {"model": model_name, "count": len(chunks), "dim": int(vecs.shape[1]),
                 "fingerprint": fingerprint(chunks), "chunk_ids": [c.chunk_id for c in chunks]}
         return cls(vecs, meta)
@@ -89,7 +100,7 @@ class BM25:
     """의존성 없는 키워드 검색 (문자 bigram). 임베딩 인덱스가 없을 때 쓴다."""
 
     def __init__(self, chunks: list[Chunk]):
-        self.docs = [Counter(_tokens(c.text)) for c in chunks]
+        self.docs = [Counter(_tokens(search_text(c))) for c in chunks]
         self.lens = [sum(d.values()) for d in self.docs]
         self.avg = sum(self.lens) / max(len(self.lens), 1)
         df = Counter(t for d in self.docs for t in d)
@@ -153,14 +164,16 @@ class Retriever:
     def search(self, query: str, k: int = 4) -> list[Chunk]:
         return [self.chunks[i] for i in self._ranked(query)[:k]]
 
-    def search_many(self, queries: list[str], k: int = 4) -> list[Chunk]:
+    def search_many(self, queries: list[str], k: int = 4, exclude: set[str] | None = None) -> list[Chunk]:
         """검색어마다 순위를 매긴 뒤 번갈아 하나씩 뽑아 k개를 채운다 (중복 제외).
 
         한 검색어가 자리를 독차지하지 않게: 검색어 2개면 2쪽씩, 3개면 2·1·1쪽.
+        exclude: 빼고 뽑을 chunk_id ("지엽적" 출제에서 앞 문항이 이미 쓴 쪽).
         """
         if not queries:
             return []
-        ranked = [self._ranked(q) for q in queries]
+        ex = exclude or set()
+        ranked = [[i for i in self._ranked(q) if self.chunks[i].chunk_id not in ex] for q in queries]
         pos = [0] * len(ranked)
         picked: list[int] = []
         while len(picked) < min(k, len(self.chunks)):

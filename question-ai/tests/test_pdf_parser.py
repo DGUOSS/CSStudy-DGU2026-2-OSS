@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pymupdf
 
-from qgen.ingest.pdf_parser import parse_file, parse_pdf
+from qgen.ingest.pdf_parser import clean_title_text, is_title_like, parse_file, parse_pdf
 
 TEXT = "HTTP persistent connection keeps the TCP connection open for multiple requests."
 
@@ -83,3 +83,36 @@ def test_markdown_split_keeps_old_behavior(tmp_path):
                  encoding="utf-8")
     pages = parse_file(f).pages
     assert [p.text.splitlines()[0] for p in pages] == ["## A", "## B", "세 번째 구간은 구분선 다음입니다. 길게 씁니다."]
+
+
+def test_title_only_from_top_zone_and_inherits_previous(tmp_path):
+    """가운데 큰 진리표·수식은 제목이 아니다. 위쪽에 제목이 없으면 앞 쪽 제목을 이어받는다."""
+    doc = pymupdf.open()
+    p1 = doc.new_page()  # 1: 위쪽 제목 + 가운데 더 큰 글씨
+    p1.insert_text((50, 60), "Full Adder", fontsize=24)
+    p1.insert_text((50, 420), "A B Cin S Cout", fontsize=32)
+    p2 = doc.new_page()  # 2: 제목이 그림이라 위쪽에 글자 없음, 가운데에만 큰 글씨
+    p2.insert_text((50, 420), "Truth Table", fontsize=32)
+    p3 = doc.new_page()  # 3: 위쪽 큰 글씨가 기호·숫자뿐 → 제목 아님, 작은 글씨 제목을 쓴다
+    p3.insert_text((50, 50), "1 = 0 + 1", fontsize=40)
+    p3.insert_text((50, 110), "Half Adder", fontsize=20)
+    p4 = doc.new_page()  # 4: 위쪽 글자가 기호뿐 → 앞 제목(Half Adder) 이어받기
+    p4.insert_text((50, 60), "= + - 1 0", fontsize=30)
+    doc.save(tmp_path / "t.pdf")
+    titles = [p.title for p in parse_pdf(tmp_path / "t.pdf").pages]
+    assert titles == ["Full Adder", "Full Adder", "Half Adder", "Half Adder"]
+
+
+def test_title_keeps_short_parts_inside_title(tmp_path):
+    """제목 안의 '1', 'S' 같은 짧은 조각은 지우지 않는다."""
+    doc = pymupdf.open()
+    p = doc.new_page()
+    p.insert_text((50, 60), "Chapter", fontsize=24)
+    p.insert_text((150, 60), "1", fontsize=24)
+    doc.save(tmp_path / "t.pdf")
+    assert parse_pdf(tmp_path / "t.pdf").pages[0].title == "Chapter 1"
+
+
+def test_clean_title_text_removes_bullet_font_chars():
+    assert clean_title_text("  Cache   Memory") == "Cache Memory"
+    assert not is_title_like("12 - 3 = 9") and is_title_like("버스 구조")

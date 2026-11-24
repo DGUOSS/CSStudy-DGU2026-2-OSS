@@ -5,19 +5,19 @@ import re
 from pathlib import Path
 
 from ..schemas import Chunk, SourceRef
-from .pdf_parser import LOW_TEXT_CHARS, Page
+from .pdf_parser import LOW_TEXT_CHARS, Page, clean_title_text, is_title_like
 
 MAX_CHARS = 1200  # 청크 하나의 최대 글자 수 (슬라이드는 보통 300~500자라 대부분 나뉘지 않음)
 
 
-_NOISE_LINE = re.compile(r"^(\d{1,4}|\d{4}[-./]\d{1,2}[-./]\d{1,2})$")  # 쪽 번호, 날짜
-
-
 def title_of(text: str) -> str:
-    """첫 번째 의미 있는 줄을 제목으로 본다 (마크다운 '#'은 떼고, 쪽 번호·날짜만 있는 줄은 건너뜀)."""
+    """첫 번째 의미 있는 줄을 제목으로 본다 (마크다운 '#'은 뗌).
+
+    쪽 번호·날짜·기호뿐인 줄(글자 2개 이상 이어진 단어가 없는 줄)과 글머리 기호 글꼴 문자는 건너뛴다.
+    """
     for line in text.splitlines():
-        line = line.strip().lstrip("#").strip()
-        if line and not _NOISE_LINE.match(line):
+        line = clean_title_text(line.strip().lstrip("#"))
+        if line and is_title_like(line):
             return line[:80]
     return ""
 

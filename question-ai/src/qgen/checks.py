@@ -15,6 +15,40 @@ def _latex_issues(text: str) -> list[str]:
     return issues
 
 
+MULTI_SELECT = re.compile(r"모두\s*(고르|골라|찾|선택)|있는\s*대로|전부\s*고르|all\s+that\s+apply|select\s+all", re.I)
+
+COPY_NGRAM = 3
+COPY_THRESHOLD = 0.25  # config.yaml pipeline.copy_threshold로 바꿀 수 있음
+
+
+def _grams(text: str, n: int = COPY_NGRAM) -> set[str]:
+    t = re.sub(r"[^0-9a-z가-힣]", "", text.lower())  # 띄어쓰기·기호·수식 기호 무시
+    return {t[i:i + n] for i in range(len(t) - n + 1)}
+
+
+def overlap(a: str, b: str, n: int = COPY_NGRAM) -> float:
+    """글자 n개 조각 겹침 비율 (짧은 글 기준). 문장을 베꼈는지 보는 용도 — 같은 주제인지는 보지 않는다."""
+    ga, gb = _grams(a, n), _grams(b, n)
+    return len(ga & gb) / max(1, min(len(ga), len(gb)))
+
+
+def copy_issues(q: Question, past: list[tuple[str, str]], threshold: float = COPY_THRESHOLD) -> list[str]:
+    """기출 문항(이름, 원문)과 문제 본문·선지의 글자 겹침이 threshold 이상이면 '베끼기'.
+
+    명세 §6은 '임베딩 유사도 > 0.9'였으나 실제 측정(2026-11-21, 컴퓨터구성 8문항 × 기출 7문항)에서
+    e5 유사도는 주제만 같아도 0.91~0.93, 기출끼리도 0.91이라 구분이 안 됨. 3글자 조각 겹침은
+    문장을 베낀 문항 0.32, 나머지 0.10~0.19, 기출끼리 0.14 → 0.25.
+    표현만 바꾼 같은 질문은 이 방법으로도 못 잡는다 → reviewer가 기출 예시를 보고 판단.
+    """
+    text = " ".join([q.stem, *(q.choices or [])])
+    out = []
+    for name, src in past:
+        r = overlap(text, src)
+        if r >= threshold:
+            out.append(f"기출 {name} 문장과 겹침 {r:.2f} (기준 {threshold}) — 기출 문장·구성을 쓰지 말고 다른 상황·조건으로 다시 쓸 것")
+    return out
+
+
 def run(q: Question, item: PlannedItem, chunks: list[Chunk]) -> list[str]:
     issues: list[str] = []
     if q.qtype == "객관식":
@@ -26,6 +60,11 @@ def run(q: Question, item: PlannedItem, chunks: list[Chunk]) -> list[str]:
         nums = re.findall(r"\d+", q.answer)
         if not nums or not all(1 <= int(n) <= len(ch) for n in nums):
             issues.append(f"정답 번호 '{q.answer}'가 선지 범위(1~{len(ch)})를 벗어남")
+        # 명세 §6 "모두 고르시오 등 형식 일치": 정답이 여러 개면 문제에 그렇게 적혀 있어야 한다
+        if len(set(nums)) != len(nums):
+            issues.append(f"정답 번호가 겹침: '{q.answer}'")
+        if len(set(nums)) > 1 and not MULTI_SELECT.search(q.stem):
+            issues.append(f"정답이 여러 개({q.answer})인데 문제에 '모두 고르시오' 같은 표시가 없음")
         lens = [len(c) for c in ch]
         if ch and nums and nums[0].isdigit() and 1 <= int(nums[0]) <= len(ch):
             ans_len = lens[int(nums[0]) - 1]

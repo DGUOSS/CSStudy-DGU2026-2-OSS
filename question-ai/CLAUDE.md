@@ -193,8 +193,8 @@ pipeline:
 - 쿼리 = `PlannedItem.topic` (+ 필요시 bloom_level 설명)
 - e5 모델 규칙: 문서는 `"passage: "`, 쿼리는 `"query: "` 접두어
 - `detail_level == "지엽적"`이면 top-k를 늘리고, 이미 많이 쓰인 청크는 제외해 세부 내용 위주로 뽑는다.
-  - **(미구현, M3에서 구현 예정)** M1에서는 검색 자체만 만들었다. 이 규칙은 프로필(M2)의 detail_level과
-    문항 생성 중 "이미 쓴 청크" 기록이 필요해서 M3로 미룸 (2026-11-18 결정).
+  - (2026-11-21 M3에서 구현) k = `retrieval_top_k` × `detail_top_k_factor`(2), 앞 문항이 통과하며 sources로 쓴 쪽을
+    `detail_reuse_limit`(1)번 이상이면 제외. 값은 `config.yaml` pipeline에서 바꾼다. (M1에서 미뤘던 항목, 2026-11-18 결정)
 - (M1에서 추가) 검색어는 `PlannedItem.source_titles`(강의자료 제목 목록에서 번역 없이 복사, 최대 3개)를 쓰고,
   제목별 결과를 번갈아 합친다. 교안이 영어인데 한국어 topic으로 검색하면 관련 쪽을 잘 못 찾기 때문.
 
@@ -228,6 +228,9 @@ render(exam)                                # exam.md (문제지), answers.md (�
 - LaTeX 괄호/`$` 짝 맞는지
 - sources가 실제 존재하는 파일/페이지인지
 - 기출 문항과 임베딩 유사도 > 0.9이면 "베끼기" 경고
+  - (2026-11-21 변경) 임베딩 대신 **글자 3개 조각 겹침 ≥ 0.25**(`copy_threshold`)로 검사하고, 걸리면 수정 요청.
+    측정(컴퓨터구성 8문항 × 기출 7문항): e5 유사도는 주제만 같아도 0.91~0.93, 기출끼리도 0.91이라 구분 불가.
+    글자 겹침은 문장을 베낀 문항 0.32, 나머지 0.10~0.19. 표현만 바꾼 같은 질문은 reviewer가 기출 예시를 보고 판단.
 
 ---
 
@@ -243,6 +246,10 @@ render(exam)                                # exam.md (문제지), answers.md (�
 | `multi_no_loop` | Solver/Reviewer로 판정만 하고 수정 루프 없음 |
 
 **최종 품질 판정은 조건과 무관한 고정 평가자 모델**로 한다 (`config.yaml`의 `models.judge`). 생성에 쓴 모델과 겹치지 않게.
+- (2026-11-21 변경) judge는 API 대신 **채팅 채점**: `scripts/evaluate.py export`가 `question-ai/for judge/<이름>/`에 가린 채점 자료
+  (문항을 섞고 J001… 번호, 출제 모델·조건·실행 이름·검증 이력 없음, 모델 이름이 섞이면 만들기 중단)를 만들고, 사람이 채팅에 붙여 넣어
+  받은 JSON을 `scores_partNN.json`으로 저장 → `evaluate.py score`가 대응표(`outputs/<과목>/experiments/<이름>/judge_key.json`)로 조건별 표를 만든다.
+  `for judge/`는 교안 내용이 들어 있어 git에 올리지 않는다.
 
 ### 평가 지표 (`evaluate.py`)
 - **정답 오류율**: judge가 강의자료만 보고 풀었을 때 정답과 불일치하는 비율
@@ -298,11 +305,14 @@ render(exam)                                # exam.md (문제지), answers.md (�
 
 ### M3. 계획 + 생성 (2일)
 - Planner, Generator, `render.py`
-- (M1에서 넘어옴) §5 "지엽적" 검색 규칙: `detail_level == "지엽적"`이면 top-k를 늘리고, 앞 문항에서 이미 많이 쓴 청크는 빼고 검색
+- (M1에서 넘어옴) §5 "지엽적" 검색 규칙: `detail_level == "지엽적"`이면 top-k를 늘리고, 앞 문항에서 이미 많이 쓴 청크는 빼고 검색 ✅
+- (2026-11-21 추가) planner 문항 수·유형 수 코드 검사, `--no-verify`(검증 없이 생성), 기출 문항 단위 예시(`past_items`·`past_refs`)
 - ✅ 완료 기준: 검증 없이 시험 1세트가 exam.md로 렌더링됨. 유형 비율이 프로필과 일치
 
 ### M4. 검증 루프 (3일)
 - `checks.py`, Solver, Reviewer, `pipeline.py` 루프
+- (2026-11-21 완료 확인) `scripts/generate_exam.py --course 26-CSC2011-02` 한 번으로 실행 `20261121-162212`: 검증 통과 4/4, exam.md·answers.md·report.md·logs.jsonl·trace.json, 수정 사례 다수(report.md). 같은 --run-id 재실행은 캐시로 모델 호출 0번
+  - 추가된 것: 코드 검산(`verify.py`), 베끼기 검사, 실패 문항 보충, reviewer 판단 절차, "모두 고르시오" 형식 검사, 실행 보고서 `report.md`
 - ✅ 완료 기준: `scripts/generate_exam.py --course X` 한 번으로 검증된 시험 1세트 + 답안지 + 로그 생성. 루프에서 실제로 수정된 사례가 로그에 있음
 
 ### M5. 실험 (4일)
@@ -317,6 +327,9 @@ render(exam)                                # exam.md (문제지), answers.md (�
 ## 10. 하지 말 것
 
 - 기출 문항을 그대로 또는 숫자만 바꿔 출력하기
+  - (2026-11-21 변경) **시험 문항 수의 25%까지는 허용** (`past_variant_ratio`, 4문항 → 1개, 내림). 실제 시험도 기출 일부를 바꿔 다시 내고,
+    카르노 맵처럼 모양이 정해진 단원은 같은 질문을 피하기 어려워 3번 모두 떨어졌음. 허용된 문항은 answers.md·report.md에 "기출 변형"으로 표시.
+    "같은 질문" = reviewer가 센 소문항 중 기출과 같은 과제가 절반 이상(`past_same_ratio`) 또는 글자 겹침 ≥ `copy_threshold`. 선착순, 다 쓰면 수정 요청
 - Solver에게 정답 정보를 넘기기 (프롬프트, 필드, 캐시 어느 경로로도)
 - 강의자료에 근거 없는 문항 통과시키기
 - 수정 루프 무제한 반복

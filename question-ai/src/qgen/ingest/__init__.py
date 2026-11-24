@@ -12,6 +12,8 @@ from ..schemas import Chunk
 from .chunker import chunk_pages, title_of
 from .index import BM25, EmbeddingIndex, Retriever, default_index_dir, fingerprint, st_encoder
 from .pdf_parser import SUPPORTED, Page, ParseReport, parse_file, rel_path
+from . import vision_pages
+from .vision_titles import apply_titles, load_saved
 
 __all__ = [
     "BM25", "EmbeddingIndex", "Page", "ParseReport", "Retriever", "chunk_pages", "default_index_dir",
@@ -20,11 +22,21 @@ __all__ = [
 ]
 
 
-def parse_lectures(course_dir: Path, render_dir: Path | None = None, verbose: bool = True) -> list[ParseReport]:
-    """lectures/ 안의 강의자료를 읽는다. render_dir가 있으면 그림 위주·글자 부족 쪽을 PNG로 남긴다."""
+def parse_lectures(course_dir: Path, render_dir: Path | None = None, verbose: bool = True,
+                   titles: dict[str, dict[int, str]] | None = None,
+                   page_texts: dict[str, dict[int, str]] | None = None) -> list[ParseReport]:
+    """lectures/ 안의 강의자료를 읽는다. render_dir가 있으면 그림 위주·글자 부족 쪽을 PNG로 남긴다.
+
+    titles: 파일 → {쪽: 제목}. 없으면 build_index가 저장한 index/titles.json(이미지로 읽은 제목)을 쓴다.
+    page_texts: 파일 → {쪽: 이미지에서 읽은 글}. 없으면 index/page_texts.json을 쓴다 (본문 뒤에 붙임).
+    """
     lec = course_dir / "lectures"
     if not lec.exists():
         return []
+    if titles is None:
+        titles = load_saved(default_index_dir(course_dir.name))
+    if page_texts is None:
+        page_texts = vision_pages.load_saved(default_index_dir(course_dir.name))
     reports = []
     for f in sorted(lec.iterdir()):
         if f.suffix.lower() not in SUPPORTED:
@@ -35,6 +47,10 @@ def parse_lectures(course_dir: Path, render_dir: Path | None = None, verbose: bo
         if verbose:
             for w in r.warnings:
                 print(f"[ingest] 경고: {w}")
+        if r.file in titles:
+            apply_titles(r, titles[r.file])
+        if r.file in page_texts:
+            vision_pages.apply_page_texts(r, page_texts[r.file])
         reports.append(r)
     return reports
 
