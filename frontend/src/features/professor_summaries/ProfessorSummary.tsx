@@ -17,31 +17,20 @@ export function ProfessorSummary({ empNo }: { empNo: string }) {
     onSuccess: data => qc.setQueryData(key, data),
   })
   const data = query.data
-  const evidence = (ids: number[]) => {
-    const sources = data?.sources?.filter(s => ids.includes(s.review_id)) ?? []
-    return [...new Set(sources.map(s => `${s.subject} · ${s.term}`))].join(' / ') + ` (후기 ${sources.length}개)`
-  }
   const claim = (item: Schemas['ProfessorSummaryClaim']) => <div>
     <p className="whitespace-pre-line text-sm leading-relaxed">{item.text}</p>
-    <p className="mt-1 text-xs text-muted-foreground">근거: {evidence(item.review_ids)}</p>
   </div>
   return <Card className="flex flex-col gap-3 p-5">
     <h2 className="text-lg font-semibold">강의평 기반 수업 특징</h2>
     <ErrorText error={query.error} />
     {query.isPending && <Loading />}
     {data && <>
-      <p className="text-sm">{data.start_year}~{data.end_year}학년도 · 후기 {data.stats.review_count}개 · 작성자 {data.stats.author_count}명 · {data.stats.course_count}개 강좌</p>
-      <div className="flex flex-wrap gap-3 text-sm">
-        <span>추천도 {data.stats.recommendation ?? '—'}/5</span>
-        <span>난이도 {data.stats.difficulty ?? '—'}/5</span>
-        <span>과제량 {data.stats.workload ?? '—'}/5</span>
-      </div>
-        {data.stats.course_count === 1 && <p className="text-sm text-muted-foreground">한 강좌의 후기만 있어 교수의 다른 수업을 대표하지 않을 수 있습니다.</p>}
+      <p className="text-sm">{data.start_year}~{data.end_year}학년도</p>
       {data.status === 'insufficient' && <p className="text-sm">서로 다른 작성자의 후기 3명 이상이 필요합니다. 교원번호로 연결된 강좌의 후기만 집계합니다.</p>}
       {data.status === 'unavailable' && <p className="text-sm">현재 AI 요약이 설정되지 않았습니다. 통계는 확인할 수 있습니다.</p>}
       {data.status === 'not_generated' && <>
         <p className="text-xs text-muted-foreground">생성 시 작성자 정보 필드를 제외한 후기 내용·과목·학기가 외부 AI 서비스로 전달됩니다.</p>
-        <Button className="self-start" disabled={create.isPending} onClick={() => create.mutate()}>{create.isPending ? '요약 생성 중…' : 'AI 수업 특징 요약 보기'}</Button>
+        <Button className="self-start" disabled={create.isPending} onClick={() => create.mutate()}>{create.isPending ? '요약 생성 중…' : '수업 특징 보기'}</Button>
       </>}
       {data.summary && <>
         {claim(data.summary.overview)}
