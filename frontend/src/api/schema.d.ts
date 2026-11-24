@@ -679,6 +679,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/professors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search Catalog Professors */
+        get: operations["search_catalog_professors_api_v1_catalog_professors_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/professor-offerings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Professor Offerings */
+        get: operations["professor_offerings_api_v1_catalog_professor_offerings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/professor-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Summary */
+        get: operations["get_summary_api_v1_catalog_professor_summary_get"];
+        put?: never;
+        /** Generate Summary */
+        post: operations["generate_summary_api_v1_catalog_professor_summary_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/courses/{course_id}/exams": {
         parameters: {
             query?: never;
@@ -2527,6 +2579,99 @@ export interface components {
             /** Origin */
             origin: string;
         };
+        /** ProfessorCatalogItem */
+        ProfessorCatalogItem: {
+            /** Emp No */
+            emp_no: string;
+            /** Name */
+            name: string;
+            /** Subject Count */
+            subject_count: number;
+        };
+        /** ProfessorCatalogSearch */
+        ProfessorCatalogSearch: {
+            /** Start Year */
+            start_year: string;
+            /** End Year */
+            end_year: string;
+            /** Total */
+            total: number;
+            /** Items */
+            items: components["schemas"]["ProfessorCatalogItem"][];
+        };
+        /** ProfessorOfferingHistory */
+        ProfessorOfferingHistory: {
+            /** Emp No */
+            emp_no: string;
+            /** Name */
+            name: string;
+            /** Start Year */
+            start_year: string;
+            /** End Year */
+            end_year: string;
+            /** Subjects */
+            subjects: components["schemas"]["ProfessorOfferingSubject"][];
+        };
+        /** ProfessorOfferingSubject */
+        ProfessorOfferingSubject: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /** Departments */
+            departments: string[];
+            /** Terms */
+            terms: components["schemas"]["ProfessorOfferingTerm"][];
+        };
+        /** ProfessorOfferingTerm */
+        ProfessorOfferingTerm: {
+            /** Year */
+            year: string;
+            /** Sem Cd */
+            sem_cd: string;
+            /** Label */
+            label: string;
+            /** Sections */
+            sections: string[];
+        };
+        /** ProfessorSummaryClaim */
+        ProfessorSummaryClaim: {
+            /** Text */
+            text: string;
+            /** Review Ids */
+            review_ids: number[];
+        };
+        /** ProfessorSummaryDraft */
+        ProfessorSummaryDraft: {
+            overview: components["schemas"]["ProfessorSummaryClaim"];
+            /** Highlights */
+            highlights: components["schemas"]["ProfessorSummaryClaim"][];
+            /** Differences */
+            differences: components["schemas"]["ProfessorSummaryClaim"][];
+        };
+        /** ProfessorSummaryOut */
+        ProfessorSummaryOut: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "not_generated" | "insufficient" | "unavailable";
+            /** Start Year */
+            start_year: string;
+            /** End Year */
+            end_year: string;
+            stats: components["schemas"]["SummaryStats"];
+            summary?: components["schemas"]["ProfessorSummaryDraft"] | null;
+            /**
+             * Sources
+             * @default []
+             */
+            sources?: components["schemas"]["SummarySource"][];
+            /** Generated At */
+            generated_at?: string | null;
+            /** Model */
+            model?: string | null;
+        };
         /** PublicCourseOut */
         PublicCourseOut: {
             /** Subject Id */
@@ -2990,6 +3135,32 @@ export interface components {
              * @default []
              */
             essays?: components["schemas"]["EssayIn"][];
+        };
+        /** SummarySource */
+        SummarySource: {
+            /** Review Id */
+            review_id: number;
+            /** Subject */
+            subject: string;
+            /** Term */
+            term: string;
+        };
+        /** SummaryStats */
+        SummaryStats: {
+            /** Review Count */
+            review_count: number;
+            /** Author Count */
+            author_count: number;
+            /** Course Count */
+            course_count: number;
+            /** Sampled Count */
+            sampled_count: number;
+            /** Recommendation */
+            recommendation: number | null;
+            /** Difficulty */
+            difficulty: number | null;
+            /** Workload */
+            workload: number | null;
         };
         /** SyllabusImportIn */
         SyllabusImportIn: {
@@ -4628,6 +4799,140 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RequestCreatedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_catalog_professors_api_v1_catalog_professors_get: {
+        parameters: {
+            query: {
+                q: string;
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfessorCatalogSearch"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    professor_offerings_api_v1_catalog_professor_offerings_get: {
+        parameters: {
+            query: {
+                emp_no: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfessorOfferingHistory"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_summary_api_v1_catalog_professor_summary_get: {
+        parameters: {
+            query: {
+                emp_no: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfessorSummaryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_summary_api_v1_catalog_professor_summary_post: {
+        parameters: {
+            query: {
+                emp_no: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                access_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfessorSummaryOut"];
                 };
             };
             /** @description Validation Error */

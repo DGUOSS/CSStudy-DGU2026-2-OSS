@@ -57,6 +57,7 @@ function FindContent() {
     <>
       <div>
         <h1 className="text-2xl font-bold">강좌 찾기</h1>
+        <Link to="/study/professors" className="mt-2 inline-block text-sm text-primary hover:underline">교수별 평가 보기 →</Link>
         <p className="mt-1 text-sm text-ink-2">
           엔드림스 종합강의시간표와 같은 목록이에요. 동국스터디에 아직 없는 강좌는 열어 달라고 요청할
           수 있고, 들어가는 건 수강 기록이 있는 강좌만 가능해요.
