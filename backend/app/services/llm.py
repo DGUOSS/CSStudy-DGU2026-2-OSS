@@ -182,7 +182,8 @@ class _Summary(BaseModel):
 def summarize_result(facts_json: str) -> str | None:
     out = _parse(
         "시험 결과 요약 도우미. 주어진 사실만으로 학생에게 줄 요약을 한국어 2문장으로 쓴다. "
-        "없는 사실을 만들지 않고, 약한 개념과 다시 볼 교안 쪽을 포함한다.",
+        "없는 사실을 만들지 않고, 약한 개념과 다시 볼 교안 쪽을 포함한다. "
+        "등수는 주어진 문구 그대로 쓰고 '반'이라는 말은 쓰지 않는다.",
         facts_json,
         _Summary,
     )

@@ -5611,6 +5611,58 @@
         ],
         "title": "AttemptIn"
       },
+      "AttemptMisconception": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "hypothesis": {
+            "type": "string",
+            "title": "Hypothesis"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "hypothesis",
+          "explanation",
+          "evidence",
+          "source",
+          "status"
+        ],
+        "title": "AttemptMisconception",
+        "description": "고른 오답에 미리 붙여 둔 오개념(보여 줘도 되는 것만)."
+      },
       "AttemptResult": {
         "properties": {
           "correct": {
@@ -5652,6 +5704,16 @@
             },
             "type": "array",
             "title": "Mastery"
+          },
+          "misconception": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AttemptMisconception"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -8464,6 +8526,17 @@
             "type": "boolean",
             "title": "Created By Me"
           },
+          "creator_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Creator Name"
+          },
           "takers": {
             "type": "integer",
             "title": "Takers"
@@ -8504,6 +8577,7 @@
           "time_limit_min",
           "created_at",
           "created_by_me",
+          "creator_name",
           "takers",
           "my_best",
           "total_points",

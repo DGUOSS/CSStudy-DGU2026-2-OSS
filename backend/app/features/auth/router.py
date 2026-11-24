@@ -1,6 +1,6 @@
 import jwt
 from fastapi import APIRouter, HTTPException, Response, status
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlmodel import select
 
 from app.core.config import settings
@@ -22,6 +22,12 @@ class SignupIn(BaseModel):
     email: EmailStr
     name: str = Field(min_length=1, max_length=50)
     password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def strip_name(cls, v):
+        # 공백만 넣으면 앞뒤를 지운 뒤 빈 이름이 되어 거절된다
+        return v.strip() if isinstance(v, str) else v
 
 
 class LoginIn(BaseModel):

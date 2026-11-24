@@ -5,6 +5,7 @@ import { api, unwrap } from '@/api/client'
 import { ErrorText } from '@/components/States'
 import { pct } from '@/features/mastery/queries'
 import { cn } from '@/lib/utils'
+import { MisconceptionNote } from '@/features/problems/MisconceptionNote'
 import { emptyEntries, type Entry, type Problem, type Result, statusOf } from './quizTypes'
 
 /** 풀이 화면: 문제 번호로 아무 문제나 오갈 수 있고, 건너뛰기·정답 확인을 한다. */
@@ -244,6 +245,7 @@ function Explanation({ result }: { result: Result }) {
       <div className={cn('font-bold', result.correct ? 'text-[#2e8b6a]' : 'text-[#c8453f]')}>
         {result.correct ? '정답입니다' : `오답입니다 · 정답 ${result.answer_index + 1}번`}
       </div>
+      <MisconceptionNote misconception={result.misconception} />
       <p className="leading-relaxed whitespace-pre-wrap">{result.explanation}</p>
       {result.evidence && (
         <blockquote className="border-l-2 border-navy pl-3 text-ink-2">

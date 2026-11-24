@@ -70,9 +70,21 @@ def test_message_validation(client, group_with_member):
     assert client.post(url, json={"body": "가" * 1001}).status_code == 422
 
 
-def test_initial_load_returns_latest_in_order(client, group_with_member):
+def test_initial_load_returns_latest_in_order(client, group_with_member, session):
+    from app.models import StudyMessage
+
     url = f"/api/v1/study-groups/{group_with_member}/messages"
-    for i in range(55):
-        client.post(url, json={"body": f"m{i}"})
+    uid = client.get("/api/v1/auth/me").json()["id"]
+    # 도배 제한(10초에 5개)이 있어 메시지는 DB에 바로 넣는다
+    session.add_all(
+        [StudyMessage(group_id=group_with_member, user_id=uid, body=f"m{i}") for i in range(55)]
+    )
+    session.commit()
     got = [m["body"] for m in client.get(url).json()]
     assert len(got) == 50 and got[0] == "m5" and got[-1] == "m54"
+
+
+def test_flood_limit(client, group_with_member):
+    url = f"/api/v1/study-groups/{group_with_member}/messages"
+    codes = [client.post(url, json={"body": f"도배 {i}"}).status_code for i in range(7)]
+    assert codes[:5] == [201] * 5 and codes[5] == 429

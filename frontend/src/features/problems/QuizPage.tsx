@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { pct } from '@/features/mastery/queries'
 import { Evidence } from './Evidence'
+import { MisconceptionNote } from './MisconceptionNote'
 import { cn } from '@/lib/utils'
 
 const COUNT = 5
@@ -195,6 +196,7 @@ function Explanation({ result }: { result: Result }) {
       <div className={cn('font-semibold', result.correct ? 'text-success' : 'text-destructive')}>
         {result.correct ? '정답입니다' : `오답입니다 · 정답 ${result.answer_index + 1}번`}
       </div>
+      <MisconceptionNote misconception={result.misconception} />
       <p className="whitespace-pre-wrap leading-relaxed">{result.explanation}</p>
       <Evidence evidence={result.evidence} source={result.source} />
       <div className="flex flex-col gap-1">

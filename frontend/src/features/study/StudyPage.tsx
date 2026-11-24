@@ -29,14 +29,14 @@ function StudyContent() {
 
   return (
     <>
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">학습</h1>
           <p className="mt-1 text-sm text-ink-2">
             내 강좌에서 교수님 강좌를 골라 시험 대비 퀴즈를 풀어 보세요.
           </p>
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
           <Link
             to="/study/import"
             className="inline-flex h-11 items-center gap-2 rounded-full border border-home-line bg-white px-5 text-[15px] font-bold text-navy hover:bg-navy-tint"

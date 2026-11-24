@@ -125,7 +125,7 @@ def _summarize(s: Session, take: PaperTake, paper: Paper) -> None:
     pending = take.essay_status not in ("done", "none")
     facts = {
         "점수": f"{score_of(take)}/{take.total_points}" + (" (서술형 채점 전)" if pending else ""),
-        "등수": f"{rank}/{len(ranking)}" if rank else None,
+        "등수": f"이 시험지 응시자 {len(ranking)}명 중 {rank}등" if rank else None,
         "약한 개념": [
             f"{c.name} {c.correct}/{c.total}" for c in rep.concepts if c.correct < c.total
         ][:6],

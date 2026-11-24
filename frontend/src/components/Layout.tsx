@@ -14,11 +14,11 @@ export function Layout() {
     <div className="min-h-svh">
       <header className="sticky top-0 z-10 border-b bg-card/90 backdrop-blur print:hidden">
         <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4">
-          <Link to="/" className="flex items-center gap-2 font-semibold">
+          <Link to="/" className="flex shrink-0 items-center gap-2 font-semibold whitespace-nowrap">
             <BookOpenCheck className="size-5 text-primary" />
             동국 스터디
           </Link>
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex min-w-0 items-center gap-2 text-sm whitespace-nowrap sm:gap-3">
             {user.role === 'admin' && (
               <Link to="/admin/courses" className="text-primary hover:underline">
                 관리
@@ -30,10 +30,11 @@ export function Layout() {
             <Link to="/requests" className="text-muted-foreground hover:underline">
               내 요청
             </Link>
-            <span className="text-muted-foreground">{user.name}</span>
-            <Button variant="ghost" size="sm" onClick={() => logout.mutate()}>
+            {/* 휴대폰에서는 이름을 숨겨 메뉴가 줄바꿈되지 않게 */}
+            <span className="hidden max-w-32 truncate text-muted-foreground sm:inline">{user.name}</span>
+            <Button variant="ghost" size="sm" onClick={() => logout.mutate()} aria-label="로그아웃">
               <LogOut />
-              로그아웃
+              <span className="hidden sm:inline">로그아웃</span>
             </Button>
           </div>
         </div>

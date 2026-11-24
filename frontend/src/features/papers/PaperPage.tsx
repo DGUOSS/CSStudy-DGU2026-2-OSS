@@ -129,7 +129,7 @@ export function PaperPage() {
                 {i === mine.data.submitted.length - 1
                   ? '첫 응시'
                   : `${mine.data.submitted.length - i}번째`}{' '}
-                · {new Date(t.submitted_at).toLocaleString()}
+                · {new Date(t.submitted_at).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
               </span>
               <span>
                 <b>
@@ -603,6 +603,8 @@ function ScanReview({
 }
 
 function ResultView({ takeId, onBack }: { takeId: number; onBack: () => void }) {
+  // 휴대폰에서 결과가 너무 길어 틀린 문제만 먼저 보여 주고, 맞힌 문제는 펼쳐 본다
+  const [showAll, setShowAll] = useState(false)
   const result = useTakeResult(takeId)
   if (result.isPending) return <Loading />
   if (!result.data) return <ErrorText error={result.error} />
@@ -692,8 +694,13 @@ function ResultView({ takeId, onBack }: { takeId: number; onBack: () => void }) 
         <ReportCharts report={r.report} />
       </Suspense>
       <h3 className="mt-2 font-semibold">문제별 결과</h3>
+      <ItemsToggle
+        right={r.items.filter((i) => i.correct === true).length}
+        showAll={showAll}
+        onToggle={() => setShowAll((v) => !v)}
+      />
       <div className="flex flex-col gap-3">
-        {r.items.map((i) => (
+        {r.items.filter((i) => showAll || i.correct !== true).map((i) => (
           <Card
             key={i.no}
             id={`q-${i.no}`}
@@ -739,6 +746,23 @@ function ResultView({ takeId, onBack }: { takeId: number; onBack: () => void }) 
 type ResultItem = Schemas['ResultItem']
 
 /** 제출한 지 몇 초 지났는지(채점 기다리는 동안 멈춘 게 아니라는 표시) */
+function ItemsToggle({
+  right,
+  showAll,
+  onToggle,
+}: {
+  right: number
+  showAll: boolean
+  onToggle: () => void
+}) {
+  if (!right) return null
+  return (
+    <button type="button" onClick={onToggle} className="self-start text-sm text-primary hover:underline">
+      {showAll ? '틀린 문제만 보기' : `맞힌 문제 ${right}개도 보기`}
+    </button>
+  )
+}
+
 function GradingClock({ since }: { since: string | null | undefined }) {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {

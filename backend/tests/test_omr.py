@@ -86,3 +86,30 @@ def test_sheet_svg_escapes_title():
     lay = omr.layout([(1, "mcq", 5), (2, "essay", 0)])
     svg = omr.sheet_svgs(lay, "<script>", 7, "2문항")[0]
     assert "<script>" not in svg and "&lt;script&gt;" in svg
+
+
+def test_paper_id_mark_rejects_other_paper():
+    """답안지의 시험지 번호 표시로 다른 시험지의 답안지를 거른다. 예전 답안지(표시 없음)는 통과."""
+    lay = omr.layout([(i, "mcq", 4) for i in range(10)])
+    marks = {s.no: [1] for s in lay.mcq}
+    for pid in (1, 7, 300, 4095):
+        photo = _photo(omr.render_page_image(lay, 0, marks, paper_id=pid), pid)
+        assert omr.read_sheet([photo], lay, pid)["mcq"][0]["chosen"] == 1
+        with pytest.raises(omr.SheetError, match=f"#{pid}"):
+            omr.read_sheet([photo], lay, pid + 1)
+    old = _photo(omr.render_page_image(lay, 0, marks), 3)  # 번호 표시가 생기기 전 답안지
+    assert omr.read_sheet([old], lay, 42)["mcq"][0]["status"] == "ok"
+
+
+def test_id_bits_and_svg():
+    bits = omr._id_bits(5)
+    assert len(bits) == 16 and bits[:3] == [1, 0, 1]
+    assert omr._id_bits(0) != [0] * 16  # 번호 0도 표시가 칠해진다
+    svg = omr.sheet_svgs(omr.layout([(1, "mcq", 4)]), "t", 5, "1문항")[0]
+    assert svg.count('fill="#000"/>') >= sum(bits)
+
+
+def test_empty_file_is_a_clear_error():
+    lay = omr.layout([(1, "mcq", 4)])
+    with pytest.raises(omr.SheetError, match="비어"):
+        omr.read_sheet([b""], lay)

@@ -89,3 +89,44 @@ def test_resolving_same_problem_does_not_raise_mastery(client, login, course_wit
     [chapter] = client.get(f"/api/v1/courses/{cid}/mastery").json()
     a = next(c for c in chapter["concepts"] if c["name"] == "A")
     assert a["attempts"] == 1
+
+
+def test_wrong_answer_shows_visible_misconception(
+    client, login, course_with_problems, enroll, session
+):
+    """문제 풀이에서 틀리면 고른 보기에 붙여 둔 오개념을 보여 준다(숨긴 것·근거 없는 AI 추정은 빼고)."""
+    from app.models import Misconception
+
+    login()
+    enroll(course_with_problems["course"].subject_id)
+    p_a, p_b, _ = course_with_problems["problems"]  # 정답은 1번 보기(index 1)
+    session.add_all(
+        [
+            Misconception(
+                problem_id=p_a.id,
+                wrong_choice_index=0,
+                label="주소와 값 혼동",
+                hypothesis="h",
+                explanation="e",
+                status="approved",
+            ),
+            Misconception(
+                problem_id=p_b.id,
+                wrong_choice_index=0,
+                label="숨김",
+                hypothesis="h",
+                explanation="e",
+                status="hidden",
+            ),
+        ]
+    )
+    session.commit()
+    r = client.post(f"/api/v1/problems/{p_a.id}/attempts", json={"chosen_index": 0}).json()
+    assert (
+        r["misconception"]["label"] == "주소와 값 혼동"
+        and r["misconception"]["status"] == "approved"
+    )
+    r = client.post(f"/api/v1/problems/{p_b.id}/attempts", json={"chosen_index": 0}).json()
+    assert r["misconception"] is None  # 관리자가 숨김
+    r = client.post(f"/api/v1/problems/{p_a.id}/attempts", json={"chosen_index": 1}).json()
+    assert r["correct"] and r["misconception"] is None

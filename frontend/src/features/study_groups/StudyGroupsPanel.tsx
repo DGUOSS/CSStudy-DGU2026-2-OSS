@@ -91,7 +91,8 @@ export function StudyGroupsPanel({ subjectId, design = false }: { subjectId: num
 const applicationLabels = { pending: '승인 대기', approved: '참여 중', rejected: '거절됨', cancelled: '취소됨' }
 function Participation({ group, subjectId, onChanged }: { group: Study; subjectId: number; onChanged: () => void }) {
   const { user } = useAuth()
-  const [show, setShow] = useState(false)
+  // 기다리는 신청이 있으면 처음부터 펼쳐 둔다(승인 버튼을 찾지 않아도 되게)
+  const [show, setShow] = useState(group.is_mine && (group.pending_count ?? 0) > 0)
   const [cancelConfirm, setCancelConfirm] = useState(false)
   const query = useQuery({ queryKey: ['study-applications', user?.id, group.id], enabled: group.is_mine && show,
     queryFn: () => unwrap(api.GET('/api/v1/subjects/{subject_id}/study-groups/{group_id}/applications', { params: { path: { subject_id: subjectId, group_id: group.id } } })),

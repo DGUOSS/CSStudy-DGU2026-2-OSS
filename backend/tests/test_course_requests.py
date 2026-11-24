@@ -191,3 +191,27 @@ def test_parse_week():
     assert parse_week("3주차 포인터") == 3
     assert parse_week("W05 slides") == 5
     assert parse_week("중간고사 정리") is None
+
+
+def test_other_students_can_request_same_course(client, login, session):
+    """같은 강좌를 다른 학생이 요청하면 막지 않고 쌓는다(같은 학생의 두 번째 요청만 막음). 승인하면 함께 처리."""
+    form = {"subject_name": "알고리즘", "professor_name": "김교수"}
+    login("a@dgu.ac.kr", "학생A")
+    first = client.post(
+        "/api/v1/course-requests",
+        data=form,
+        files=[("files", ("w1.pdf", make_pdf(LECTURE), "application/pdf"))],
+    ).json()
+    assert client.post("/api/v1/course-requests", data=form).status_code == 409
+    client.post("/api/v1/auth/logout")
+    login("b@dgu.ac.kr", "학생B")
+    second = client.post("/api/v1/course-requests", data=form)
+    assert second.status_code == 201
+    client.post("/api/v1/auth/logout")
+    login("admin2@dgu.ac.kr", "관리자")
+    make_admin(session, "admin2@dgu.ac.kr")
+    pending = client.get("/api/v1/admin/course-requests", params={"status": "pending"}).json()
+    assert {p["subject_name"] for p in pending} == {"알고리즘"} and len(pending) == 2
+    assert client.post(f"/api/v1/admin/course-requests/{first['id']}/approve").status_code == 200
+    left = client.get("/api/v1/admin/course-requests", params={"status": "pending"}).json()
+    assert left == []  # 같은 강좌 요청이 함께 승인됨

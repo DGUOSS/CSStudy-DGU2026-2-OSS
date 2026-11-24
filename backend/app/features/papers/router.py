@@ -45,6 +45,7 @@ class PaperSummary(BaseModel):
     time_limit_min: int
     created_at: datetime
     created_by_me: bool
+    creator_name: str | None  # 학생이 만든 시험지도 함께 풀 수 있어 누가 만들었는지 보여 준다
     takers: int
     my_best: int | None
     total_points: int
@@ -303,6 +304,12 @@ def list_papers(course_id: int, session: SessionDep, user: CurrentUser) -> list[
     papers = session.exec(
         select(Paper).where(Paper.course_id == course_id).order_by(Paper.id.desc())  # type: ignore[union-attr]
     ).all()
+    names = {
+        u.id: u.name
+        for u in session.exec(
+            select(User).where(User.id.in_({p.created_by for p in papers if p.created_by}))  # type: ignore[union-attr]
+        ).all()
+    }
     out = []
     for paper in papers:
         probs = _problems(session, paper)
@@ -319,6 +326,7 @@ def list_papers(course_id: int, session: SessionDep, user: CurrentUser) -> list[
                 time_limit_min=paper.time_limit_min,
                 created_at=paper.created_at,
                 created_by_me=paper.created_by == user.id,
+                creator_name=names.get(paper.created_by),
                 takers=len({t.user_id for t in done}),
                 my_best=max((_score(t) for t in mine), default=None),
                 total_points=sum(p.points for p in probs),
@@ -478,7 +486,7 @@ async def scan_sheet(
             )
         images.append(data)
     try:
-        return ScanOut.model_validate(omr.read_sheet(images, lay))
+        return ScanOut.model_validate(omr.read_sheet(images, lay, paper.id))
     except omr.SheetError as e:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e)) from None
 

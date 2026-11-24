@@ -9,6 +9,7 @@ from app.core.security import CurrentUser
 from app.features.courses.router import get_course_or_404
 from app.features.enrollments.service import require_course_access
 from app.features.mastery.service import concept_states
+from app.features.misconceptions.service import visible_for
 from app.features.problems.generation import schedule_if_low
 from app.features.problems.service import concepts_of, pick_problems
 from app.models import Attempt, Chapter, Concept, Material, Problem
@@ -58,6 +59,17 @@ class MasteryChange(BaseModel):
     after: float
 
 
+class AttemptMisconception(BaseModel):
+    """고른 오답에 미리 붙여 둔 오개념(보여 줘도 되는 것만)."""
+
+    label: str
+    hypothesis: str
+    explanation: str
+    evidence: str | None
+    source: SourceOut | None
+    status: str  # auto = AI 추정, approved = 관리자 확인
+
+
 class AttemptResult(BaseModel):
     correct: bool
     answer_index: int
@@ -65,6 +77,7 @@ class AttemptResult(BaseModel):
     evidence: str | None
     source: SourceOut | None
     mastery: list[MasteryChange]
+    misconception: AttemptMisconception | None = None
 
 
 _concepts_of = concepts_of
@@ -181,7 +194,24 @@ def submit_attempt(
                 material_id=material.id, title=material.title, page=problem.source_page
             )
 
+    misconception = None
+    if not correct:
+        m = visible_for(session, [problem.id]).get((problem.id, body.chosen_index))
+        if m:
+            src = session.get(Material, m.source_material_id) if m.source_material_id else None
+            misconception = AttemptMisconception(
+                label=m.label,
+                hypothesis=m.hypothesis,
+                explanation=m.explanation,
+                evidence=m.evidence,
+                source=SourceOut(material_id=src.id, title=src.title, page=m.source_page)
+                if src
+                else None,
+                status=m.status,
+            )
+
     return AttemptResult(
+        misconception=misconception,
         correct=correct,
         answer_index=problem.answer_index,
         explanation=problem.explanation,

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
@@ -388,6 +388,7 @@ class MessageOut(BaseModel):
 
 
 MESSAGE_PAGE = 50
+CHAT_WINDOW_SEC, CHAT_MAX_IN_WINDOW = 10, 5
 
 
 @router.get("/study-groups/{group_id}/messages")
@@ -427,6 +428,19 @@ def send_message(
     group_id: int, body: MessageIn, session: SessionDep, user: CurrentUser
 ) -> MessageOut:
     group, is_owner = require_member(session, group_id, user)
+    # 도배 막기: 한 사람이 10초에 5개까지
+    since = _now() - timedelta(seconds=CHAT_WINDOW_SEC)
+    recent = session.exec(
+        select(func.count())
+        .select_from(StudyMessage)
+        .where(
+            StudyMessage.group_id == group_id,
+            StudyMessage.user_id == user.id,
+            StudyMessage.created_at >= since,
+        )
+    ).one()
+    if recent >= CHAT_MAX_IN_WINDOW:
+        raise HTTPException(429, "메시지를 너무 빨리 보내고 있어요. 잠시 후 다시 보내 주세요")
     m = StudyMessage(group_id=group_id, user_id=user.id, body=body.body)
     session.add(m)
     session.commit()
