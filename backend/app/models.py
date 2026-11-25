@@ -426,3 +426,18 @@ class StudyMessage(SQLModel, table=True):
     user_id: int = Field(foreign_key="users.id", index=True)
     body: str = Field(sa_column=Column(Text, nullable=False))
     created_at: datetime = Field(default_factory=_now)
+
+
+class ProfessorSummary(SQLModel, table=True):
+    """교원번호별 공유 요약과 생성 임대. 시간은 UTC로 저장한다."""
+
+    __tablename__ = "professor_summaries"
+    emp_no: str = Field(primary_key=True, max_length=20)
+    fingerprint: str = Field(default="", max_length=64)
+    status: str = Field(default="failed", max_length=20)
+    model: str = Field(default="", max_length=100)
+    summary: dict | None = Field(default=None, sa_column=Column(JSON, nullable=True))
+    generated_at: datetime | None = None
+    lease_token: str | None = Field(default=None, max_length=36)
+    lease_until: datetime | None = None
+    retry_after: datetime | None = None

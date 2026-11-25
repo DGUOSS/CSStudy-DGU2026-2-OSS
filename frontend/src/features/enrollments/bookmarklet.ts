@@ -42,7 +42,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean, C
     alert('엔드림스(ndrims.dongguk.edu) 창에서 눌러 주세요.')
     return
   }
-  const VER = 13
+  const VER = 14
   // 예전 버전 상자가 남아 있으면 치우고 새로 시작한다(새로고침 없이 새 버튼이 동작하도록)
   if (w.__dguStudy && w.__dguStudy.v !== VER) {
     w.__dguStudy.box?.remove()
@@ -206,7 +206,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean, C
   const log: string[] = [] // 진단: 칸 이름과 건수만 (값은 넣지 않음)
   const box = document.createElement('div')
   box.style.cssText =
-    'position:fixed;top:12px;right:12px;z-index:2147483647;width:300px;padding:14px;border-radius:12px;' +
+    'position:fixed;top:12px;right:12px;z-index:2147483647;width:300px;max-height:calc(100vh - 24px);overflow-y:auto;padding:14px;border-radius:12px;' +
     'background:#fff;color:#222;font:14px/1.5 sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.25);border:2px solid #c8102e'
   document.body.appendChild(box)
   const msg = (t: string) => {
@@ -233,6 +233,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean, C
           SEMS.map(([c, l]) => '<option value="' + c + '">' + l + '</option>').join('') +
           '</select></div>' +
           '<button data-c style="width:100%;margin-top:6px;padding:6px;border:1px solid #c8102e;border-radius:8px;background:#fff;color:#c8102e;cursor:pointer">관리자: 이 학기 개설 목록 전체 가져오기</button>' +
+          '<button data-b style="width:100%;margin-top:6px;padding:6px;border:1px solid #c8102e;border-radius:8px;background:#fff;color:#c8102e;cursor:pointer">관리자: ' + catalogLabel() + ' 개설 목록 다시 가져오기</button>' +
           '<button data-p style="width:100%;margin-top:6px;padding:6px;border:1px solid #c8102e;border-radius:8px;background:#fff;color:#c8102e;cursor:pointer">관리자: 이 학기 강의계획서 가져오기</button>' +
           '<button data-a style="width:100%;margin-top:6px;padding:6px;border:0;border-radius:8px;background:#c8102e;color:#fff;cursor:pointer">관리자: 최근 3년 강의계획서 한 번에 가져오기</button>' +
           '<div style="font-size:11px;color:#666;margin-top:4px">계획서는 사이트에 있는 과목만 가져와 팀플 여부를 판정합니다.</div>' +
@@ -251,11 +252,13 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean, C
       ySel.onchange = tSel.onchange = () => (pick = [ySel.value, tSel.value])
     }
     const c = box.querySelector('[data-c]') as HTMLElement | null
-    if (c) c.onclick = () => fullCatalog().catch(fail)
+    if (c) c.onclick = () => runAdmin(fullCatalog)
+    const bulk = box.querySelector('[data-b]') as HTMLElement | null
+    if (bulk) bulk.onclick = () => runCatalog()
     const pl = box.querySelector('[data-p]') as HTMLElement | null
-    if (pl) pl.onclick = () => syllabi([pick || term()]).catch(fail)
+    if (pl) pl.onclick = () => runAdmin(() => syllabi([pick || term()]))
     const all = box.querySelector('[data-a]') as HTMLElement | null
-    if (all) all.onclick = () => syllabi(recentTerms()).catch(fail)
+    if (all) all.onclick = () => runAdmin(() => syllabi(recentTerms()))
     const r = box.querySelector('[data-r]') as HTMLElement | null
     if (r) r.onclick = () => run(true)
   }
@@ -272,6 +275,10 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean, C
     }
   })
   function send(auto = false) {
+    if (busy && !auto) {
+      msg('수집 중입니다. 완료 후 보내 주세요.')
+      return
+    }
     const payload = { type: TYPE, records: Object.values(rec), catalog: Object.values(cat), syllabi: Object.values(syl) }
     if (!payload.records.length && !payload.catalog.length) {
       msg('아직 모은 기록이 없습니다. 위 화면을 먼저 열어 주세요.')
@@ -329,8 +336,10 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean, C
       method: 'POST',
       body,
       credentials: 'include',
+      signal: AbortSignal.timeout(30000),
       headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
     })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const text = await res.text()
     const name = path.split('/').slice(-2).join('/')
     let j: Json
@@ -446,6 +455,77 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean, C
       return
     }
     send(true)
+  }
+
+  function catalogLabel() {
+    const year = Number(term()[0])
+    return `${year - 2}~${year}학년도(계절학기 포함)`
+  }
+
+  // 학년도 기준 최근 3년. 1월은 직전 학년도에 속한다.
+  // 현재 연도의 아직 개설되지 않은 학기는 빈 결과로 표시한다.
+  async function recentCatalog() {
+    const { ids, pgmNana } = await session()
+    const lesnNana = await pgmNana('EdcLesn010')
+    if (!lesnNana) throw new Error('lesn')
+    const year = Number(term()[0])
+    const semesters = [
+      ['CM160.10', '1학기'], ['CM160.11', '여름학기'],
+      ['CM160.20', '2학기'], ['CM160.21', '겨울학기'],
+    ]
+    const failed: string[] = []
+    const empty: string[] = []
+    let completed = 0
+    let count = 0
+    for (let yy = year - 2; yy <= year; yy++) {
+      for (const [sem, label] of semesters) {
+        const title = `${yy} ${label}`
+        msg(`[${++count}/12] ${title} 조회 중…`)
+        try {
+          // 자동으로 cat에 넣지 않고 응답 형태·학기를 확인한 뒤 반영한다.
+          const result = await post('/ed/edc/lesn/EdcLesn010/doList.do', {
+            _runningNana: lesnNana,
+            ...ids,
+            '@d1#OPEN_ORGN_CLSF_CD': 'CM015.110',
+            '@d1#OPEN_YY': String(yy),
+            '@d1#OPEN_SEM_CD': sem,
+          }, true, true)
+          if (!Array.isArray(result.dsMain)) throw new Error('시간표 응답 없음')
+          const rows = result.dsMain as Row[]
+          if (rows.some((r) => String(r.OPEN_YY) !== String(yy) || r.OPEN_SEM_CD !== sem || !r.SBJ_NO || !r.SBJ_NM))
+            throw new Error('요청 학기와 다른 응답 또는 필수 항목 누락')
+          lesnInto(cat, rows)
+          completed++
+          if (!rows.length) empty.push(title)
+        } catch {
+          failed.push(title)
+        }
+      }
+    }
+    render()
+    // 부분 실패를 놓치지 않도록 자동 전송하지 않는다.
+    msg(`조회 완료 ${completed}/12학기, 누적 ${Object.keys(cat).length}건. ` +
+      (empty.length ? `조회 결과 0건: ${empty.join(', ')}. ` : '') +
+      (failed.length ? `실패: ${failed.join(', ')}. 다시 가져오기로 재시도할 수 있습니다. ` : '') +
+      '결과를 확인한 뒤 [동국스터디로 보내기]를 눌러 저장하세요.')
+  }
+
+  async function runCatalog() {
+    return runAdmin(recentCatalog)
+  }
+
+  async function runAdmin(action: () => Promise<void>) {
+    if (busy) return
+    busy = true
+    sess = null
+    msg('조회 준비 중…')
+    try {
+      await action()
+    } catch (e) {
+      fail(e as Error)
+    } finally {
+      busy = false
+    }
   }
 
   // 관리자: 고른 학기들에서 사이트에 있는 과목의 강의계획서. 시간표의 "강의계획서" 버튼이 여는 팝업과 같은 요청.
@@ -591,9 +671,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean, C
   let busy = false
   const run = (force = false) => {
     if (ADMIN && !force) {
-      render()
-      msg('관리자: 학기를 고르고 개설 목록이나 강의계획서를 가져옵니다.')
-      return
+      return runCatalog()
     }
     if (busy) return
     busy = true

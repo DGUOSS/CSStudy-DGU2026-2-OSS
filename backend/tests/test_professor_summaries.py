@@ -4,7 +4,7 @@ import pytest
 
 from app.core.config import settings
 from app.features.professor_summaries import router as module
-from app.models import CatalogOffering, CourseReview, Enrollment, Professor, User
+from app.models import CatalogOffering, CourseReview, Enrollment, Professor, ProfessorSummary, User
 from app.services import llm
 
 URL = "/api/v1/catalog/professor-summary?emp_no=E1"
@@ -13,9 +13,6 @@ URL = "/api/v1/catalog/professor-summary?emp_no=E1"
 @pytest.fixture
 def reviews(session, course_with_problems, monkeypatch):
     monkeypatch.setattr("app.features.enrollments.service._today", lambda: date(2026, 11, 24))
-    module._cache.clear()
-    module._attempts.clear()
-    module._active.clear()
     course = course_with_problems["course"]
     professor = session.get(Professor, course.professor_id)
     professor.emp_no = "E1"
@@ -141,7 +138,7 @@ def test_changes_during_generation_are_discarded(client, login, session, reviews
 
     monkeypatch.setattr(llm, "summarize_professor", generate)
     assert client.post(URL).status_code == 409
-    assert not module._cache
+    assert session.get(ProfessorSummary, "E1").summary is None
 
 
 def test_old_reviews_excluded(client, login, session, reviews):
@@ -151,3 +148,61 @@ def test_old_reviews_excluded(client, login, session, reviews):
     session.commit()
     assert client.get(URL).json()["stats"]["review_count"] == 2
     assert client.post(URL).json()["status"] == "insufficient"
+
+
+def test_persisted_summary_in_new_session(client, login, session, reviews, monkeypatch):
+    from sqlmodel import Session
+
+    login()
+    monkeypatch.setattr(settings, "anthropic_api_key", "fake-key")
+    monkeypatch.setattr(llm, "summarize_professor", lambda _: draft([r.id for r in reviews]))
+    assert client.post(URL).json()["status"] == "ready"
+    monkeypatch.setattr(settings, "anthropic_api_key", "")
+    with Session(session.get_bind()) as fresh:
+        key, out, facts, _ = module._snapshot(fresh, "E1")
+        assert module._cached(fresh, "E1", key, out, facts).status == "ready"
+    assert client.get(URL).json()["status"] == "ready"
+    monkeypatch.setattr(settings, "llm_model", "changed-model")
+    assert client.get(URL).json()["summary"] is None
+
+
+def test_shared_lease_expiry_and_old_worker(session, reviews, monkeypatch):
+    from datetime import timedelta
+
+    from sqlmodel import Session
+
+    key, _, _, _ = module._snapshot(session, "E1")
+    now = module._now()
+    monkeypatch.setattr(module, "_now", lambda: now)
+    first = module._acquire(session, "E1", key)
+    assert first
+    with Session(session.get_bind()) as other:
+        assert module._acquire(other, "E1", key) is None
+        _, out, facts, _ = module._snapshot(other, "E1")
+        assert module._cached(other, "E1", key, out, facts).status == "generating"
+        monkeypatch.setattr(module, "_now", lambda: now + timedelta(minutes=4))
+        second = module._acquire(other, "E1", key)
+        assert second and first != second
+        assert not module._finish(session, "E1", first, draft([r.id for r in reviews]))
+        assert module._finish(other, "E1", second, draft([r.id for r in reviews]))
+    assert session.get(ProfessorSummary, "E1", populate_existing=True).status == "ready"
+
+
+def test_review_change_invalidates_and_failure_retry(client, login, session, reviews, monkeypatch):
+    from datetime import timedelta
+
+    login()
+    monkeypatch.setattr(settings, "anthropic_api_key", "fake-key")
+    monkeypatch.setattr(llm, "summarize_professor", lambda _: draft([r.id for r in reviews]))
+    assert client.post(URL).json()["status"] == "ready"
+    reviews[0].content = "변경된 후기"
+    session.add(reviews[0])
+    session.commit()
+    assert client.get(URL).json()["status"] == "not_generated"
+    monkeypatch.setattr(llm, "summarize_professor", lambda _: None)
+    assert client.post(URL).status_code == 502
+    assert client.post(URL).status_code == 429
+    future = module._now() + timedelta(seconds=61)
+    monkeypatch.setattr(module, "_now", lambda: future)
+    monkeypatch.setattr(llm, "summarize_professor", lambda _: draft([r.id for r in reviews]))
+    assert client.post(URL).json()["status"] == "ready"

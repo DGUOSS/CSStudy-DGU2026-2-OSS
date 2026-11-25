@@ -9142,7 +9142,8 @@
               "ready",
               "not_generated",
               "insufficient",
-              "unavailable"
+              "unavailable",
+              "generating"
             ],
             "title": "Status"
           },
