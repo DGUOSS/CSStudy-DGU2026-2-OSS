@@ -416,3 +416,31 @@ def test_background_failure_counts_as_failure(session, course_with_problems, mon
     tasks2 = BackgroundTasks()
     schedule_if_low(tasks2, session, cid, 42)
     assert len(tasks2.tasks) == 0
+
+
+def test_code_check_from_question_ai_blocks_wrong_answer():
+    """question-ai의 코드 검산이 사이트 규칙 검사에도 들어간다: 적어 둔 계산 정답이 틀리면 규칙 위반."""
+    from qgen import verify
+    from qgen.schemas import Verification
+
+    from app.features.problems import generation as g
+
+    v_ok = Verification(kind="int_repr", value="-3", bits=8, repr="2s", expected="11111101")
+    v_bad = Verification(kind="int_repr", value="-3", bits=8, repr="2s", expected="11111100")
+    assert verify.run(_q_with([v_ok])).issues == []
+    assert verify.run(_q_with([v_bad])).issues
+    assert any("코드 검산" in i for i in g.qgen_verify.run(_q_with([v_bad])).issues)
+
+
+def _q_with(vs):
+    from qgen.schemas import Question
+
+    return Question(
+        item_id="1",
+        qtype="mcq",
+        stem="-3을 8비트 2의 보수로?",
+        choices=["a", "b", "c", "d"],
+        answer="1",
+        sources=[],
+        verifications=vs,
+    )

@@ -322,7 +322,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.2.4" },
     { name = "python-multipart", specifier = ">=0.0.33" },
     { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "qgen", git = "https://github.com/DGUOSS/CSStudy-DGU2026-2-OSS?subdirectory=question-ai&rev=13bffc28194c834f07e110fa2eb15636cd590b73" },
+    { name = "qgen", git = "https://github.com/DGUOSS/CSStudy-DGU2026-2-OSS?subdirectory=question-ai&rev=8c80e9cd1064bad30642ddba834e7bf79b75f1d4" },
     { name = "rapidfuzz", specifier = ">=3.14.6" },
     { name = "scikit-learn", specifier = "<1.7" },
     { name = "sqlmodel", specifier = ">=0.0.48" },
@@ -898,7 +898,7 @@ wheels = [
 [[package]]
 name = "qgen"
 version = "0.1.0"
-source = { git = "https://github.com/DGUOSS/CSStudy-DGU2026-2-OSS?subdirectory=question-ai&rev=13bffc28194c834f07e110fa2eb15636cd590b73#13bffc28194c834f07e110fa2eb15636cd590b73" }
+source = { git = "https://github.com/DGUOSS/CSStudy-DGU2026-2-OSS?subdirectory=question-ai&rev=8c80e9cd1064bad30642ddba834e7bf79b75f1d4#8c80e9cd1064bad30642ddba834e7bf79b75f1d4" }
 
 [[package]]
 name = "rapidfuzz"
