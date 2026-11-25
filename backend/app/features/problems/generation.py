@@ -19,6 +19,7 @@ from threading import Lock
 from fastapi import BackgroundTasks
 from pydantic import BaseModel, Field
 from qgen import checks
+from qgen import verify as qgen_verify
 from qgen.ingest import Retriever, format_chunks
 from qgen.ingest.chunker import chunk_pages
 from qgen.ingest.pdf_parser import Page
@@ -302,8 +303,10 @@ def all_issues(
     concept_names: list[str],
     existing: Existing | None = None,
 ) -> list[str]:
+    # 코드 검산(question-ai #42): 출제자가 적은 계산(불 대수·IEEE 754·진법 등)을 코드로 다시 계산해 정답과 대조
+    code = qgen_verify.run(q).issues
     return sorted(
-        set(checks.run(q, item, chunks) + site_issues(q, chunks, concept_names, existing))
+        set(checks.run(q, item, chunks) + code + site_issues(q, chunks, concept_names, existing))
     )
 
 

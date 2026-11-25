@@ -49,4 +49,4 @@ select = ["E", "F", "I", "B", "UP"]
 ignore = ["E501"]  # 긴 줄은 ruff format이 정리한다
 
 [tool.uv.sources]
-qgen = { git = "https://github.com/DGUOSS/CSStudy-DGU2026-2-OSS", rev = "13bffc28194c834f07e110fa2eb15636cd590b73", subdirectory = "question-ai" }
+qgen = { git = "https://github.com/DGUOSS/CSStudy-DGU2026-2-OSS", rev = "8c80e9cd1064bad30642ddba834e7bf79b75f1d4", subdirectory = "question-ai" }
