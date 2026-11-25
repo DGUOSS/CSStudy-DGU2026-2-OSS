@@ -10,11 +10,13 @@ export function ProfessorSummary({ empNo }: { empNo: string }) {
   const qc = useQueryClient()
   const key = ['professor-summary', user?.id, empNo]
   const query = useQuery({ queryKey: key, staleTime: 0,
+    refetchInterval: query => query.state.data?.status === 'generating' ? 3000 : false,
     queryFn: () => unwrap(api.GET('/api/v1/catalog/professor-summary', { params: { query: { emp_no: empNo } } })),
   })
   const create = useMutation({
     mutationFn: () => unwrap(api.POST('/api/v1/catalog/professor-summary', { params: { query: { emp_no: empNo } } })),
     onSuccess: data => qc.setQueryData(key, data),
+    onError: () => { void qc.invalidateQueries({ queryKey: key }) },
   })
   const data = query.data
   const claim = (item: Schemas['ProfessorSummaryClaim']) => <div>
@@ -27,7 +29,8 @@ export function ProfessorSummary({ empNo }: { empNo: string }) {
     {data && <>
       <p className="text-sm">{data.start_year}~{data.end_year}학년도</p>
       {data.status === 'insufficient' && <p className="text-sm">서로 다른 작성자의 후기 3명 이상이 필요합니다. 교원번호로 연결된 강좌의 후기만 집계합니다.</p>}
-      {data.status === 'unavailable' && <p className="text-sm">현재 AI 요약이 설정되지 않았습니다. 통계는 확인할 수 있습니다.</p>}
+      {data.status === 'unavailable' && <p className="text-sm">현재 AI 요약이 설정되지 않았습니다.</p>}
+      {data.status === 'generating' && <p className="text-sm">수업 특징을 생성하고 있습니다. 완료되면 자동으로 표시됩니다.</p>}
       {data.status === 'not_generated' && <>
         <p className="text-xs text-muted-foreground">생성 시 작성자 정보 필드를 제외한 후기 내용·과목·학기가 외부 AI 서비스로 전달됩니다.</p>
         <Button className="self-start" disabled={create.isPending} onClick={() => create.mutate()}>{create.isPending ? '요약 생성 중…' : '수업 특징 보기'}</Button>
@@ -37,6 +40,7 @@ export function ProfessorSummary({ empNo }: { empNo: string }) {
         {data.summary.highlights.length > 0 && <div className="flex flex-col gap-3"><h3 className="font-medium">반복되는 특징</h3>{data.summary.highlights.map((c, i) => <div key={i}>{claim(c)}</div>)}</div>}
         {data.summary.differences.length > 0 && <div className="flex flex-col gap-3"><h3 className="font-medium">과목별 차이·엇갈린 의견</h3>{data.summary.differences.map((c, i) => <div key={i}>{claim(c)}</div>)}</div>}
         <p className="text-xs text-muted-foreground">분석 후기 {data.stats.sampled_count}개 · 생성 {data.generated_at ? new Date(data.generated_at).toLocaleString('ko-KR') : ''}</p>
+        <p className="text-xs text-muted-foreground">이 내용은 강의평을 바탕으로 AI가 작성한 요약입니다.</p>
       </>}
     </>}
     <ErrorText error={create.error} />

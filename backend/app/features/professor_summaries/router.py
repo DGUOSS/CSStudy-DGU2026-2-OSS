@@ -4,30 +4,26 @@ import hashlib
 import json
 import logging
 import re
-import threading
-import time
-from collections import OrderedDict
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
+from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
+from sqlalchemy import or_, update
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from app.core.config import settings
 from app.core.db import SessionDep
 from app.core.security import CurrentUser
 from app.features.enrollments.service import current_term, term_label
-from app.models import CatalogOffering, Course, CourseReview, Professor, Subject
+from app.models import CatalogOffering, Course, CourseReview, Professor, ProfessorSummary, Subject
 from app.services import llm
 
 router = APIRouter(tags=["professor_summaries"])
 log = logging.getLogger(__name__)
-# 프로세스별 최대 128개, 24시간 캐시. DB 변경 없이 사용하며 재시작 시 사라진다.
-_cache: OrderedDict[str, tuple[float, llm.ProfessorSummaryDraft, str]] = OrderedDict()
-_attempts: OrderedDict[str, float] = OrderedDict()
-_active: set[str] = set()
-_lock = threading.Lock()
+PROMPT_VERSION = "v1"
 
 
 class SummaryStats(BaseModel):
@@ -47,7 +43,7 @@ class SummarySource(BaseModel):
 
 
 class ProfessorSummaryOut(BaseModel):
-    status: Literal["ready", "not_generated", "insufficient", "unavailable"]
+    status: Literal["ready", "not_generated", "insufficient", "unavailable", "generating"]
     start_year: str
     end_year: str
     stats: SummaryStats
@@ -117,7 +113,7 @@ def _snapshot(session, emp_no):
     fingerprint = hashlib.sha256(
         json.dumps(
             [
-                "v1",
+                PROMPT_VERSION,
                 emp_no,
                 start,
                 end,
@@ -134,22 +130,23 @@ def _snapshot(session, emp_no):
     return fingerprint, out, facts, {rev.id: rev.user_id for rev, _ in selected}
 
 
-def _cached(key, out, facts):
-    with _lock:
-        cached = _cache.get(key)
-        if cached and time.monotonic() - cached[0] < 86400:
-            _cache.move_to_end(key)
-        else:
-            _cache.pop(key, None)
-            cached = None
-    if cached:
+def _now():
+    return datetime.now(UTC)
+
+
+def _cached(session, emp_no, key, out, facts):
+    row = session.get(ProfessorSummary, emp_no, populate_existing=True)
+    if row and row.status == "generating" and row.lease_until and row.lease_until > _now():
+        out.status = "generating"
+    elif row and row.fingerprint == key and row.status == "ready" and row.summary:
+        draft = llm.ProfessorSummaryDraft.model_validate(row.summary)
         out.status = "ready"
-        out.summary = cached[1]
-        out.generated_at = cached[2]
-        out.model = settings.llm_model
+        out.summary = draft
+        out.generated_at = row.generated_at.replace(tzinfo=UTC).isoformat()
+        out.model = row.model
         ids = {
             i
-            for claim in [cached[1].overview, *cached[1].highlights, *cached[1].differences]
+            for claim in [draft.overview, *draft.highlights, *draft.differences]
             for i in claim.review_ids
         }
         out.sources = [
@@ -160,6 +157,67 @@ def _cached(key, out, facts):
     return out
 
 
+def _acquire(session, emp_no, key):
+    if session.get(ProfessorSummary, emp_no) is None:
+        session.add(ProfessorSummary(emp_no=emp_no))
+        try:
+            session.commit()
+        except IntegrityError:
+            session.rollback()  # 다른 서버가 먼저 같은 교수 행을 만들었을 수 있다.
+    now = _now()
+    token = str(uuid4())
+    result = session.execute(
+        update(ProfessorSummary)
+        .where(
+            ProfessorSummary.emp_no == emp_no,
+            or_(ProfessorSummary.status != "generating", ProfessorSummary.lease_until <= now),
+            or_(ProfessorSummary.status != "ready", ProfessorSummary.fingerprint != key),
+            or_(
+                ProfessorSummary.retry_after.is_(None),
+                ProfessorSummary.retry_after <= now,
+                ProfessorSummary.fingerprint != key,
+            ),
+        )
+        .values(
+            status="generating",
+            fingerprint=key,
+            model=settings.llm_model,
+            summary=None,
+            generated_at=None,
+            lease_token=token,
+            lease_until=now + timedelta(minutes=3),
+            retry_after=None,
+        )
+        .execution_options(synchronize_session=False)
+    )
+    session.commit()
+    return token if result.rowcount == 1 else None
+
+
+def _finish(session, emp_no, token, draft=None):
+    # 임대가 만료되어 새 작업이 시작됐다면 이전 작업은 결과를 덮어쓸 수 없다.
+    result = session.execute(
+        update(ProfessorSummary)
+        .where(
+            ProfessorSummary.emp_no == emp_no,
+            ProfessorSummary.lease_token == token,
+            ProfessorSummary.status == "generating",
+            ProfessorSummary.lease_until > _now(),
+        )
+        .values(
+            status="ready" if draft else "failed",
+            summary=draft.model_dump(mode="json") if draft else None,
+            generated_at=_now() if draft else None,
+            lease_token=None,
+            lease_until=None,
+            retry_after=None if draft else _now() + timedelta(seconds=60),
+        )
+        .execution_options(synchronize_session=False)
+    )
+    session.commit()
+    return result.rowcount == 1
+
+
 @router.get("/catalog/professor-summary")
 def get_summary(
     session: SessionDep, _: CurrentUser, emp_no: Annotated[str, Query(min_length=1, max_length=20)]
@@ -167,8 +225,8 @@ def get_summary(
     key, out, facts, _authors = _snapshot(session, emp_no)
     if out.status == "insufficient":
         return out
-    out = _cached(key, out, facts)
-    if out.status != "ready" and not settings.anthropic_api_key:
+    out = _cached(session, emp_no, key, out, facts)
+    if out.status == "not_generated" and not settings.anthropic_api_key:
         out.status = "unavailable"
     return out
 
@@ -180,22 +238,19 @@ def generate_summary(
     key, out, facts, authors = _snapshot(session, emp_no)
     if out.status == "insufficient":
         return out
-    out = _cached(key, out, facts)
+    out = _cached(session, emp_no, key, out, facts)
     if out.status == "ready":
         return out
     if not settings.anthropic_api_key:
         raise HTTPException(503, "AI 요약이 설정되지 않았습니다")
-    with _lock:
-        now = time.monotonic()
-        if key in _active or len(_active) >= 2 or now - _attempts.get(key, -60) < 60:
-            raise HTTPException(
-                429, "요약 생성 중이거나 잠시 대기 중입니다. 1분 후 다시 확인해 주세요"
-            )
-        _active.add(key)
-        _attempts[key] = now
-        _attempts.move_to_end(key)
-        while len(_attempts) > 256:
-            _attempts.popitem(last=False)
+    token = _acquire(session, emp_no, key)
+    if token is None:
+        out = _cached(session, emp_no, key, out, facts)
+        if out.status == "ready":
+            return out
+        raise HTTPException(
+            429, "요약 생성 중이거나 잠시 대기 중입니다. 잠시 후 다시 확인해 주세요"
+        )
     try:
         session.commit()  # 외부 응답을 기다리는 동안 DB 연결을 반환한다.
         draft = llm.summarize_professor(json.dumps({"reviews": facts}, ensure_ascii=False))
@@ -218,11 +273,9 @@ def generate_summary(
         current, _, _, _ = _snapshot(session, emp_no)
         if current != key:
             raise HTTPException(409, "후기가 변경되었습니다. 다시 확인해 주세요")
-        with _lock:
-            _cache[key] = (time.monotonic(), draft, datetime.now(UTC).isoformat())
-            while len(_cache) > 128:
-                _cache.popitem(last=False)
-        return _cached(key, out, facts)
+        if not _finish(session, emp_no, token, draft):
+            raise HTTPException(409, "생성 시간이 만료되었습니다. 다시 확인해 주세요")
+        return _cached(session, emp_no, key, out, facts)
     except llm.LLMNotConfigured:
         raise HTTPException(503, "AI 요약이 설정되지 않았습니다") from None
     except HTTPException:
@@ -231,5 +284,5 @@ def generate_summary(
         log.exception("교수 요약 생성 실패")
         raise HTTPException(502, "요약 생성 중 오류가 발생했습니다") from None
     finally:
-        with _lock:
-            _active.discard(key)
+        session.rollback()
+        _finish(session, emp_no, token)

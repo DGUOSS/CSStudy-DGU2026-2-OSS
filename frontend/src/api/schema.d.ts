@@ -2655,7 +2655,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "ready" | "not_generated" | "insufficient" | "unavailable";
+            status: "ready" | "not_generated" | "insufficient" | "unavailable" | "generating";
             /** Start Year */
             start_year: string;
             /** End Year */
