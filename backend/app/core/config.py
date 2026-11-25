@@ -25,7 +25,9 @@ class Settings(BaseSettings):
     max_upload_mb: int = 30
     # Claude API (오개념 만들기, 서술형 채점, 결과 요약). 없으면 그 기능만 꺼진다
     anthropic_api_key: str = ""
-    llm_model: str = "claude-opus-5-5"
+    # 비용 원칙: 기본은 Haiku. 서술형 채점만 Sonnet(11/20 비교: 틀린 내용이 섞인 답을 Haiku는 1점 후하게 줌)
+    llm_model: str = "claude-haiku-5-5"
+    grade_model: str = "claude-sonnet-5-5"
     qgen_model: str = "claude-haiku-5-5"
     # 동국대 계정(Google 워크스페이스) 로그인. 클라이언트 ID가 없으면 버튼이 안 보인다
     google_client_id: str = ""
