@@ -1,20 +1,27 @@
-import { BookOpen, GraduationCap, House, LayoutGrid, LogOut, School, User } from 'lucide-react'
+import { BookOpen, GraduationCap, House, LayoutGrid, LogOut, School, User, Users } from 'lucide-react'
 import { Link, useLocation } from 'react-router'
 import { useAuth } from '@/features/auth/useAuth'
 import { cn } from '@/lib/utils'
 
+// 스터디 화면 주소: /study/groups(모음), /study/groups/:id(채팅), /study/subjects/:id/groups(과목별)
+const isStudyPath = (p: string) => p.startsWith('/study/groups') || /^\/study\/subjects\/[^/]+\/groups/.test(p)
+
 const NAV = [
-  { label: '홈', icon: LayoutGrid, to: '/home' },
-  { label: '학습', icon: BookOpen, to: '/study' },
-  { label: '생활', icon: House, to: null },
-  { label: '학교', icon: School, to: null },
+  { label: '홈', icon: LayoutGrid, to: '/home', active: (p: string) => p === '/home' },
+  // 학습은 /study 아래 전부, 단 스터디 화면은 '스터디' 메뉴가 켜진다
+  { label: '학습', icon: BookOpen, to: '/study', active: (p: string) => (p === '/study' || p.startsWith('/study/')) && !isStudyPath(p) },
+  { label: '스터디', icon: Users, to: '/study/groups', active: isStudyPath },
+  { label: '생활', icon: House, to: null, active: () => false },
+  { label: '학교', icon: School, to: null, active: () => false },
 ] as const
 
 export function HomeSidebar() {
   const { user, logout } = useAuth()
   const { pathname } = useLocation()
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r border-home-line bg-white px-5 pt-7 pb-6 md:flex">
+    // 화면 높이에 고정(sticky + h-svh): 본문이 길어져도 사이드바가 따라 늘어나지 않아 아래 프로필이 항상 보인다.
+    // 메뉴가 화면보다 길어지면 사이드바 안에서만 스크롤
+    <aside className="sticky top-0 hidden h-svh w-60 shrink-0 flex-col self-start overflow-y-auto border-r border-home-line bg-white px-5 pt-7 pb-6 md:flex">
       <Link to="/home" className="flex items-center gap-3 px-2">
         <span className="flex size-10 items-center justify-center rounded-full bg-navy text-white">
           <GraduationCap size={22} />
@@ -23,7 +30,7 @@ export function HomeSidebar() {
       </Link>
 
       <nav className="mt-8 flex flex-col gap-1.5">
-        {NAV.map(({ label, icon: Icon, to }) => {
+        {NAV.map(({ label, icon: Icon, to, active: isActive }) => {
           const cls = 'flex h-12 items-center gap-3 rounded-xl px-4 text-base'
           if (!to)
             return (
@@ -36,7 +43,7 @@ export function HomeSidebar() {
                 {label}
               </span>
             )
-          const active = pathname === to || pathname.startsWith(`${to}/`)
+          const active = isActive(pathname)
           return (
             <Link
               key={label}

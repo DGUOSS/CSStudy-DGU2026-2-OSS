@@ -72,7 +72,7 @@ export function MisconceptionAdmin({ courseId }: { courseId: number }) {
       )}
       {s?.error && <p className="text-destructive">{s.error}</p>}
       {!s?.running && s && s.failed > 0 && (
-        <p className="text-amber-700">
+        <p className="text-[#8a6212]">
           지난번 {s.failed}문제는 만들지 못했습니다. 다시 누르면 남은 것만 만듭니다.
         </p>
       )}

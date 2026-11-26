@@ -112,7 +112,7 @@ export function HomePage() {
                 ) : (
                   w.professor_name ? (
                     <RequestWithFiles
-                      label={`열어 달라고 요청${w.request_count > 0 ? ` (${w.request_count}명 대기)` : ''}`}
+                      label={`개설 요청${w.request_count > 0 ? ` (${w.request_count}명 대기)` : ''}`}
                       create={async (note) =>
                         (
                           await unwrap(

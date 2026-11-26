@@ -13,9 +13,9 @@ const SUMMARY: Record<string, string> = {
 }
 const TERM_TEXT: Record<string, string> = { yes: '있음', no: '없음', likely_no: '언급 없음', unknown: '모름' }
 const TONE: Record<string, string> = {
-  yes: 'border-orange-300 bg-orange-50 text-orange-800 dark:border-orange-800 dark:bg-orange-950 dark:text-orange-200',
-  no: 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
-  mixed: 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200',
+  yes: 'border-gold bg-gold-soft text-[#6b4a0c]',
+  no: 'border-tone-blue bg-navy-tint text-navy',
+  mixed: 'border-home-line bg-home-bg text-ink-2',
   likely_no: 'text-muted-foreground',
   unknown: 'text-muted-foreground',
 }

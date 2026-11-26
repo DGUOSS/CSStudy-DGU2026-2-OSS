@@ -2,9 +2,21 @@ import { BookOpenCheck, LogOut } from 'lucide-react'
 import { Link, Navigate, Outlet, useLocation } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/features/auth/useAuth'
+import { AppShell } from '@/features/home/AppShell'
+import { DESIGN_ON } from '@/lib/design'
 
-/** 로그인해야 볼 수 있는 화면의 공통 틀 */
+/** 로그인해야 볼 수 있는 화면의 공통 틀. 새 디자인이 켜져 있으면 새 틀(사이드바)로 그린다 */
 export function Layout() {
+  if (DESIGN_ON)
+    return (
+      <AppShell>
+        <Outlet />
+      </AppShell>
+    )
+  return <OldLayout />
+}
+
+function OldLayout() {
   const { user, loading, logout } = useAuth()
   const location = useLocation()
   if (loading) return <p className="p-8 text-center text-muted-foreground">불러오는 중…</p>

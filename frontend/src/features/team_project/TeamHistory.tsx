@@ -1,7 +1,6 @@
 import { type FormEvent, useState } from 'react'
 import { ErrorText } from '@/components/States'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/features/auth/useAuth'
 import { TeamBadge } from './TeamBadge'
@@ -21,34 +20,34 @@ export function TeamHistory({ courseId }: { courseId: number }) {
   const q = useTeamProject(courseId)
   const { user } = useAuth()
   return (
-    <Card className="flex flex-col gap-3 p-5">
-      <h2 className="font-semibold">팀 프로젝트</h2>
+    <section className="flex flex-col gap-3 rounded-2xl border border-home-line bg-white p-5">
+      <h2 className="text-lg font-bold">팀 프로젝트</h2>
       <ErrorText error={q.error} />
       {q.data && q.data.terms.length === 0 && (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-ink-2">
           아직 정보가 없습니다. 강의계획서를 가져오거나 수강생이 응답하면 표시됩니다.
         </p>
       )}
       <ul className="flex flex-col gap-3 sm:gap-2">
         {q.data?.terms.map((t) => (
           <li key={`${t.year}-${t.sem_cd}`} className="flex flex-col gap-1 text-sm sm:flex-row sm:items-start sm:gap-3">
-            <span className="w-28 shrink-0 font-medium">{t.term}</span>
+            <span className="w-28 shrink-0 font-bold">{t.term}</span>
             {t.label === 'unknown' ? (
-              <span className="shrink-0 text-muted-foreground">아직 모름</span>
+              <span className="shrink-0 text-ink-2">아직 모름</span>
             ) : (
               <TeamBadge label={t} className="self-start" />
             )}
-            <span className="min-w-0 break-words text-muted-foreground">{teamSourceText(t, false)}</span>
+            <span className="min-w-0 break-words text-ink-2">{teamSourceText(t, false)}</span>
           </li>
         ))}
       </ul>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs text-ink-2">
         강의계획서를 기본으로 쓰고, 그 학기 수강생 응답이 2명 이상 모여 과반이면 실제 응답을 따릅니다. 운영진이
         확인한 학기는 운영진 판단을 따릅니다.
       </p>
       <MyTeamAnswers courseId={courseId} />
       {user?.role === 'admin' && <OverrideForm courseId={courseId} />}
-    </Card>
+    </section>
   )
 }
 
@@ -65,10 +64,10 @@ function OverrideForm({ courseId }: { courseId: number }) {
       { onSuccess: () => setNote('') },
     )
   }
-  const selectClass = 'rounded-md border bg-background px-3 py-2 text-sm'
+  const selectClass = 'h-9 rounded-xl border border-home-line bg-white px-3 text-sm'
   return (
-    <form onSubmit={submit} className="flex flex-col gap-2 border-t pt-3">
-      <h3 className="text-sm font-medium">운영진 지정</h3>
+    <form onSubmit={submit} className="flex flex-col gap-2 border-t border-home-line pt-3">
+      <h3 className="text-sm font-bold">운영진 지정</h3>
       <div className="flex flex-wrap gap-2">
         <Input aria-label="연도" className="w-24" inputMode="numeric" pattern="\d{4}" value={year}
           onChange={(e) => setYear(e.target.value)} />
@@ -85,7 +84,7 @@ function OverrideForm({ courseId }: { courseId: number }) {
           onChange={(e) => setNote(e.target.value)} placeholder="근거 메모(예: 수강생 확인, 공지 변경)" />
         <Button type="submit" disabled={save.isPending || !/^\d{4}$/.test(year)}>저장</Button>
       </div>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs text-ink-2">
         다른 사이트의 글을 옮겨 적지 말고 확인한 판단만 적어 주세요.
       </p>
       <ErrorText error={save.error} />

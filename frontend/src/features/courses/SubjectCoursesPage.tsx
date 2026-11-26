@@ -62,7 +62,7 @@ export function SubjectCoursesPage() {
       <ErrorText error={courses.error} />
       <Link to="/find" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
         <Search className="size-4" />
-        찾는 강좌가 없으면 강좌 찾기에서 열어 달라고 요청하세요
+        찾는 강좌가 없으면 강좌 찾기에서 개설 요청하세요
       </Link>
       <Link
         to={`/requests/new?subject=${encodeURIComponent(subject?.name ?? '')}&code=${encodeURIComponent(subject?.code ?? '')}`}

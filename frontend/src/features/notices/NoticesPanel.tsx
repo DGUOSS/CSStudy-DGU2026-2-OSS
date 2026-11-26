@@ -42,7 +42,7 @@ export function NoticesPanel() {
     {notices.data && items.length === 0 && <p role="status" className="py-4 text-sm text-muted-foreground">검색 결과가 없습니다. 다른 키워드로 검색해 보세요.</p>}
     {notices.isPending && <p role="status" className="text-sm">공지를 불러오는 중입니다.</p>}
     {notices.isError && <div role="status" className="text-sm"><p>공지를 불러오지 못했어요. 학교 공지 전체보기에서 확인해 주세요.</p><Button variant="outline" size="sm" onClick={() => notices.refetch()}>다시 시도</Button></div>}
-    {notices.data?.stale && <p role="status" className="mb-2 text-sm text-amber-700">학교 사이트 연결이 지연되어 이전 공지를 표시합니다.</p>}
+    {notices.data?.stale && <p role="status" className="mb-2 text-sm text-[#8a6212]">학교 사이트 연결이 지연되어 이전 공지를 표시합니다.</p>}
     <ul className="divide-y">{(query || expanded ? items : items.slice(0, 5)).map(item => <li key={item.id} className="py-3">
       <button className="w-full rounded text-left focus-visible:outline-2 focus-visible:outline-primary" aria-expanded={selected === item.id} aria-controls={`notice-${item.id}`} onClick={() => setSelected(selected === item.id ? null : item.id)}>
         <div className="mb-1 flex flex-wrap gap-2 text-xs text-muted-foreground">{item.pinned && <span className="font-semibold text-primary">중요</span>}<span>{item.category}</span><span>{item.date}</span></div>
@@ -65,7 +65,7 @@ function NoticeBody({ id, url, query, page }: { id: number; url: string; query: 
   return <div className="mt-3 rounded-lg bg-muted/40 p-4">
     {detail.isPending && <p role="status" className="text-sm">본문을 불러오는 중입니다.</p>}
     {detail.isError && <p role="status" className="text-sm">본문을 불러오지 못했어요. 아래 원문 링크를 이용해 주세요.</p>}
-    {detail.data?.stale && <p className="mb-2 text-sm text-amber-700">이전에 가져온 본문입니다. 최신 내용은 원문을 확인해 주세요.</p>}
+    {detail.data?.stale && <p className="mb-2 text-sm text-[#8a6212]">이전에 가져온 본문입니다. 최신 내용은 원문을 확인해 주세요.</p>}
     {detail.data && <p className="max-h-96 overflow-y-auto whitespace-pre-wrap break-words text-sm leading-relaxed">{detail.data.text || '텍스트가 없는 공지입니다. 원문에서 확인해 주세요.'}</p>}
     <p className="mt-3 text-xs text-muted-foreground">이미지·표의 원래 형태와 첨부파일은 학교 원문에서 확인해 주세요.</p>
     <a href={url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-sm text-primary hover:underline">원문 및 첨부파일 보기 ↗</a>

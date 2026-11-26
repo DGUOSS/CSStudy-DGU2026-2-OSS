@@ -5,8 +5,8 @@ import { NoticesPanel } from '@/features/department_notices/NoticesPanel'
 import { AppShell } from './AppShell'
 import { Calendar } from './Calendar'
 import { Hero } from './Hero'
+import { MyStudyGroups } from './MyStudyGroups'
 import { useDeadlines, useHomeSummary } from './queries'
-import { Upcoming, WeekDeadlines } from './Schedule'
 import { Stats } from './Stats'
 
 /**
@@ -40,15 +40,16 @@ function HomeContent() {
       <ErrorText error={summary.error} />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="flex flex-col gap-7">
+          {/* '이번 주 시험 과제' 대신 스터디 현황(왼쪽 맨 위, 첫 화면에 보이게). 일정은 오른쪽 달력에 점으로 표시 */}
+          <MyStudyGroups />
           <Stats totals={summary.totals} />
-          <WeekDeadlines items={deadlines.data} now={today} />
         </div>
-        <div className="flex flex-col gap-6">
+        {/* 오른쪽: 공지를 달력 위에 둔다 (다가오는 일정 목록은 뺐다) */}
+        <div className="flex min-w-0 flex-col gap-6">
+          <NoticesPanel />
           <Calendar today={today} eventDates={eventDates} />
-          <Upcoming items={deadlines.data} now={today} />
         </div>
       </div>
-      <NoticesPanel />
     </>
   )
 }

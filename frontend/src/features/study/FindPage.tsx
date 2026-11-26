@@ -1,6 +1,7 @@
 import { ExternalLink, Search } from 'lucide-react'
-import { type FormEvent, type ReactNode, useState } from 'react'
+import { type FormEvent, type ReactNode, useEffect, useState } from 'react'
 import { Link } from 'react-router'
+import { cn } from '@/lib/utils'
 import { api, unwrap } from '@/api/client'
 import { Empty, ErrorText, Loading } from '@/components/States'
 import {
@@ -17,7 +18,7 @@ const PAGE = 50
 const fieldCls =
   'h-11 w-full rounded-xl border border-home-line bg-white px-3 text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy/40 disabled:bg-home-bg disabled:text-ink-2/60'
 
-/** 강좌 찾기(/study/find): 학기·대학·학과·이수구분·과목·교수로 개설 목록을 찾고, 아직 없는 강좌는 열어 달라고 요청한다. */
+/** 강좌 찾기(/study/find): 학기·대학·학과·이수구분·과목·교수로 개설 목록을 찾고, 아직 없는 강좌는 개설 요청한다. */
 export function FindPage() {
   return (
     <AppShell>
@@ -52,16 +53,20 @@ function FindContent() {
   }
   // 이전/다음은 보고 있는 검색 조건 그대로 쪽만 넘긴다
   const page = (next: number) => query && setQuery({ ...query, offset: next })
+  // 수강한 강좌만: 서버에 이 조건이 없어서 받아 온 쪽(최대 50개) 안에서 거른다
+  const [onlyMine, setOnlyMine] = useState(false)
+  const shownItems = (result.data?.items ?? []).filter((g) => !onlyMine || g.mine)
 
   return (
     <>
-      <div>
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <h1 className="text-2xl font-bold">강좌 찾기</h1>
-        <Link to="/study/professors" className="mt-2 inline-block text-sm text-primary hover:underline">교수별 평가 보기 →</Link>
-        <p className="mt-1 text-sm text-ink-2">
-          엔드림스 종합강의시간표와 같은 목록이에요. 동국스터디에 아직 없는 강좌는 열어 달라고 요청할
-          수 있고, 들어가는 건 수강 기록이 있는 강좌만 가능해요.
-        </p>
+        <Link
+          to="/study/professors"
+          className="inline-flex h-11 shrink-0 items-center rounded-full border border-home-line bg-white px-5 text-[15px] font-bold text-navy hover:bg-navy-tint"
+        >
+          교수별 평가 보기 →
+        </Link>
       </div>
 
       {terms.isPending ? (
@@ -129,7 +134,7 @@ function FindContent() {
           <Field label="교수명">
             <input className={fieldCls} value={prof} onChange={(e) => setProf(e.target.value)} />
           </Field>
-          <div className="sm:col-span-3">
+          <div className="flex justify-end sm:col-span-3">
             <button
               type="submit"
               className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-full bg-navy px-6 text-[15px] font-bold text-white hover:bg-navy-deep"
@@ -144,14 +149,27 @@ function FindContent() {
       <ErrorText error={result.error} />
       {result.data && (
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-ink-2">
-            강좌 {result.data.total}개 (같은 교수님 분반은 한 줄로 묶었어요)
-          </p>
-          {result.data.items.length === 0 ? (
-            <Empty>조건에 맞는 강좌가 없어요.</Empty>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-ink-2">
+              {onlyMine
+                ? `내 강좌 ${shownItems.length}개${result.data.total > PAGE ? ' (이 쪽에서)' : ''}`
+                : `강좌 ${result.data.total}개 (같은 교수님 분반은 한 줄로 묶었어요)`}
+            </p>
+            <label className="flex cursor-pointer items-center gap-2 text-sm font-bold text-ink-2 select-none">
+              <input
+                type="checkbox"
+                className="size-4 cursor-pointer accent-navy"
+                checked={onlyMine}
+                onChange={(e) => setOnlyMine(e.target.checked)}
+              />
+              수강한 강좌만
+            </label>
+          </div>
+          {shownItems.length === 0 ? (
+            <Empty>{onlyMine ? '이 조건에서 내가 수강한 강좌가 없어요.' : '조건에 맞는 강좌가 없어요.'}</Empty>
           ) : (
             <ul className="flex flex-col gap-3">
-              {result.data.items.map((g) => (
+              {shownItems.map((g) => (
                 <Offering key={`${g.sbj_no}-${g.emp_no ?? g.emp_nm}`} g={g} />
               ))}
             </ul>
@@ -214,10 +232,17 @@ function PageBtn({
 function Offering({ g }: { g: OfferingGroup }) {
   const rates = Object.entries(g.eval_rates).filter(([, v]) => v != null)
   return (
-    <li className="flex flex-wrap items-start gap-4 rounded-2xl border border-home-line bg-white p-5">
+    // 수강 중인 강좌는 카드 바탕을 옅은 남색으로 (배지 대신)
+    <li
+      className={cn(
+        'flex flex-wrap items-start gap-4 rounded-2xl border p-5',
+        g.mine ? 'border-navy/35 bg-navy-tint' : 'border-home-line bg-white',
+      )}
+    >
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-lg font-bold">{g.sbj_nm}</h3>
+          {g.mine && <span className="sr-only">(수강 중)</span>}
           {g.cpdiv_nm && (
             <span className="rounded-full bg-tone-blue px-2.5 py-0.5 text-xs font-bold text-navy">
               {g.cpdiv_nm}
@@ -257,6 +282,31 @@ function Offering({ g }: { g: OfferingGroup }) {
 
 const pill = 'inline-flex h-10 items-center rounded-full px-5 text-sm font-bold'
 
+/** 수강 기록이 없는 열린 강좌: 회색 '입장'. 누르면 들어가지 않고 이유를 잠깐 보여 준다 */
+function LockedEnter() {
+  const [shown, setShown] = useState(false)
+  useEffect(() => {
+    if (!shown) return
+    const t = setTimeout(() => setShown(false), 2500)
+    return () => clearTimeout(t)
+  }, [shown])
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setShown(true)}
+        className={`${pill} cursor-pointer bg-tone-gray text-ink-2 hover:bg-[#cfd5e1]`}
+      >
+        입장
+      </button>
+      {/* 줄 높이를 바꾸지 않게 버튼 아래에 띄운다 */}
+      <p role="status" className="absolute top-full right-0 mt-1 text-xs font-bold whitespace-nowrap text-[#8a6212]">
+        {shown && '수강 기록이 없어요'}
+      </p>
+    </div>
+  )
+}
+
 function Action({ g }: { g: OfferingGroup }) {
   if (g.status === 'open') {
     return g.mine && g.course_id ? (
@@ -267,12 +317,7 @@ function Action({ g }: { g: OfferingGroup }) {
         입장
       </Link>
     ) : (
-      <span
-        className={`${pill} bg-tone-gray text-ink-2`}
-        title="수강 기록이 있어야 들어갈 수 있어요"
-      >
-        열림 · 잠김
-      </span>
+      <LockedEnter />
     )
   }
   if (g.requested_by_me)
@@ -281,7 +326,7 @@ function Action({ g }: { g: OfferingGroup }) {
     )
   return (
     <RequestWithFiles
-      label={`열어 달라고 요청${g.request_count > 0 ? ` (${g.request_count}명)` : ''}`}
+      label={`개설 요청${g.request_count > 0 ? ` (${g.request_count}명)` : ''}`}
       create={async (note) =>
         (
           await unwrap(

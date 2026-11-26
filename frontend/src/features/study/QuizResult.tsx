@@ -3,6 +3,8 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { useMastery, pct } from '@/features/mastery/queries'
 import { cn } from '@/lib/utils'
+import { choiceTextClass } from './choiceText'
+import { StudyNudge } from './StudyNudge'
 import { type Entry, type Problem, statusOf } from './quizTypes'
 import { useChapters } from './queries'
 
@@ -121,6 +123,7 @@ export function QuizResult({
               </li>
             ))}
           </ul>
+          <StudyNudge courseId={courseId} weakNames={weakList.map((w) => w.name)} />
         </section>
       )}
 
@@ -157,13 +160,13 @@ export function QuizResult({
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="rounded-xl border border-[#c8453f]/40 bg-[#fbeceb] p-4">
                       <p className="text-xs font-bold text-[#c8453f]">내 답</p>
-                      <p className="mt-1 font-mono text-sm whitespace-pre-wrap">
+                      <p className={cn('mt-1 whitespace-pre-wrap', choiceTextClass(p.choices[e.chosen ?? 0] ?? ''))}>
                         {(e.chosen ?? 0) + 1}번 {p.choices[e.chosen ?? 0]}
                       </p>
                     </div>
                     <div className="rounded-xl border border-[#2e8b6a]/40 bg-[#e8f4ef] p-4">
                       <p className="text-xs font-bold text-[#2e8b6a]">정답</p>
-                      <p className="mt-1 font-mono text-sm whitespace-pre-wrap">
+                      <p className={cn('mt-1 whitespace-pre-wrap', choiceTextClass(p.choices[e.result.answer_index] ?? ''))}>
                         {e.result.answer_index + 1}번 {p.choices[e.result.answer_index]}
                       </p>
                     </div>

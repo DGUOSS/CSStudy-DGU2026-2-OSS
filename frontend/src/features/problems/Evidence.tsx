@@ -24,7 +24,7 @@ export function Evidence({
   if (!evidence) return null
   return (
     <>
-      <blockquote className="border-l-2 border-primary pl-3 text-muted-foreground">
+      <blockquote className="border-l-2 border-navy pl-3 text-ink-2">
         {evidence}
         {source && (
           <div className="mt-1 text-xs">
@@ -35,7 +35,7 @@ export function Evidence({
                 {source.page}쪽{' '}
                 <button
                   type="button"
-                  className="cursor-pointer text-primary underline"
+                  className="cursor-pointer font-bold text-navy underline"
                   onClick={() => setShowPage((v) => !v)}
                 >
                   {showPage ? '접기' : '교안 보기'}

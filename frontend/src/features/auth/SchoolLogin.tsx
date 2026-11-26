@@ -61,6 +61,7 @@ export function SchoolLogin({ onCredential }: { onCredential: (credential: strin
         id.renderButton(box.current, {
           theme: 'outline',
           size: 'large',
+          shape: 'pill', // 사이트의 다른 버튼처럼 둥글게
           text: 'continue_with',
           locale: 'ko',
           width: box.current.clientWidth || 320,
@@ -76,7 +77,7 @@ export function SchoolLogin({ onCredential }: { onCredential: (credential: strin
   return (
     <div className="flex flex-col gap-2">
       <div ref={box} className="flex min-h-10 w-full justify-center" />
-      <p className="text-center text-xs text-muted-foreground">
+      <p className="text-center text-xs text-ink-2">
         동국대 계정(@{domain})만 로그인할 수 있습니다
       </p>
     </div>

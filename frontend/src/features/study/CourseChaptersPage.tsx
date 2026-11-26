@@ -1,36 +1,56 @@
 import { ChevronDown, ChevronLeft, Play } from 'lucide-react'
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { Empty, ErrorText, Loading } from '@/components/States'
+import { CourseInfoTab } from '@/features/courses/CourseInfoTab'
 import { useCourse } from '@/features/courses/queries'
-import { ExamPicker } from '@/features/exams/ExamPicker'
-import { AppShell } from '@/features/home/AppShell'
-import { pct, useMastery } from '@/features/mastery/queries'
 import { isForbidden } from '@/features/enrollments/queries'
+import { AppShell } from '@/features/home/AppShell'
+import { ExamNotesPanel, MaterialsTab } from '@/features/materials/MaterialsTab'
+import { pct, useMastery } from '@/features/mastery/queries'
+import { PapersTab } from '@/features/papers/PapersTab'
+import { ReviewsTab } from '@/features/reviews/ReviewsTab'
+import { StudyList } from '@/features/study_groups/StudySubjectView'
+import { TeamHistory } from '@/features/team_project/TeamHistory'
+import { TeamReportPrompt } from '@/features/team_project/TeamReport'
 import { cn } from '@/lib/utils'
+import { CourseAside, TodayCards } from './CourseHub'
 import { useChapters } from './queries'
 
 export const QUIZ_TOTAL = 8
 
-/** 강좌의 챕터 선택(/study/courses/:courseId). 챕터별 숙련도를 누르면 개념별 숙련도가 펼쳐진다. */
+// 강좌 홈에서 들어가는 하위 화면(?tab=…). 옛 탭 주소도 그대로 열린다
+const SUB = {
+  papers: '시험지',
+  materials: '자료',
+  info: '시험·평가',
+  reviews: '강의평',
+  groups: '스터디',
+} as const
+
+type SubKey = keyof typeof SUB
+
+/**
+ * 강좌 화면(/study/courses/:courseId). 시안 A(강좌 홈): 왼쪽 "오늘 할 것"(퀴즈·모의고사)과 단원 고르기,
+ * 오른쪽 "강좌 정보" 요약(시험·평가+팀플, 강의평, 스터디, 자료). 요약을 누르면 ?tab=… 하위 화면으로 간다.
+ * 하위 화면은 기존 탭 컴포넌트를 그대로 쓴다.
+ */
 export function CourseChaptersPage() {
   return (
     <AppShell>
-      <ChaptersContent />
+      <CourseContent />
     </AppShell>
   )
 }
 
-function ChaptersContent() {
+function CourseContent() {
   const courseId = Number(useParams().courseId)
-  const navigate = useNavigate()
   const course = useCourse(courseId)
-  const chapters = useChapters(courseId)
-  const mastery = useMastery(courseId)
-  const [selected, setSelected] = useState<number[]>([])
-  const [open, setOpen] = useState<number | null>(null)
+  const [params] = useSearchParams()
+  const raw = params.get('tab')
+  const sub = raw && raw in SUB ? (raw as SubKey) : null
 
-  if (course.isPending || chapters.isPending) return <Loading />
+  if (course.isPending) return <Loading />
   if (isForbidden(course.error))
     return (
       <Empty>
@@ -42,12 +62,35 @@ function ChaptersContent() {
     )
   if (!course.data) return <ErrorText error={course.error} />
   const c = course.data
-  const list = chapters.data ?? []
+  const title = (
+    <>
+      {c.subject_name} <span className="text-ink-2">·</span> {c.professor_name} 교수님
+    </>
+  )
 
-  const toggle = (id: number) =>
-    setSelected((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))
-  const start = () =>
-    navigate(`/study/courses/${courseId}/quiz?chapters=${selected.join(',')}`)
+  if (sub)
+    return (
+      <>
+        <div>
+          <Link to={`/study/courses/${courseId}`} className="mb-2 inline-flex items-center text-sm text-ink-2">
+            <ChevronLeft className="size-4" />
+            {title}
+          </Link>
+          <h1 className="text-2xl font-bold">{SUB[sub]}</h1>
+        </div>
+        {sub === 'papers' && <PapersTab courseId={courseId} paperBase="/study/papers" />}
+        {sub === 'materials' && <MaterialsTab courseId={courseId} />}
+        {sub === 'info' && (
+          <div className="flex flex-col gap-4">
+            <CourseInfoTab course={c} examNotesHere />
+            <ExamNotesPanel courseId={courseId} />
+            <TeamHistory courseId={courseId} />
+          </div>
+        )}
+        {sub === 'reviews' && <ReviewsTab key={courseId} courseId={courseId} />}
+        {sub === 'groups' && <StudyList key={c.subject_id} subjectId={c.subject_id} withCreate />}
+      </>
+    )
 
   return (
     <>
@@ -56,25 +99,47 @@ function ChaptersContent() {
           <ChevronLeft className="size-4" />
           학습
         </Link>
-        <h1 className="text-2xl font-bold">
-          {c.subject_name} <span className="text-ink-2">·</span> {c.professor_name} 교수님
-        </h1>
-        <p className="mt-1 text-sm text-ink-2">
-          풀고 싶은 단원을 고르세요. 숙련도를 누르면 개념별 숙련도를 볼 수 있어요.
-        </p>
+        <h1 className="text-2xl font-bold">{title}</h1>
+      </div>
+      <TeamReportPrompt courseId={courseId} />
+
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="flex min-w-0 flex-col gap-5">
+          <h2 className="text-xl font-bold">오늘 할 것</h2>
+          <TodayCards courseId={courseId} />
+          <LearnTab courseId={courseId} />
+        </div>
+        <CourseAside course={c} />
+      </div>
+    </>
+  )
+}
+
+/** 단원 고르기: 단원별 숙련도(누르면 개념별로 펼침), 여러 단원을 골라 아래 고정 바에서 퀴즈 시작. */
+function LearnTab({ courseId }: { courseId: number }) {
+  const navigate = useNavigate()
+  const chapters = useChapters(courseId)
+  const mastery = useMastery(courseId)
+  const [selected, setSelected] = useState<number[]>([])
+  const [open, setOpen] = useState<number | null>(null)
+
+  if (chapters.isPending) return <Loading />
+  const list = chapters.data ?? []
+
+  const toggle = (id: number) =>
+    setSelected((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))
+  const quiz = (ids: number[]) => navigate(`/study/courses/${courseId}/quiz?chapters=${ids.join(',')}`)
+  const pool = list.filter((ch) => selected.includes(ch.id)).reduce((s, ch) => s + ch.problem_count, 0)
+
+  return (
+    <>
+      <div id="units" className="mt-2 flex scroll-mt-6 items-baseline justify-between gap-3">
+        <h2 className="text-xl font-bold">단원 고르기</h2>
+        <span className="text-sm text-ink-2">숙련도를 누르면 개념별로 펼쳐져요</span>
       </div>
 
-      <Link to={`/study/subjects/${c.subject_id}/groups`} className="inline-flex min-h-11 items-center justify-between rounded-2xl border border-home-line bg-white px-5 py-4 font-bold text-navy hover:bg-navy-tint">이 과목 스터디 모집 <span aria-hidden="true">→</span></Link>
-
-      <details className="rounded-2xl border border-home-line bg-white p-4">
-        <summary className="cursor-pointer text-[15px] font-bold">참고할 족보 고르기</summary>
-        <div className="mt-3">
-          <ExamPicker courseId={courseId} />
-        </div>
-      </details>
-
       {list.length === 0 ? (
-        <Empty>아직 문제가 없습니다. 기존 화면의 자료 탭에서 교안을 올려 주세요.</Empty>
+        <Empty>아직 문제가 없습니다. 자료 탭에서 교안을 올려 주세요.</Empty>
       ) : (
         <ul className="flex flex-col gap-3 pb-24">
           {list.map((ch) => {
@@ -106,7 +171,9 @@ function ChaptersContent() {
                   <div className="min-w-0 flex-1">
                     <p className="font-bold">{ch.title}</p>
                     <p className="mt-0.5 text-sm text-ink-2">
-                      {empty ? '문제 없음' : `문제 ${ch.problem_count}개`}
+                      {empty && ch.essay_count === 0
+                        ? '문제 없음'
+                        : `객관식 ${ch.problem_count}개 · 서술형 ${ch.essay_count}개`}
                     </p>
                     <button
                       type="button"
@@ -171,14 +238,15 @@ function ChaptersContent() {
               '단원을 선택해 주세요'
             ) : (
               <>
-                <b className="text-ink">{selected.length}개 단원</b> 선택 · 문제 최대 {QUIZ_TOTAL}개
+                <b className="text-ink">단원 {selected.length}개</b> 선택 · 객관식 {pool}문제 중{' '}
+                {Math.min(QUIZ_TOTAL, pool)}문제 출제
               </>
             )}
           </p>
           <button
             type="button"
             disabled={selected.length === 0}
-            onClick={start}
+            onClick={() => quiz(selected)}
             className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-full bg-navy px-6 text-[15px] font-bold text-white hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Play size={16} />

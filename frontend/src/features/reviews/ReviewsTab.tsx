@@ -1,11 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Star } from 'lucide-react'
+import { PenLine, Star } from 'lucide-react'
 import { useId, useState } from 'react'
 import { api, type Schemas, unwrap } from '@/api/client'
 import { Empty, ErrorText, Loading } from '@/components/States'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/lib/utils'
 
 type Body = Omit<Schemas['ReviewCreate'], 'enrollment_id'>
 const PAGE_SIZE = 20
@@ -18,72 +16,306 @@ const TEAM_CHOICES: { value: boolean | null; label: string }[] = [
   { value: null, label: '답하지 않음' },
 ]
 
+// 새 디자인 모양 (다른 화면과 같은 카드·버튼)
+const CARD = 'rounded-2xl border border-home-line bg-white'
+const BTN = {
+  primary:
+    'inline-flex h-11 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-navy px-5 text-[15px] font-bold text-white hover:bg-navy-deep disabled:cursor-default disabled:opacity-50',
+  line: 'inline-flex h-11 cursor-pointer items-center justify-center rounded-full border border-home-line bg-white px-5 text-[15px] font-bold text-navy hover:bg-navy-tint disabled:cursor-default disabled:opacity-50',
+  quiet:
+    'inline-flex h-9 cursor-pointer items-center justify-center rounded-full px-3 text-sm font-bold text-ink-2 hover:bg-home-bg hover:text-navy disabled:cursor-default disabled:opacity-50',
+}
+const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null)
+
+function Stars({ value, size = 'size-5' }: { value: number; size?: string }) {
+  return (
+    <span className="flex gap-0.5" aria-hidden="true">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star key={n} className={cn(size, n <= Math.round(value) ? 'fill-gold text-gold' : 'text-[#d9dee8]')} />
+      ))}
+    </span>
+  )
+}
+
 export function ReviewsTab({ courseId }: { courseId: number }) {
   const qc = useQueryClient()
   const [page, setPage] = useState(0)
   const [writing, setWriting] = useState(false)
   const [deleting, setDeleting] = useState<number | null>(null)
   const key = ['courses', courseId, 'reviews']
-  const reviews = useQuery({ queryKey: [...key, page], queryFn: () => unwrap(api.GET('/api/v1/courses/{course_id}/reviews', {
-    params: { path: { course_id: courseId }, query: { offset: page * PAGE_SIZE, limit: PAGE_SIZE } },
-  })) })
-  const terms = useQuery({ queryKey: [...key, 'terms'], queryFn: () => unwrap(api.GET('/api/v1/courses/{course_id}/reviews/terms', {
-    params: { path: { course_id: courseId } },
-  })) })
+  const reviews = useQuery({
+    queryKey: [...key, page],
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/v1/courses/{course_id}/reviews', {
+          params: { path: { course_id: courseId }, query: { offset: page * PAGE_SIZE, limit: PAGE_SIZE } },
+        }),
+      ),
+  })
+  const terms = useQuery({
+    queryKey: [...key, 'terms'],
+    queryFn: () =>
+      unwrap(api.GET('/api/v1/courses/{course_id}/reviews/terms', { params: { path: { course_id: courseId } } })),
+  })
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: key })
     void qc.invalidateQueries({ queryKey: ['courses', courseId, 'team-project'] })
   }
   const remove = useMutation({
     mutationFn: (id: number) => unwrap(api.DELETE('/api/v1/reviews/{review_id}', { params: { path: { review_id: id } } })),
-    onSuccess: () => { setDeleting(null); setPage(0); refresh() },
+    onSuccess: () => {
+      setDeleting(null)
+      setPage(0)
+      refresh()
+    },
   })
-  const available = (terms.data ?? []).filter(t => t.review_id === null)
-  return <section className="flex flex-col gap-4" aria-label="강좌 후기">
-    <div className="flex items-center justify-between gap-3">
-      <div><h2 className="text-lg font-semibold">수업·시험 후기</h2><p className="text-sm text-muted-foreground">수강한 과목의 경험과 공부 팁을 익명으로 공유해 주세요.</p></div>
-      {!writing && available.length > 0 && <Button onClick={() => setWriting(true)}>후기 작성</Button>}
-    </div>
-    <ErrorText error={terms.error} />
-    {terms.data && terms.data.length === 0 && <p className="text-sm text-muted-foreground">이 강좌에 연결된 본인의 수강 기록이 있어야 작성할 수 있습니다.</p>}
-    {terms.data && terms.data.length > 0 && available.length === 0 && <p className="text-sm text-muted-foreground">이미 이 강좌의 후기를 작성했어요. 같은 과목·교수의 강좌에는 한 번만 작성할 수 있으며, 삭제 후에도 다시 작성할 수 없습니다.</p>}
-    {writing && <ReviewForm courseId={courseId} terms={available}
-      onCancel={() => setWriting(false)}
-      onSaved={() => { setWriting(false); setPage(0); refresh() }} />}
-    {reviews.isPending && <Loading />}
-    <ErrorText error={reviews.error} />
-    {reviews.data?.length === 0 && <Empty>아직 후기가 없습니다. 첫 수업 경험을 남겨 주세요.</Empty>}
-    {reviews.data?.map(r => <Card key={r.id} className="gap-3 p-5">
-      <div className="flex flex-wrap justify-between gap-2 text-sm"><span className="font-medium">{r.term} · {r.is_mine ? '내 후기' : '익명'}</span><time dateTime={r.created_at}>{r.created_at.slice(0, 10)}</time></div>
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span>전체 추천도</span>
-        <span className="flex gap-0.5" role="img" aria-label={`추천도 ${r.recommendation}점: ${RECOMMENDATION_LABELS[r.recommendation - 1]}`}>
-          {[1, 2, 3, 4, 5].map(n => <Star key={n} aria-hidden="true" className={`size-5 ${n <= r.recommendation ? 'fill-amber-400 text-amber-500' : 'text-muted-foreground/40'}`} />)}
-        </span>
-        <span>{r.recommendation}/5 · {RECOMMENDATION_LABELS[r.recommendation - 1]}</span>
+  const available = (terms.data ?? []).filter((t) => t.review_id === null)
+  const list = reviews.data ?? []
+  // 요약: 이 쪽에 받아 온 후기(최대 20개) 기준
+  const rec = avg(list.map((r) => r.recommendation))
+  const dif = avg(list.map((r) => r.difficulty))
+  const wl = avg(list.map((r) => r.workload))
+  const hint =
+    terms.data && terms.data.length === 0
+      ? '이 강좌를 수강한 기록이 있어야 후기를 쓸 수 있어요.'
+      : terms.data && terms.data.length > 0 && available.length === 0
+        ? '이 강좌 후기를 이미 썼어요. 강좌마다 한 번만 쓸 수 있어요.'
+        : null
+
+  return (
+    <section className="flex flex-col gap-4" aria-label="강좌 후기">
+      {/* 요약 + 쓰기 */}
+      <div className={cn(CARD, 'flex flex-wrap items-center gap-x-8 gap-y-4 p-5')}>
+        {rec != null ? (
+          <>
+            <div className="flex items-center gap-3">
+              <span className="text-4xl leading-none font-bold tabular-nums">{rec.toFixed(1)}</span>
+              <div>
+                <Stars value={rec} />
+                <p className="mt-1 text-[13px] text-ink-2">
+                  추천도 · 후기 {list.length}
+                  {list.length === PAGE_SIZE && '+'}개
+                </p>
+              </div>
+            </div>
+            <dl className="flex gap-6 text-sm">
+              <div>
+                <dt className="text-[13px] text-ink-2">체감 난이도</dt>
+                <dd className="mt-0.5 font-bold">{DIFFICULTY_LABELS[Math.round(dif!) - 1]}</dd>
+              </div>
+              <div>
+                <dt className="text-[13px] text-ink-2">과제량</dt>
+                <dd className="mt-0.5 font-bold">{WORKLOAD_LABELS[Math.round(wl!) - 1]}</dd>
+              </div>
+            </dl>
+          </>
+        ) : (
+          <p className="text-[15px] font-bold text-ink-2">아직 후기가 없어요</p>
+        )}
+        <div className="ml-auto flex flex-col items-end gap-1">
+          {!writing && available.length > 0 && (
+            <button type="button" className={BTN.primary} onClick={() => setWriting(true)}>
+              <PenLine size={16} aria-hidden="true" /> 후기 쓰기
+            </button>
+          )}
+          {hint && <p className="text-[13px] text-ink-2">{hint}</p>}
+        </div>
       </div>
-      <p className="text-sm text-muted-foreground">체감 난이도 {r.difficulty}/5 · {DIFFICULTY_LABELS[r.difficulty - 1]} · 과제량 {WORKLOAD_LABELS[r.workload - 1]}{r.team_project != null && ` · 팀 프로젝트 ${r.team_project ? '있었음' : '없었음'}`}</p>
-      <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{r.content}</p>
-      {r.is_mine && <div className="flex flex-wrap gap-2">
-        <Button variant="ghost" disabled={remove.isPending} onClick={() => { setDeleting(r.id); remove.reset() }}>삭제</Button>
-        {deleting === r.id && <div className="flex w-full flex-wrap items-center gap-2 rounded border p-3">
-          <span className="text-sm">이 후기를 삭제할까요? 삭제 후에는 이 강좌에 다시 작성할 수 없습니다.</span>
-          <Button variant="destructive" disabled={remove.isPending} onClick={() => remove.mutate(r.id)}>삭제 확인</Button>
-          <Button variant="ghost" disabled={remove.isPending} onClick={() => setDeleting(null)}>취소</Button>
-          <ErrorText error={remove.error} />
-        </div>}
-      </div>}
-    </Card>)}
-    <div className="flex items-center justify-center gap-3">
-      <Button variant="outline" disabled={page === 0 || reviews.isPending} onClick={() => setPage(p => p - 1)}>이전</Button>
-      <span className="text-sm">{page + 1}페이지</span>
-      <Button variant="outline" disabled={!reviews.data || reviews.data.length < PAGE_SIZE || reviews.isPending} onClick={() => setPage(p => p + 1)}>다음</Button>
-    </div>
-  </section>
+      <ErrorText error={terms.error} />
+
+      {writing && (
+        <ReviewForm
+          courseId={courseId}
+          terms={available}
+          onCancel={() => setWriting(false)}
+          onSaved={() => {
+            setWriting(false)
+            setPage(0)
+            refresh()
+          }}
+        />
+      )}
+
+      {reviews.isPending && <Loading />}
+      <ErrorText error={reviews.error} />
+      {reviews.data?.length === 0 && <Empty>아직 후기가 없어요. 첫 수업 경험을 남겨 주세요.</Empty>}
+      {list.length > 0 && (
+        <ul className={cn(CARD, 'divide-y divide-home-line overflow-hidden')}>
+          {list.map((r) => (
+            <li key={r.id} className={cn('flex flex-col gap-2.5 px-5 py-4', r.is_mine && 'bg-navy-tint/50')}>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span
+                  role="img"
+                  aria-label={`추천도 ${r.recommendation}점: ${RECOMMENDATION_LABELS[r.recommendation - 1]}`}
+                >
+                  <Stars value={r.recommendation} size="size-4" />
+                </span>
+                <span className="text-sm font-bold">{RECOMMENDATION_LABELS[r.recommendation - 1]}</span>
+                <span className="text-[13px] text-ink-2">
+                  {r.term} · {r.is_mine ? <b className="text-navy">내 후기</b> : '익명'}
+                </span>
+                <time className="ml-auto text-[13px] text-ink-2" dateTime={r.created_at}>
+                  {r.created_at.slice(0, 10)}
+                </time>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <Chip>난이도 {DIFFICULTY_LABELS[r.difficulty - 1]}</Chip>
+                <Chip>과제 {WORKLOAD_LABELS[r.workload - 1]}</Chip>
+                {r.team_project != null && <Chip>팀플 {r.team_project ? '있음' : '없음'}</Chip>}
+              </div>
+              <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">{r.content}</p>
+              {r.is_mine &&
+                (deleting === r.id ? (
+                  <div className="flex flex-wrap items-center gap-2 rounded-xl bg-white p-3">
+                    <span className="mr-auto text-sm">삭제하면 이 강좌에 다시 쓸 수 없어요. 삭제할까요?</span>
+                    <button type="button" className={BTN.quiet} disabled={remove.isPending} onClick={() => setDeleting(null)}>
+                      취소
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex h-9 cursor-pointer items-center rounded-full bg-[#c8453f] px-4 text-sm font-bold text-white hover:bg-[#b03a35] disabled:opacity-50"
+                      disabled={remove.isPending}
+                      onClick={() => remove.mutate(r.id)}
+                    >
+                      삭제
+                    </button>
+                    <ErrorText error={remove.error} />
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className={cn(BTN.quiet, 'self-end')}
+                    disabled={remove.isPending}
+                    onClick={() => {
+                      setDeleting(r.id)
+                      remove.reset()
+                    }}
+                  >
+                    삭제
+                  </button>
+                ))}
+            </li>
+          ))}
+        </ul>
+      )}
+      {(page > 0 || list.length === PAGE_SIZE) && (
+        <nav aria-label="후기 쪽" className="flex items-center justify-center gap-2">
+          <button
+            type="button"
+            className={BTN.quiet}
+            disabled={page === 0 || reviews.isPending}
+            onClick={() => setPage((p) => p - 1)}
+          >
+            이전
+          </button>
+          <span className="text-sm text-ink-2 tabular-nums">{page + 1}쪽</span>
+          <button
+            type="button"
+            className={BTN.quiet}
+            disabled={!reviews.data || reviews.data.length < PAGE_SIZE || reviews.isPending}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            다음
+          </button>
+        </nav>
+      )}
+    </section>
+  )
 }
 
-function ReviewForm({ courseId, terms, onCancel, onSaved }: {
-  courseId: number; terms: Schemas['ReviewTerm'][]; onCancel: () => void; onSaved: () => void
+function Chip({ children }: { children: React.ReactNode }) {
+  return <span className="rounded-full bg-home-bg px-2.5 py-0.5 text-xs font-bold text-ink-2">{children}</span>
+}
+
+/** 별 다섯 개 고르기 (추천도·난이도) */
+function StarPicker({
+  name,
+  value,
+  onChange,
+  labels,
+  aria,
+}: {
+  name: string
+  value: number
+  onChange: (v: number) => void
+  labels: string[]
+  aria: string
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="flex gap-0.5">
+        {labels.map((label, i) => {
+          const v = i + 1
+          return (
+            <label key={v} className="relative cursor-pointer">
+              <input
+                type="radio"
+                name={name}
+                value={v}
+                checked={value === v}
+                onChange={() => onChange(v)}
+                aria-label={`${aria} ${v}점: ${label}`}
+                className="peer sr-only"
+              />
+              <span className="flex size-10 items-center justify-center rounded-lg transition-colors peer-hover:bg-gold-soft/60 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy peer-disabled:cursor-not-allowed peer-disabled:opacity-50">
+                <Star aria-hidden="true" className={cn('size-7', v <= value ? 'fill-gold text-gold' : 'text-[#d9dee8]')} />
+              </span>
+            </label>
+          )
+        })}
+      </div>
+      <span className="text-sm font-bold" aria-live="polite">
+        {labels[value - 1]}
+      </span>
+    </div>
+  )
+}
+
+/** 하나 고르기 (과제량·팀플): 알약 모양 버튼 줄 */
+function PillPicker<T>({
+  name,
+  value,
+  onChange,
+  options,
+  aria,
+}: {
+  name: string
+  value: T
+  onChange: (v: T) => void
+  options: { value: T; label: string }[]
+  aria: string
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((o) => (
+        <label key={o.label} className="relative cursor-pointer">
+          <input
+            type="radio"
+            name={name}
+            checked={value === o.value}
+            onChange={() => onChange(o.value)}
+            aria-label={`${aria}: ${o.label}`}
+            className="peer sr-only"
+          />
+          <span className="flex h-10 items-center rounded-full border border-home-line bg-white px-4 text-sm font-bold text-ink-2 transition-colors hover:text-navy peer-checked:border-navy peer-checked:bg-navy peer-checked:text-white peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy peer-disabled:cursor-not-allowed peer-disabled:opacity-50">
+            {o.label}
+          </span>
+        </label>
+      ))}
+    </div>
+  )
+}
+
+function ReviewForm({
+  courseId,
+  terms,
+  onCancel,
+  onSaved,
+}: {
+  courseId: number
+  terms: Schemas['ReviewTerm'][]
+  onCancel: () => void
+  onSaved: () => void
 }) {
   const [enrollmentId, setEnrollmentId] = useState(terms[0]?.enrollment_id ?? 0)
   const [content, setContent] = useState('')
@@ -91,86 +323,110 @@ function ReviewForm({ courseId, terms, onCancel, onSaved }: {
   const [workload, setWorkload] = useState(3)
   const [recommendation, setRecommendation] = useState(3)
   const [teamProject, setTeamProject] = useState<boolean | null>(null)
-  const ratingId = useId()
+  const id = useId()
   const save = useMutation({
-    mutationFn: (body: Body) => unwrap(api.POST('/api/v1/courses/{course_id}/reviews', {
-      params: { path: { course_id: courseId } }, body: { ...body, enrollment_id: enrollmentId },
-    })),
+    mutationFn: (body: Body) =>
+      unwrap(
+        api.POST('/api/v1/courses/{course_id}/reviews', {
+          params: { path: { course_id: courseId } },
+          body: { ...body, enrollment_id: enrollmentId },
+        }),
+      ),
     onSuccess: onSaved,
   })
-  const selectClass = 'rounded-md border bg-background px-3 py-2 text-sm'
-  return <Card className="p-5"><form className="flex flex-col gap-4" onSubmit={e => { e.preventDefault(); save.mutate({ content: content.trim(), recommendation, difficulty, workload, team_project: teamProject }) }}>
-    <h3 className="font-semibold">후기 작성</h3>
-    <label className="flex flex-col gap-2 text-sm">수강 학기
-      <select className={selectClass} value={enrollmentId} onChange={e => setEnrollmentId(Number(e.target.value))} disabled={save.isPending}>
-        {terms.map(t => <option key={t.enrollment_id} value={t.enrollment_id}>{t.term}</option>)}
-      </select></label>
-    <p className="rounded-md bg-muted p-3 text-sm">같은 과목·교수의 강좌당 한 번만 작성할 수 있고 저장 후 수정할 수 없습니다. 추천도와 내용을 확인한 뒤 저장해 주세요.</p>
-    <fieldset disabled={save.isPending} className="min-w-0">
-      <legend className="mb-2 text-sm font-medium">전체 추천도</legend>
+  const field = 'text-sm font-bold'
+  return (
+    <form
+      className={cn(CARD, 'flex flex-col gap-5 p-6')}
+      onSubmit={(e) => {
+        e.preventDefault()
+        save.mutate({ content: content.trim(), recommendation, difficulty, workload, team_project: teamProject })
+      }}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-lg font-bold">후기 쓰기</h3>
+        {terms.length > 1 ? (
+          <label className="flex items-center gap-2 text-sm font-bold">
+            수강 학기
+            <select
+              className="h-10 rounded-xl border border-home-line bg-white px-3 text-sm"
+              value={enrollmentId}
+              onChange={(e) => setEnrollmentId(Number(e.target.value))}
+              disabled={save.isPending}
+            >
+              {terms.map((t) => (
+                <option key={t.enrollment_id} value={t.enrollment_id}>
+                  {t.term}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <span className="text-sm text-ink-2">{terms[0]?.term} 수강</span>
+        )}
+      </div>
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        <fieldset disabled={save.isPending} className="min-w-0">
+          <legend className={cn(field, 'mb-1.5')}>추천도</legend>
+          <StarPicker
+            name={`${id}-rec`}
+            value={recommendation}
+            onChange={setRecommendation}
+            labels={RECOMMENDATION_LABELS}
+            aria="추천도"
+          />
+        </fieldset>
+        <fieldset disabled={save.isPending} className="min-w-0">
+          <legend className={cn(field, 'mb-1.5')}>체감 난이도</legend>
+          <StarPicker name={`${id}-dif`} value={difficulty} onChange={setDifficulty} labels={DIFFICULTY_LABELS} aria="난이도" />
+        </fieldset>
+        <fieldset disabled={save.isPending} className="min-w-0">
+          <legend className={cn(field, 'mb-1.5')}>과제량</legend>
+          <PillPicker
+            name={`${id}-wl`}
+            value={workload}
+            onChange={setWorkload}
+            options={WORKLOAD_LABELS.map((label, i) => ({ value: i + 1, label }))}
+            aria="과제량"
+          />
+        </fieldset>
+        <fieldset disabled={save.isPending} className="min-w-0">
+          <legend className={cn(field, 'mb-1.5')}>팀 프로젝트가 있었나요?</legend>
+          <PillPicker name={`${id}-team`} value={teamProject} onChange={setTeamProject} options={TEAM_CHOICES} aria="팀 프로젝트" />
+        </fieldset>
+      </div>
+
+      <label className={cn(field, 'flex flex-col gap-1.5')}>
+        후기
+        <textarea
+          rows={5}
+          minLength={10}
+          maxLength={3000}
+          required
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          disabled={save.isPending}
+          placeholder="시험 유형, 도움이 된 자료, 공부 방법을 알려 주세요."
+          className="rounded-xl border border-home-line bg-white px-3.5 py-3 text-[15px] font-normal leading-relaxed focus-visible:outline-2 focus-visible:outline-navy"
+        />
+      </label>
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex gap-1">
-          {RECOMMENDATION_LABELS.map((label, i) => {
-            const value = i + 1
-            return <label key={value} className="relative cursor-pointer">
-              <input type="radio" name={`${ratingId}-recommendation`} value={value}
-                checked={recommendation === value} onChange={() => setRecommendation(value)}
-                aria-label={`추천도 ${value}점: ${label}`} className="peer sr-only" />
-              <span className="flex size-11 items-center justify-center rounded-md transition-colors hover:bg-amber-50 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary peer-disabled:cursor-not-allowed peer-disabled:opacity-50">
-                <Star aria-hidden="true" className={`size-8 ${value <= recommendation ? 'fill-amber-400 text-amber-500' : 'fill-none text-muted-foreground/40'}`} />
-              </span>
-            </label>
-          })}
-        </div>
-        <span className="text-sm" aria-live="polite">{recommendation}/5 · {RECOMMENDATION_LABELS[recommendation - 1]}</span>
+        <p className="mr-auto text-[13px] text-ink-2">
+          {content.length}/3000자 · 이름은 안 보여요 · 저장하면 고칠 수 없어요
+        </p>
+        <ErrorText error={save.error} />
+        <button type="button" className={BTN.line} disabled={save.isPending} onClick={onCancel}>
+          취소
+        </button>
+        <button
+          type="submit"
+          className={BTN.primary}
+          disabled={save.isPending || content.trim().length < 10 || !enrollmentId}
+        >
+          {save.isPending ? '저장 중…' : '저장'}
+        </button>
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">별이 많을수록 추천하는 수업이에요.</p>
-    </fieldset>
-    <fieldset disabled={save.isPending} className="min-w-0">
-      <legend className="mb-2 text-sm font-medium">체감 난이도</legend>
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex gap-1">
-          {DIFFICULTY_LABELS.map((label, i) => {
-            const value = i + 1
-            return <label key={value} className="relative cursor-pointer">
-              <input type="radio" name={`${ratingId}-difficulty`} value={value}
-                checked={difficulty === value} onChange={() => setDifficulty(value)}
-                aria-label={`난이도 ${value}점: ${label}`} className="peer sr-only" />
-              <span className="flex size-11 items-center justify-center rounded-md transition-colors hover:bg-amber-50 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary peer-disabled:cursor-not-allowed peer-disabled:opacity-50">
-                <Star aria-hidden="true" className={`size-8 ${value <= difficulty ? 'fill-amber-400 text-amber-500' : 'fill-none text-muted-foreground/40'}`} />
-              </span>
-            </label>
-          })}
-        </div>
-        <span className="text-sm" aria-live="polite">{difficulty}/5 · {DIFFICULTY_LABELS[difficulty - 1]}</span>
-      </div>
-      <p className="mt-1 text-xs text-muted-foreground">별이 많을수록 어려운 수업이에요.</p>
-    </fieldset>
-    <fieldset disabled={save.isPending} className="min-w-0">
-      <legend className="mb-2 text-sm font-medium">과제량</legend>
-      <div className="flex flex-wrap gap-2">
-        {WORKLOAD_LABELS.map((label, i) => <label key={label} className="relative cursor-pointer">
-          <input type="radio" name={`${ratingId}-workload`} value={i + 1}
-            checked={workload === i + 1} onChange={() => setWorkload(i + 1)}
-            aria-label={`과제량: ${label}`} className="peer sr-only" />
-          <span className="flex min-h-11 items-center rounded-md border px-4 py-2 text-sm transition-colors hover:bg-accent peer-checked:border-primary peer-checked:bg-primary peer-checked:font-semibold peer-checked:text-primary-foreground peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary peer-disabled:cursor-not-allowed peer-disabled:opacity-50">{label}</span>
-        </label>)}
-      </div>
-    </fieldset>
-    <fieldset disabled={save.isPending} className="min-w-0">
-      <legend className="mb-2 text-sm font-medium">팀 프로젝트(조별 과제)가 있었나요?</legend>
-      <div className="flex flex-wrap gap-2">
-        {TEAM_CHOICES.map(c => <label key={c.label} className="relative cursor-pointer">
-          <input type="radio" name={`${ratingId}-team`} checked={teamProject === c.value}
-            onChange={() => setTeamProject(c.value)} aria-label={`팀 프로젝트: ${c.label}`} className="peer sr-only" />
-          <span className="flex min-h-11 items-center rounded-md border px-4 py-2 text-sm transition-colors hover:bg-accent peer-checked:border-primary peer-checked:bg-primary peer-checked:font-semibold peer-checked:text-primary-foreground peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary peer-disabled:cursor-not-allowed peer-disabled:opacity-50">{c.label}</span>
-        </label>)}
-      </div>
-      <p className="mt-1 text-xs text-muted-foreground">수강한 학기 기준이에요. 강좌 목록의 팀플 라벨에 반영됩니다.</p>
-    </fieldset>
-    <label className="flex flex-col gap-2 text-sm">수업·시험 후기<Textarea rows={6} minLength={10} maxLength={3000} required value={content} onChange={e => setContent(e.target.value)} disabled={save.isPending} placeholder="시험 유형, 도움이 된 자료, 공부 방법을 알려 주세요. 개인정보나 비방은 포함하지 말아 주세요." /></label>
-    <p className="text-xs text-muted-foreground">{content.length}/3000자 · 최소 10자 · 다른 사용자에게 작성자 이름은 표시되지 않습니다.</p>
-    <ErrorText error={save.error} />
-    <div className="flex gap-2"><Button type="submit" disabled={save.isPending || content.trim().length < 10 || !enrollmentId}>{save.isPending ? '저장 중…' : '저장'}</Button><Button type="button" variant="outline" disabled={save.isPending} onClick={onCancel}>취소</Button></div>
-  </form></Card>
+    </form>
+  )
 }
