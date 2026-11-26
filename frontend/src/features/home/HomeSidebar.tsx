@@ -1,4 +1,4 @@
-import { BookOpen, GraduationCap, House, LayoutGrid, LogOut, School, User, Users } from 'lucide-react'
+import { BookOpen, GraduationCap, LayoutGrid, LogOut, User, Users } from 'lucide-react'
 import { Link, useLocation } from 'react-router'
 import { useAuth } from '@/features/auth/useAuth'
 import { cn } from '@/lib/utils'
@@ -11,8 +11,6 @@ const NAV = [
   // 학습은 /study 아래 전부, 단 스터디 화면은 '스터디' 메뉴가 켜진다
   { label: '학습', icon: BookOpen, to: '/study', active: (p: string) => (p === '/study' || p.startsWith('/study/')) && !isStudyPath(p) },
   { label: '스터디', icon: Users, to: '/study/groups', active: isStudyPath },
-  { label: '생활', icon: House, to: null, active: () => false },
-  { label: '학교', icon: School, to: null, active: () => false },
 ] as const
 
 export function HomeSidebar() {
@@ -32,17 +30,6 @@ export function HomeSidebar() {
       <nav className="mt-8 flex flex-col gap-1.5">
         {NAV.map(({ label, icon: Icon, to, active: isActive }) => {
           const cls = 'flex h-12 items-center gap-3 rounded-xl px-4 text-base'
-          if (!to)
-            return (
-              <span
-                key={label}
-                title="준비 중"
-                className={cn(cls, 'cursor-not-allowed font-medium text-ink-2/50')}
-              >
-                <Icon size={20} strokeWidth={1.8} />
-                {label}
-              </span>
-            )
           const active = isActive(pathname)
           return (
             <Link
