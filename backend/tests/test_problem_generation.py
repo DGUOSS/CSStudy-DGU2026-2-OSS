@@ -45,12 +45,13 @@ def test_replenishment_threshold_counts_distinct_user_attempts(
     session, course_with_problems, monkeypatch
 ):
     data = course_with_problems
-    course_id = data["course"].id
+    course_id, ch = data["course"].id, data["chapter"].id
     user_id = 42
-    assert unanswered_count(session, course_id, user_id) == 3
+    _link_lecture(session, data)
+    assert unanswered_count(session, course_id, user_id, ch) == 3
     tasks = BackgroundTasks()
     monkeypatch.setattr(settings, "anthropic_api_key", "test-key")
-    schedule_if_low(tasks, session, course_id, user_id)
+    schedule_if_low(tasks, session, course_id, user_id, ch)
     assert len(tasks.tasks) == 0
 
     for _ in range(2):  # 같은 문제를 두 번 풀어도 한 문제
@@ -60,9 +61,104 @@ def test_replenishment_threshold_counts_distinct_user_attempts(
             )
         )
     session.commit()
-    assert unanswered_count(session, course_id, user_id) == 2
-    schedule_if_low(tasks, session, course_id, user_id)
+    assert unanswered_count(session, course_id, user_id, ch) == 2
+    schedule_if_low(tasks, session, course_id, user_id, ch)
     assert len(tasks.tasks) == 1
+
+
+def _link_lecture(session, data):
+    """챕터에 승인 교안을 붙인다(보충은 교안이 연결된 단원만)."""
+    from app.models import Material
+
+    m = Material(
+        course_id=data["course"].id,
+        kind="lecture",
+        title="교안",
+        filename="l.pdf",
+        page_count=1,
+        pages=["포인터 설명"],
+        status="approved",
+    )
+    session.add(m)
+    session.flush()
+    ch = data["chapter"]
+    ch.material_id = m.id
+    session.add(ch)
+    session.commit()
+    return m
+
+
+def test_chapter_runs_out_while_course_has_many_left(session, course_with_problems, monkeypatch):
+    """강좌 전체에 안 푼 문제가 많아도, 푸는 단원이 떨어지면 그 단원을 보충한다(예전 버그)."""
+    from app.models import Chapter, Concept, Problem, ProblemConcept
+
+    data = course_with_problems
+    cid, ch = data["course"].id, data["chapter"]
+    _link_lecture(session, data)
+    other = Chapter(course_id=cid, order=2, title="다른 단원")
+    session.add(other)
+    session.flush()
+    k = Concept(chapter_id=other.id, name="Z")
+    session.add(k)
+    session.flush()
+    for i in range(10):  # 다른 단원에 안 푼 문제 10개
+        p = Problem(
+            chapter_id=other.id,
+            question=f"q{i}",
+            choices=["1", "2", "3", "4"],
+            answer_index=1,
+            explanation="e",
+        )
+        session.add(p)
+        session.flush()
+        session.add(ProblemConcept(problem_id=p.id, concept_id=k.id))
+    session.add(
+        Attempt(user_id=42, problem_id=data["problems"][0].id, chosen_index=0, correct=False)
+    )
+    session.commit()
+    monkeypatch.setattr(settings, "anthropic_api_key", "test-key")
+    assert unanswered_count(session, cid, 42) == 12  # 강좌 전체로는 많음
+    tasks = BackgroundTasks()
+    schedule_if_low(tasks, session, cid, 42, ch.id)
+    assert len(tasks.tasks) == 1 and tasks.tasks[0].args == (cid, 42, ch.id)
+    tasks2 = BackgroundTasks()
+    schedule_if_low(tasks2, session, cid, 42, other.id)  # 다른 단원은 아직 충분 + 교안 없음
+    assert len(tasks2.tasks) == 0
+
+
+def test_chapter_without_lecture_does_not_reserve(session, course_with_problems, monkeypatch):
+    data = course_with_problems
+    cid, ch = data["course"].id, data["chapter"].id
+    for p in data["problems"]:
+        session.add(Attempt(user_id=42, problem_id=p.id, chosen_index=0, correct=False))
+    session.commit()
+    monkeypatch.setattr(settings, "anthropic_api_key", "test-key")
+    tasks = BackgroundTasks()
+    schedule_if_low(tasks, session, cid, 42, ch)
+    assert len(tasks.tasks) == 0 and ch not in g._guards
+
+
+def test_initial_fill_only_empty_chapters_with_cap(session, course_with_problems, monkeypatch):
+    from app.models import Chapter
+
+    data = course_with_problems
+    cid = data["course"].id
+    empty = Chapter(course_id=cid, order=2, title="빈 단원")
+    session.add(empty)
+    session.commit()
+    calls = []
+
+    class Rep:
+        saved = 3
+
+    monkeypatch.setattr(settings, "anthropic_api_key", "test-key")
+    monkeypatch.setattr(
+        g, "generate_for_course", lambda s, c, u, ch, n: calls.append((ch, n)) or Rep()
+    )
+    assert g.fill_new_chapters(session.get_bind(), [data["chapter"].id, empty.id]) == 3
+    assert calls == [(empty.id, g.INITIAL_SIZE)]  # 문제가 이미 있는 단원은 건너뜀
+    monkeypatch.setattr(settings, "anthropic_api_key", "")
+    assert g.fill_new_chapters(session.get_bind(), [empty.id]) == 0  # 키 없으면 안 돎
 
 
 # ---------- 생성 흐름(가짜 모델) ----------
@@ -358,6 +454,7 @@ def test_real_qgen_prompts_get_site_instructions(monkeypatch):
 
 
 def _low_stock(session, data, user_id=42):
+    _link_lecture(session, data)
     for p in data["problems"][:1]:
         session.add(Attempt(user_id=user_id, problem_id=p.id, chosen_index=0, correct=False))
     session.commit()
@@ -366,7 +463,7 @@ def _low_stock(session, data, user_id=42):
 def test_cost_guard_cooldown_gap_and_daily_limit(session, course_with_problems, monkeypatch):
     """실패하면 1시간 쉬고, 성공해도 10분 간격, 하루 5번까지만 생성을 시작한다."""
     data = course_with_problems
-    cid = data["course"].id
+    cid, ch = data["course"].id, data["chapter"].id
     _low_stock(session, data)
     monkeypatch.setattr(settings, "anthropic_api_key", "test-key")
     clock = {"t": 1_795_568_400.0}  # 2026-11-25 01:00 UTC(하루 안에서 시험)
@@ -374,25 +471,25 @@ def test_cost_guard_cooldown_gap_and_daily_limit(session, course_with_problems, 
 
     def start():
         tasks = BackgroundTasks()
-        schedule_if_low(tasks, session, cid, 42)
+        schedule_if_low(tasks, session, cid, 42, ch)
         return len(tasks.tasks)
 
     assert start() == 1
     assert start() == 0  # 실행 중이면 또 시작하지 않음
-    g._release(cid, 0)  # 저장 0개로 끝남(실패)
+    g._release(ch, 0)  # 저장 0개로 끝남(실패)
     clock["t"] += 30 * 60
     assert start() == 0  # 실패 후 1시간 안 됨
     clock["t"] += 31 * 60
     assert start() == 1  # 1시간 지나면 다시 시도
-    g._release(cid, 3)  # 성공
+    g._release(ch, 3)  # 성공
     clock["t"] += 5 * 60
     assert start() == 0  # 성공해도 10분 간격
     for _ in range(3):  # 오늘 3번 더(합계 5번)
         clock["t"] += 11 * 60
         assert start() == 1
-        g._release(cid, 2)
+        g._release(ch, 2)
     clock["t"] += 11 * 60
-    assert start() == 0  # 하루 5번 한도
+    assert start() == 0  # 단원 하루 5번 한도
     clock["t"] += 24 * 60 * 60
     assert start() == 1  # 날이 바뀌면 다시
 
@@ -400,7 +497,7 @@ def test_cost_guard_cooldown_gap_and_daily_limit(session, course_with_problems, 
 def test_background_failure_counts_as_failure(session, course_with_problems, monkeypatch):
     """생성 중 예외가 나도 실패로 기록해 1시간 쉰다(바로 다시 돌지 않는다)."""
     data = course_with_problems
-    cid = data["course"].id
+    cid, ch = data["course"].id, data["chapter"].id
     _low_stock(session, data)
     monkeypatch.setattr(settings, "anthropic_api_key", "test-key")
     monkeypatch.setattr(g, "engine", session.get_bind())
@@ -408,13 +505,13 @@ def test_background_failure_counts_as_failure(session, course_with_problems, mon
         g, "generate_for_course", lambda *a: (_ for _ in ()).throw(RuntimeError("x"))
     )
     tasks = BackgroundTasks()
-    schedule_if_low(tasks, session, cid, 42)
-    g._replenish_background(cid, 42)
-    assert g._guards[cid].last_saved == 0 and g._guards[cid].running is False
-    clock = g._guards[cid].last_at
+    schedule_if_low(tasks, session, cid, 42, ch)
+    g._replenish_background(cid, 42, ch)
+    assert g._guards[ch].last_saved == 0 and g._guards[ch].running is False
+    clock = g._guards[ch].last_at
     monkeypatch.setattr(g, "_now", lambda: clock + 20 * 60)
     tasks2 = BackgroundTasks()
-    schedule_if_low(tasks2, session, cid, 42)
+    schedule_if_low(tasks2, session, cid, 42, ch)
     assert len(tasks2.tasks) == 0
 
 
@@ -444,3 +541,11 @@ def _q_with(vs):
         sources=[],
         verifications=vs,
     )
+
+
+def test_course_daily_cap_across_chapters(monkeypatch):
+    """단원마다 따로 세도 강좌 전체 하루 한도(COURSE_DAILY_RUNS)는 넘지 않는다."""
+    g.reset_guards()
+    monkeypatch.setattr(g, "_now", lambda: 1_795_568_400.0)
+    started = sum(g._reserve(7, chapter) for chapter in range(1, g.COURSE_DAILY_RUNS + 6))
+    assert started == g.COURSE_DAILY_RUNS

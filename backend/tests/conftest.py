@@ -28,6 +28,9 @@ def _no_real_llm(monkeypatch):
 
     monkeypatch.setattr(misconceptions, "spawn", lambda bind, ids: None)
     monkeypatch.setattr(structure, "spawn", lambda bind, ids: None)
+    from app.features.problems import generation
+
+    monkeypatch.setattr(generation, "spawn_initial_fill", lambda bind, ids: None)
 
 
 @pytest.fixture

@@ -141,7 +141,7 @@ def next_problems(
     ).all()  # 퀴즈는 객관식만(서술형은 종이 시험에서)
     picked = pick_problems(session, user.id, list(problems), count)
     concepts = _concepts_of(session, [p.id for p in picked])
-    schedule_if_low(background_tasks, session, chapter.course_id, user.id)
+    schedule_if_low(background_tasks, session, chapter.course_id, user.id, chapter.id)
 
     return [
         ProblemOut(
@@ -183,7 +183,7 @@ def submit_attempt(
         )
     )
     session.commit()
-    schedule_if_low(background_tasks, session, chapter.course_id, user.id)
+    schedule_if_low(background_tasks, session, chapter.course_id, user.id, chapter.id)
     after = concept_states(session, user.id, ids)
 
     source = None
