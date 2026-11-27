@@ -44,8 +44,6 @@ FALL, SPRING = "CM160.20", "CM160.10"
         "그룹 과제: 3~4명이 웹 서비스를 만든다",
         "Final team project (40%) and presentation",
         "팀플 20%",
-        "평가: 프로젝트 30%",
-        "캡스톤프로젝트 결과물을 제출한다",
     ],
 )
 def test_syllabus_yes(text):
@@ -57,7 +55,6 @@ def test_syllabus_yes(text):
     "text",
     [
         "팀 프로젝트: 없음",
-        "프로젝트: 없음",
         "조별 과제는 하지 않는다. 개인 과제 3회.",
         "팀 프로젝트 0%",
         "조별 과제 없이 개인 과제로만 평가한다",
@@ -75,6 +72,8 @@ def test_syllabus_explicit_no(text):
         "중간 40% 기말 40% 과제 20%",
         "중요 개념을 강조 과제로 정리한다",  # '강조 과제'의 '조 과제'는 조별이 아님
         "스팀 엔진 원리",
+        "개인 프로젝트 30%",  # 프로젝트만으로는 팀플이 아니다
+        "기말 프로젝트 보고서 제출",
         "",
     ],
 )
@@ -237,7 +236,7 @@ def test_admin_syllabus_import_and_course_endpoint(client, login, session, two_p
                     "sem_cd": FALL,
                     "sbj_no": "csc2001",
                     "dvcls": "03",
-                    "text": "평가: 프로젝트 20%",
+                    "text": "평가: 팀 프로젝트 20%",
                 },
                 {"year": "2026", "sem_cd": FALL, "sbj_no": "CSC9999", "dvcls": "01", "text": "x"},
             ]
@@ -247,7 +246,7 @@ def test_admin_syllabus_import_and_course_endpoint(client, login, session, two_p
     assert r.json() == {"checked": 1, "missing": 1, "yes": 1, "no": 0, "not_mentioned": 0}
     o = session.exec(select(CatalogOffering).where(CatalogOffering.dvcls == "03")).one()
     assert o.team_project == "yes" and o.syllabus_checked_at is not None
-    assert o.team_evidence == "평가: 프로젝트 20%"
+    assert o.team_evidence == "평가: 팀 프로젝트 20%"
 
     body = client.get(f"/api/v1/courses/{kang.id}/team-project").json()
     assert body["latest"]["label"] == "yes" and len(body["terms"]) == 2

@@ -260,9 +260,6 @@ function Offering({ g }: { g: OfferingGroup }) {
         )}
         {/* 수강신청 전에 보는 팀플 기록(같은 교수·과목 최근 3년). 강좌에 들어가지 않아도 보이게 */}
         <TeamYears history={g.team_history} className="mt-2" />
-        {(!g.team_history || g.team_history.summary === 'unknown') && (
-          <p className="mt-2 text-xs text-ink-2">팀플: 아직 정보 없음(강의계획서·수강생 응답이 모이면 표시)</p>
-        )}
         {(rates.length > 0 || g.plan_url) && (
           <p className="mt-1 text-xs text-ink-2">
             {rates.map(([k, v]) => `${k} ${v}%`).join(' · ')}
