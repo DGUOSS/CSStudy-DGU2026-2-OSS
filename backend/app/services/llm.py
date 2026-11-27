@@ -79,6 +79,9 @@ def _parse(
     except anthropic.APIError as e:
         log.warning("Claude API 오류: %s", e)
         return None
+    except ValueError as e:  # 응답이 중간에 끊겨 JSON이 깨짐(거절 등). pydantic ValidationError도 여기 → 그 호출만 실패
+        log.warning("Claude 응답을 읽지 못함: %s", str(e)[:200])
+        return None
     if resp.stop_reason == "refusal":
         log.warning("Claude가 거절함: %s", resp.stop_details)
         return None

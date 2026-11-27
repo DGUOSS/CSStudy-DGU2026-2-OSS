@@ -136,14 +136,20 @@ def build_for_material(session: Session, material_id: int) -> int:
         session.exec(select(func.max(Chapter.order)).where(Chapter.course_id == m.course_id)).one()
         or 0
     )
+    new_ids = []
     for ch in chapters:
         order += 1
         row = Chapter(course_id=m.course_id, order=order, title=ch.title, material_id=m.id)
         session.add(row)
         session.flush()
+        new_ids.append(row.id)
         for c in ch.concepts:
             session.add(Concept(chapter_id=row.id, name=c.name))
     session.commit()
+    # 새 단원마다 처음 문제를 채운다(학생이 처음 들어와도 모든 단원을 풀 수 있게)
+    from app.features.problems import generation
+
+    generation.spawn_initial_fill(session.get_bind(), new_ids)
     log.info("교안 %s(%s): 챕터 %d개를 만듦", m.id, m.title, len(chapters))
     return len(chapters)
 

@@ -10,6 +10,7 @@ question-ai/ 는 생성기 담당 코드라 여기서 고치지 않는다. 사�
 
 import logging
 import re
+import threading
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
@@ -34,8 +35,10 @@ from app.services.llm import LLMNotConfigured, _parse
 
 log = logging.getLogger(__name__)
 
-LOW_STOCK = 2  # 강좌 전체에서 이 사용자가 안 푼 객관식이 이 수 이하면 보충
+LOW_STOCK = 2  # 학생이 푸는 단원(챕터)에서 안 푼 객관식이 이 수 이하면 그 단원을 보충
 REFILL_SIZE = 5
+INITIAL_SIZE = 3  # 교안이 들어와 새로 생긴 단원마다 처음에 채우는 문항 수
+INITIAL_MAX_CHAPTERS = 40  # 교안 하나로 처음 채우는 단원 수 상한(비용 상한)
 # question-ai/config.yaml 의 pipeline 값과 같게 둔다(그 파일은 git 설치본에 들어 있지 않다)
 MAX_REVISIONS = 2
 MAX_REGENERATIONS = 1
@@ -44,12 +47,13 @@ MIN_EVIDENCE_CHARS = (
     8  # 공백·문장부호를 뺀 근거 글자 수 하한(한두 단어짜리 '근거'는 아무 데나 맞는다)
 )
 
-# ---------- 비용 상한(강좌별) ----------
+# ---------- 비용 상한(단원별 + 강좌 전체) ----------
 # 생성이 실패(저장 0개)해도 '부족' 상태가 그대로라, 막지 않으면 문제를 풀 때마다 다시 생성한다.
 # 시작 전에 아래를 확인하고 하나라도 걸리면 생성하지 않는다. 기록은 서버 메모리(재시작하면 초기화).
-FAIL_COOLDOWN_SEC = 60 * 60  # 저장 0개로 끝났으면 1시간 쉼
-MIN_GAP_SEC = 10 * 60  # 성공했어도 다음 시도까지 10분
-DAILY_RUNS = 5  # 강좌별 하루(UTC) 최대 시도 횟수 → 하루 최대 5 × REFILL_SIZE 문항
+FAIL_COOLDOWN_SEC = 60 * 60  # 그 단원이 저장 0개로 끝났으면 1시간 쉼
+MIN_GAP_SEC = 10 * 60  # 같은 단원은 성공했어도 다음 시도까지 10분
+DAILY_RUNS = 5  # 단원별 하루(UTC) 최대 시도 횟수
+COURSE_DAILY_RUNS = 20  # 강좌 전체 하루 최대 시도 횟수 → 하루 최대 20 × REFILL_SIZE 문항
 
 
 @dataclass
@@ -61,7 +65,8 @@ class _Guard:
     running: bool = False
 
 
-_guards: dict[int, _Guard] = {}
+_guards: dict[int, _Guard] = {}  # 단원(챕터) id → 기록
+_course_runs: dict[int, tuple[date, int]] = {}  # 강좌 id → (날짜, 오늘 시도 수)
 _guard_lock = Lock()
 _locks_guard = Lock()
 _course_locks: dict[int, Lock] = {}
@@ -78,15 +83,20 @@ def _today() -> date:
 def reset_guards() -> None:
     with _guard_lock:
         _guards.clear()
+        _course_runs.clear()
 
 
-def _reserve(course_id: int) -> bool:
-    """생성을 시작해도 되면 자리를 잡고 True. 실행 중·실패 후 쉬는 중·간격 미달·하루 한도면 False."""
+def _reserve(course_id: int, chapter_id: int) -> bool:
+    """생성을 시작해도 되면 자리를 잡고 True.
+    그 단원이 실행 중·실패 후 쉬는 중·간격 미달·단원 하루 한도이거나, 강좌 하루 한도면 False."""
     now, today = _now(), _today()
     with _guard_lock:
-        g = _guards.setdefault(course_id, _Guard(day=today))
+        g = _guards.setdefault(chapter_id, _Guard(day=today))
         if g.day != today:
             g.day, g.runs = today, 0
+        day, course_runs = _course_runs.get(course_id, (today, 0))
+        if day != today:
+            course_runs = 0
         if g.running:
             return False
         since = now - g.last_at
@@ -94,18 +104,19 @@ def _reserve(course_id: int) -> bool:
             return False
         if g.last_at and since < MIN_GAP_SEC:
             return False
-        if g.runs >= DAILY_RUNS:
-            log.info("Course %s reached the daily generation limit", course_id)
+        if g.runs >= DAILY_RUNS or course_runs >= COURSE_DAILY_RUNS:
+            log.info("Generation limit reached (course %s, chapter %s)", course_id, chapter_id)
             return False
         g.running = True
         g.runs += 1
         g.last_at = now
+        _course_runs[course_id] = (today, course_runs + 1)
         return True
 
 
-def _release(course_id: int, saved: int | None) -> None:
+def _release(chapter_id: int, saved: int | None) -> None:
     with _guard_lock:
-        g = _guards.get(course_id)
+        g = _guards.get(chapter_id)
         if g:
             g.running = False
             g.last_saved = saved
@@ -400,14 +411,18 @@ def _lock_for(course_id: int) -> Lock:
         return _course_locks.setdefault(course_id, Lock())
 
 
-def unanswered_count(session: Session, course_id: int, user_id: int) -> int:
-    ids = list(
-        session.exec(
-            select(Problem.id)
-            .join(Chapter, Problem.chapter_id == Chapter.id)
-            .where(Chapter.course_id == course_id, Problem.qtype == "mcq")
-        ).all()
+def unanswered_count(
+    session: Session, course_id: int, user_id: int, chapter_id: int | None = None
+) -> int:
+    """이 사용자가 안 푼 객관식 수. chapter_id를 주면 그 단원만."""
+    q = (
+        select(Problem.id)
+        .join(Chapter, Problem.chapter_id == Chapter.id)
+        .where(Chapter.course_id == course_id, Problem.qtype == "mcq")
     )
+    if chapter_id is not None:
+        q = q.where(Problem.chapter_id == chapter_id)
+    ids = list(session.exec(q).all())
     if not ids:
         return 0
     answered = set(
@@ -422,32 +437,76 @@ def unanswered_count(session: Session, course_id: int, user_id: int) -> int:
 
 
 def schedule_if_low(
-    background_tasks: BackgroundTasks, session: Session, course_id: int, user_id: int
+    background_tasks: BackgroundTasks,
+    session: Session,
+    course_id: int,
+    user_id: int,
+    chapter_id: int,
 ) -> None:
+    """학생이 푸는 단원에서 안 푼 객관식이 LOW_STOCK 이하이면 그 단원에 문제를 보충한다.
+    (예전에는 강좌 전체 기준이라, 문제가 많은 강좌는 한 단원을 다 풀어도 같은 문제만 반복됐다)"""
     if not settings.anthropic_api_key:
         return
-    if unanswered_count(session, course_id, user_id) > LOW_STOCK:
+    if unanswered_count(session, course_id, user_id, chapter_id) > LOW_STOCK:
         return
-    if _reserve(course_id):
-        background_tasks.add_task(_replenish_background, course_id, user_id)
+    chapter = session.get(Chapter, chapter_id)
+    if chapter is None or _source_material(session, chapter) is None:
+        return  # 교안이 연결되지 않은 단원은 만들 수 없음(자리도 잡지 않는다)
+    if _reserve(course_id, chapter_id):
+        background_tasks.add_task(_replenish_background, course_id, user_id, chapter_id)
 
 
-def _replenish_background(course_id: int, user_id: int) -> None:
+def _replenish_background(course_id: int, user_id: int, chapter_id: int) -> None:
     saved: int | None = None
     with _lock_for(course_id):
         try:
             with Session(engine) as session:
-                if unanswered_count(session, course_id, user_id) <= LOW_STOCK:
-                    report = generate_for_course(session, course_id, user_id)
+                if unanswered_count(session, course_id, user_id, chapter_id) <= LOW_STOCK:
+                    report = generate_for_course(session, course_id, user_id, chapter_id)
                     saved = report.saved
                     for it in report.items:
                         if not it.saved:
                             log.info("qgen %s %s 탈락: %s", course_id, it.item_id, it.reason)
         except Exception:
             saved = 0  # 예외도 실패로 보고 쉬게 한다
-            log.exception("Automatic problem generation failed for course %s", course_id)
+            log.exception("Automatic problem generation failed for chapter %s", chapter_id)
         finally:
-            _release(course_id, saved)
+            _release(chapter_id, saved)
+
+
+def fill_new_chapters(bind, chapter_ids: list[int]) -> int:
+    """교안이 들어와 새로 생긴 단원마다 INITIAL_SIZE 문항씩 처음 채운다(한 번만, 문제가 없는 단원만).
+    단원 수 상한(INITIAL_MAX_CHAPTERS)이 있어 비용이 정해져 있다. 저장한 문항 수를 돌려준다."""
+    if not settings.anthropic_api_key:
+        return 0
+    total = 0
+    for chapter_id in chapter_ids[:INITIAL_MAX_CHAPTERS]:
+        try:
+            with Session(bind) as session:
+                chapter = session.get(Chapter, chapter_id)
+                if chapter is None:
+                    continue
+                has_mcq = session.exec(
+                    select(Problem.id).where(
+                        Problem.chapter_id == chapter_id, Problem.qtype == "mcq"
+                    )
+                ).first()
+                if has_mcq is not None:
+                    continue
+                with _lock_for(chapter.course_id):
+                    report = generate_for_course(
+                        session, chapter.course_id, 0, chapter_id, n=INITIAL_SIZE
+                    )
+                total += report.saved
+        except Exception:
+            log.exception("Initial problem fill failed for chapter %s", chapter_id)
+    log.info("새 단원 %d개에 문제 %d개를 처음 채움", len(chapter_ids), total)
+    return total
+
+
+def spawn_initial_fill(bind, chapter_ids: list[int]) -> None:
+    """테스트에서는 바꿔 끼운다."""
+    threading.Thread(target=fill_new_chapters, args=(bind, chapter_ids), daemon=True).start()
 
 
 def _source_material(session: Session, chapter: Chapter) -> Material | None:
@@ -516,7 +575,11 @@ def plan_items(concept_names: list[str], chapter_title: str, n: int) -> list[Pla
 
 
 def generate_for_course(
-    session: Session, course_id: int, user_id: int, chapter_id: int | None = None
+    session: Session,
+    course_id: int,
+    user_id: int,
+    chapter_id: int | None = None,
+    n: int = REFILL_SIZE,
 ) -> GenerationReport:
     """검토를 통과한 객관식을 저장하고 문항별 결과를 돌려준다. chapter_id를 주면 그 챕터로."""
     report = GenerationReport(course_id)
@@ -544,7 +607,7 @@ def generate_for_course(
     profile = ExamProfile(
         course=str(course_id),
         format_ratio={"객관식": 1.0},
-        num_questions=REFILL_SIZE,
+        num_questions=n,
         detail_level="중간",
         difficulty="보통",
         recurring_patterns=[],
@@ -559,7 +622,7 @@ def generate_for_course(
         (p.question.strip(), normalize(p.evidence or ""))
         for p in session.exec(select(Problem).where(Problem.chapter_id == chapter.id)).all()
     ]
-    for i, item in enumerate(plan_items(concept_names, chapter.title, REFILL_SIZE)):
+    for i, item in enumerate(plan_items(concept_names, chapter.title, n)):
         concept = concept_names[i % len(concept_names)]
         ctx = retriever.search_many([concept, chapter.title], k=RETRIEVAL_TOP_K)
         try:
