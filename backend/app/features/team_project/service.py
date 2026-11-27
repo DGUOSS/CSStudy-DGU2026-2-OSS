@@ -35,6 +35,7 @@ _TEAM = re.compile(
     r"|그룹\s*(?:프로젝트|과제|발표|활동|별)"
     r"|협업\s*(?:프로젝트|과제)"
     r")"
+    r"|프로젝트"
     r"|\b(?:team|group)\s*(?:project|work|assignment|presentation)s?\b|\bteamwork\b",
     re.IGNORECASE,
 )
