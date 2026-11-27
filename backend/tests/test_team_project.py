@@ -72,6 +72,8 @@ def test_syllabus_explicit_no(text):
         "중간 40% 기말 40% 과제 20%",
         "중요 개념을 강조 과제로 정리한다",  # '강조 과제'의 '조 과제'는 조별이 아님
         "스팀 엔진 원리",
+        "개인 프로젝트 30%",  # 프로젝트만으로는 팀플이 아니다
+        "기말 프로젝트 보고서 제출",
         "",
     ],
 )
@@ -234,7 +236,7 @@ def test_admin_syllabus_import_and_course_endpoint(client, login, session, two_p
                     "sem_cd": FALL,
                     "sbj_no": "csc2001",
                     "dvcls": "03",
-                    "text": "평가: 조별 발표 20%",
+                    "text": "평가: 팀 프로젝트 20%",
                 },
                 {"year": "2026", "sem_cd": FALL, "sbj_no": "CSC9999", "dvcls": "01", "text": "x"},
             ]
@@ -244,6 +246,7 @@ def test_admin_syllabus_import_and_course_endpoint(client, login, session, two_p
     assert r.json() == {"checked": 1, "missing": 1, "yes": 1, "no": 0, "not_mentioned": 0}
     o = session.exec(select(CatalogOffering).where(CatalogOffering.dvcls == "03")).one()
     assert o.team_project == "yes" and o.syllabus_checked_at is not None
+    assert o.team_evidence == "평가: 팀 프로젝트 20%"
 
     body = client.get(f"/api/v1/courses/{kang.id}/team-project").json()
     assert body["latest"]["label"] == "yes" and len(body["terms"]) == 2

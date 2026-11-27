@@ -28,10 +28,19 @@ function shortTerm(t: Schemas['TeamLabelOut']) {
 
 /**
  * 같은 교수·같은 과목의 최근 3개 연도 팀플 기록. 수강신청 전에 보는 용도.
- * 요약 배지 + 학기별 칸. 기록이 하나도 없으면 그리지 않는다.
+ * 요약 배지 + 학기별 칸. 판정할 정보가 없어도 상태를 표시한다.
  */
 export function TeamYears({ history, className }: { history: History | null | undefined; className?: string }) {
-  if (!history || history.terms.length === 0 || history.summary === 'unknown') return null
+  if (!history || history.terms.length === 0 || history.summary === 'unknown') {
+    return (
+      <div className={cn('text-xs', className)}>
+        <span className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 font-medium text-muted-foreground">
+          <Users aria-hidden="true" className="size-3" />
+          팀플 정보 없음
+        </span>
+      </div>
+    )
+  }
   const range = history.from_year === history.to_year ? history.to_year : `${history.from_year}~${history.to_year}`
   return (
     <div className={cn('flex flex-wrap items-center gap-1.5 text-xs', className)}>

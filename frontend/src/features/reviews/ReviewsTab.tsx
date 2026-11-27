@@ -37,7 +37,7 @@ function Stars({ value, size = 'size-5' }: { value: number; size?: string }) {
   )
 }
 
-export function ReviewsTab({ courseId }: { courseId: number }) {
+export function ReviewsTab({ courseId, readOnly = false }: { courseId: number; readOnly?: boolean }) {
   const qc = useQueryClient()
   const [page, setPage] = useState(0)
   const [writing, setWriting] = useState(false)
@@ -53,6 +53,7 @@ export function ReviewsTab({ courseId }: { courseId: number }) {
       ),
   })
   const terms = useQuery({
+    enabled: !readOnly,
     queryKey: [...key, 'terms'],
     queryFn: () =>
       unwrap(api.GET('/api/v1/courses/{course_id}/reviews/terms', { params: { path: { course_id: courseId } } })),
@@ -112,18 +113,18 @@ export function ReviewsTab({ courseId }: { courseId: number }) {
         ) : (
           <p className="text-[15px] font-bold text-ink-2">아직 후기가 없어요</p>
         )}
-        <div className="ml-auto flex flex-col items-end gap-1">
+        {!readOnly && <div className="ml-auto flex flex-col items-end gap-1">
           {!writing && available.length > 0 && (
             <button type="button" className={BTN.primary} onClick={() => setWriting(true)}>
               <PenLine size={16} aria-hidden="true" /> 후기 쓰기
             </button>
           )}
           {hint && <p className="text-[13px] text-ink-2">{hint}</p>}
-        </div>
+        </div>}
       </div>
-      <ErrorText error={terms.error} />
+      {!readOnly && <ErrorText error={terms.error} />}
 
-      {writing && (
+      {!readOnly && writing && (
         <ReviewForm
           courseId={courseId}
           terms={available}
@@ -138,7 +139,10 @@ export function ReviewsTab({ courseId }: { courseId: number }) {
 
       {reviews.isPending && <Loading />}
       <ErrorText error={reviews.error} />
-      {reviews.data?.length === 0 && <Empty>아직 후기가 없어요. 첫 수업 경험을 남겨 주세요.</Empty>}
+      {!readOnly && reviews.data?.length === 0 && <Empty>아직 후기가 없어요. 첫 수업 경험을 남겨 주세요.</Empty>}
+      {readOnly && reviews.data?.length === 0 && (
+        <Empty>아직 볼 수 있는 강의평이 없어요. 수강생 3명 이상이 남기면 공개돼요.</Empty>
+      )}
       {list.length > 0 && (
         <ul className={cn(CARD, 'divide-y divide-home-line overflow-hidden')}>
           {list.map((r) => (
@@ -164,7 +168,7 @@ export function ReviewsTab({ courseId }: { courseId: number }) {
                 {r.team_project != null && <Chip>팀플 {r.team_project ? '있음' : '없음'}</Chip>}
               </div>
               <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">{r.content}</p>
-              {r.is_mine &&
+              {!readOnly && r.is_mine &&
                 (deleting === r.id ? (
                   <div className="flex flex-wrap items-center gap-2 rounded-xl bg-white p-3">
                     <span className="mr-auto text-sm">삭제하면 이 강좌에 다시 쓸 수 없어요. 삭제할까요?</span>

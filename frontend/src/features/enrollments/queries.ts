@@ -41,9 +41,22 @@ export function useImportNdrims(isAdmin: boolean) {
       const adminSave = async () => {
         const catalog = await importCatalog()
         // 계획서 판정은 개설 목록 행에 붙으므로 개설 목록을 먼저 저장한다
-        const syllabi = p.syllabi?.length
-          ? await unwrap(api.POST('/api/v1/admin/catalog/syllabi', { body: { rows: p.syllabi } }))
-          : null
+        // 서버 한 번에 5,000행까지라 나눠 보낸다(3년치 전체면 만 건이 넘는다)
+        let syllabi: Schemas['SyllabusImportOut'] | null = null
+        for (let offset = 0; offset < (p.syllabi?.length ?? 0); offset += 5000) {
+          const r = await unwrap(
+            api.POST('/api/v1/admin/catalog/syllabi', { body: { rows: p.syllabi!.slice(offset, offset + 5000) } }),
+          )
+          syllabi = syllabi
+            ? {
+                checked: syllabi.checked + r.checked,
+                missing: syllabi.missing + r.missing,
+                yes: syllabi.yes + r.yes,
+                no: syllabi.no + r.no,
+                not_mentioned: syllabi.not_mentioned + r.not_mentioned,
+              }
+            : r
+        }
         return { catalog, syllabi }
       }
       const [admin, mine] = await Promise.allSettled([

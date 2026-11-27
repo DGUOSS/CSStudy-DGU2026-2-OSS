@@ -162,12 +162,10 @@ function InfoCard({ course, href }: { course: Course; href: string }) {
           {text || '아직 등록된 시험·평가 정보가 없어요.'}
         </span>
       </Link>
-      {course.team_history && (
-        <div className="flex flex-col gap-1.5 border-t border-home-line pt-2">
-          <span className="text-[13px] font-bold text-ink-2">팀플</span>
-          <TeamYears history={course.team_history} />
-        </div>
-      )}
+      <div className="flex flex-col gap-1.5 border-t border-home-line pt-2">
+        <span className="text-[13px] font-bold text-ink-2">팀플</span>
+        <TeamYears history={course.team_history} />
+      </div>
     </div>
   )
 }

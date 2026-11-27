@@ -234,8 +234,8 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean, C
           '</select></div>' +
           '<button data-c style="width:100%;margin-top:6px;padding:6px;border:1px solid #c8102e;border-radius:8px;background:#fff;color:#c8102e;cursor:pointer">관리자: 이 학기 개설 목록 전체 가져오기</button>' +
           '<button data-b style="width:100%;margin-top:6px;padding:6px;border:1px solid #c8102e;border-radius:8px;background:#fff;color:#c8102e;cursor:pointer">관리자: ' + catalogLabel() + ' 개설 목록 다시 가져오기</button>' +
-          '<button data-p style="width:100%;margin-top:6px;padding:6px;border:1px solid #c8102e;border-radius:8px;background:#fff;color:#c8102e;cursor:pointer">관리자: 이 학기 강의계획서 가져오기</button>' +
-          '<button data-a style="width:100%;margin-top:6px;padding:6px;border:0;border-radius:8px;background:#c8102e;color:#fff;cursor:pointer">관리자: 최근 3년 강의계획서 한 번에 가져오기</button>' +
+          '<button data-p style="width:100%;margin-top:6px;padding:6px;border:1px solid #c8102e;border-radius:8px;background:#fff;color:#c8102e;cursor:pointer">관리자: 이 학기 강의계획서 전체 가져오기 (약 10~15분)</button>' +
+          '<button data-a style="width:100%;margin-top:6px;padding:6px;border:0;border-radius:8px;background:#c8102e;color:#fff;cursor:pointer">관리자: 최근 3년 강의계획서 전체 가져오기 (1시간 이상)</button>' +
           '<div style="font-size:11px;color:#666;margin-top:4px">계획서는 사이트에 있는 과목만 가져와 팀플 여부를 판정합니다.</div>' +
           '<button data-r style="width:100%;margin-top:6px;padding:4px;border:0;background:none;color:#666;font-size:12px;cursor:pointer;text-decoration:underline">내 수강 기록도 가져오기</button>'
         : '') +
@@ -528,31 +528,36 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean, C
     }
   }
 
-  // 관리자: 고른 학기들에서 사이트에 있는 과목의 강의계획서. 시간표의 "강의계획서" 버튼이 여는 팝업과 같은 요청.
-  // 개설 목록에는 그 과목 행만 넣는다(계획서 판정이 붙을 자리). 학기 전체 목록은 [개설 목록 전체 가져오기]로
+  // 관리자: 고른 학기들의 개설 강좌 전체 강의계획서. 시간표의 "강의계획서" 버튼이 여는 팝업과 같은 요청.
+  // 팀플 라벨은 수강신청 전에 보는 것이라 사이트에 없는 강좌도 판정해야 한다.
+  // - 같은 학기·과목·교수의 분반은 계획서가 같아서 한 분반만 받는다(서버가 분반을 묶어 판정한다)
+  // - 사이트 과목을 먼저 받는다(중간에 멈춰도 사이트 강좌는 채워지게)
+  // - 계획서 글은 팀플 판정에 쓰는 줄(팀·조·그룹·협업·team·group이 든 줄)만 남겨 보낸다. 판정 결과는 같고 크기는 훨씬 작다
   async function syllabi(terms: [string, string][]) {
     msg('사이트 과목 목록을 받는 중…')
     const codes = await getSiteCodes()
-    if (!codes.size) {
-      msg('사이트에 과목코드가 있는 과목이 없습니다.')
-      return
-    }
     let total = 0
-    let empty = 0
+    let none = 0
+    let failed = 0
+    const started = Date.now()
     for (const t of terms) {
       const { rows, lesnNana, ids } = await termRows(t, false)
-      const targets: Record<string, Json> = {}
+      lesnInto(cat, rows) // 계획서 판정이 붙을 개설 목록 행(학기 전체, 서버는 있으면 갱신)
+      const groups: Record<string, Json> = {}
       for (const x of rows) {
-        if (!codes.has(code(x.SBJ_NO))) continue
-        const k = [x.OPEN_YY, x.OPEN_SEM_CD, x.SBJ_NO, x.DVCLS].join('|')
-        if (!targets[k] || x.MAIN_PROF_YN === 'Y') targets[k] = x
+        const k = [x.OPEN_YY, x.OPEN_SEM_CD, x.SBJ_NO, x.EMP_NO || x.EMP_NM || x.DVCLS].join('|')
+        if (!groups[k] || x.MAIN_PROF_YN === 'Y') groups[k] = x
       }
-      lesnInto(cat, Object.values(targets))
-      const list = Object.entries(targets)
+      const list = Object.values(groups).sort(
+        (p, q) => Number(codes.has(code(q.SBJ_NO))) - Number(codes.has(code(p.SBJ_NO))),
+      )
       total += list.length
       for (let i = 0; i < list.length; i++) {
-        const [k, x] = list[i]
-        msg(`${termLabel(t)} 강의계획서 ${i + 1}/${list.length} 가져오는 중…`)
+        const x = list[i]
+        if (i % 20 === 0) {
+          const left = Math.ceil(((Date.now() - started) / Math.max(1, Object.keys(syl).length + none + failed)) * (list.length - i) / 60000)
+          msg(`${termLabel(t)} 강의계획서 ${i + 1}/${list.length} 가져오는 중… (이 학기 남은 시간 약 ${left}분)`)
+        }
         const q: Record<string, string> = {
           OPEN_ORGN_CLSF_CD: String(x.OPEN_ORGN_CLSF_CD || 'CM015.110'),
           OPEN_YY: String(x.OPEN_YY),
@@ -563,22 +568,27 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean, C
           SBJ_NO: String(x.SBJ_NO),
           OPEN_DPTMJR_CD: String(x.OPEN_DPTMJR_CD ?? ''),
         }
-        const j = await post('/ed/edc/plan/popup/EdcPlan010P20/doList.do', {
-          _runningNana: lesnNana,
-          ...ids,
-          ...Object.fromEntries(Object.entries(q).map(([a, b]) => ['@d1#' + a, b])),
-        })
-        const text = planText(j)
-        if (text) syl[k] = { year: q.OPEN_YY, sem_cd: q.OPEN_SEM_CD, sbj_no: q.SBJ_NO, dvcls: q.DVCLS, text }
-        else empty++
+        try {
+          const j = await post('/ed/edc/plan/popup/EdcPlan010P20/doList.do', {
+            _runningNana: lesnNana,
+            ...ids,
+            ...Object.fromEntries(Object.entries(q).map(([a, b]) => ['@d1#' + a, b])),
+          })
+          const text = planText(j)
+          const k = [q.OPEN_YY, q.OPEN_SEM_CD, q.SBJ_NO, q.DVCLS].join('|')
+          if (text === null) none++
+          else syl[k] = { year: q.OPEN_YY, sem_cd: q.OPEN_SEM_CD, sbj_no: q.SBJ_NO, dvcls: q.DVCLS, text }
+        } catch {
+          failed++ // 한 건 실패로 전체를 멈추지 않는다
+        }
         await new Promise((r) => setTimeout(r, 200)) // 학교 서버에 몰아서 보내지 않는다
       }
       render()
     }
-    log.push(`계획서 대상 ${total}, 받음 ${total - empty}, 비어 있음 ${empty} (${terms.length}개 학기)`)
+    log.push(`계획서 대상 ${total}, 받음 ${Object.keys(syl).length}, 계획서 없음 ${none}, 실패 ${failed} (${terms.length}개 학기)`)
     render()
     if (!total) {
-      msg(terms.length > 1 ? '최근 3년에 열린 사이트 과목이 없습니다.' : '이 학기에 열린 사이트 과목이 없습니다.')
+      msg('개설 목록이 비어 있습니다.')
       return
     }
     send(true)
@@ -586,7 +596,7 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean, C
   // 계획서 응답 → 판정용 글. 수업 목표·개요, 평가, 주차별 내용, 과제·프로젝트만 쓴다.
   // dsTabAolAt(평가 도구)은 모든 강좌에 같은 선택지 목록("Team Project" 등)이 오고 CHK로만 다르다 → 고른 것(CHK=Y)만.
   // 코드·번호·날짜·교원 칸은 뺀다.
-  function planText(j: Json): string {
+  function planText(j: Json): string | null {
     const skip = /(_CD|_NO|_YY|_YN|_DTTM|_ID|_SEQ|_RATE|CHK|DVCLS|TEL|EMAIL)$|^(EMP_|PROF|SBJ_NM|SYS_)/
     const rowsIn = (v: unknown) => (Array.isArray(v) ? (v as Json[]) : v && typeof v === 'object' ? [v as Json] : [])
     const lines = new Set<string>()
@@ -596,7 +606,9 @@ function inNdrims(SITE: string, HOSTS: string[], TYPE: string, ADMIN: boolean, C
           if (typeof v === 'string' && v.trim() && !skip.test(c) && !/^기타\d$/.test(v.trim())) lines.add(v.trim())
     for (const r of rowsIn(j.dsTabAolAt))
       if (r.CHK === 'Y' && typeof r.AOL_LESN_AIM_TOOL_DSC === 'string') lines.add(r.AOL_LESN_AIM_TOOL_DSC.trim())
-    return [...lines].join('\n').slice(0, 100000)
+    if (!lines.size) return null
+    // 판정(classify_syllabus)은 이 단어가 든 문장만 본다. 문장은 줄을 넘지 않으므로 이 줄들만 보내도 결과가 같다
+    return [...lines].filter((l) => /팀|조|그룹|협업|team|group/i.test(l)).join('\n').slice(0, 100000)
   }
 
   async function auto() {
