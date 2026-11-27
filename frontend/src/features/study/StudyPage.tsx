@@ -5,6 +5,7 @@ import { Empty, ErrorText, Loading } from '@/components/States'
 import { RequestWithFiles } from '@/features/course_requests/RequestWithFiles'
 import { useMyCourses } from '@/features/enrollments/queries'
 import { AppShell } from '@/features/home/AppShell'
+import { subjectIcon } from './subjectIcon'
 
 /** 학습(/study): 내 과목과 그 강좌(교수) 목록, 과목 추가 */
 export function StudyPage() {
@@ -19,13 +20,12 @@ function StudyContent() {
   const mine = useMyCourses()
   const courses = mine.data?.courses ?? []
 
-  // 내 강좌를 과목명으로 묶는다
-  const groups = new Map<number, { name: string; code: string | null; items: typeof courses }>()
-  for (const c of courses) {
-    const g = groups.get(c.subject_id) ?? { name: c.subject_name, code: c.sbj_no, items: [] }
-    g.items.push(c)
-    groups.set(c.subject_id, g)
-  }
+  // 강좌 하나 = 가로로 긴 한 줄. 수강 중인 강좌를 먼저, 같은 과목은 붙여 둔다
+  const rows = [...courses].sort(
+    (a, b) =>
+      Number(b.status === 'current') - Number(a.status === 'current') ||
+      a.subject_name.localeCompare(b.subject_name, 'ko'),
+  )
 
   return (
     <>
@@ -56,45 +56,47 @@ function StudyContent() {
 
       {mine.isPending ? (
         <Loading />
-      ) : groups.size === 0 ? (
+      ) : rows.length === 0 ? (
         <Empty>
           아직 내 강좌가 없어요. &lsquo;수강 기록 가져오기&rsquo;로 엔드림스 기록을 가져오거나
           &lsquo;강좌 찾기&rsquo;를 이용해 주세요.
         </Empty>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {[...groups.entries()].map(([subjectId, g]) => (
-            <section
-              key={subjectId}
-              className="flex flex-col gap-3 rounded-2xl border border-home-line bg-white p-5"
-            >
-              <div>
-                <h2 className="text-lg font-bold">{g.name}</h2>
-                {g.code && <p className="text-sm text-ink-2">{g.code}</p>}
-              </div>
-              <Link to={`/study/subjects/${subjectId}/groups`} className="rounded-full border border-home-line px-4 py-2 text-center text-sm font-bold text-navy hover:bg-navy-tint">스터디 찾기</Link>
-              <ul className="flex flex-col gap-2">
-                {g.items.map((c) => (
-                  <li key={c.course_id}>
-                    <Link
-                      to={`/study/courses/${c.course_id}`}
-                      className="flex items-center justify-between rounded-xl bg-navy-tint px-4 py-3 hover:bg-tone-blue"
-                    >
-                      <span>
-                        <span className="block font-bold text-navy">{c.professor_name} 교수님</span>
-                        <span className="block text-xs text-ink-2">
-                          {c.status === 'current' ? '수강 중' : '수강함'}
-                          {c.terms.length > 0 && ` · ${c.terms.join(', ')}`}
-                        </span>
-                      </span>
-                      <ChevronRight size={18} className="text-navy" />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
+        <ul className="overflow-hidden rounded-2xl border border-home-line bg-white">
+          {rows.map((c) => {
+            const { Icon, tone } = subjectIcon(c.subject_name, c.subject_id)
+            return (
+            <li key={c.course_id} className="border-b border-home-line last:border-b-0">
+              <Link
+                to={`/study/courses/${c.course_id}`}
+                className="flex items-center gap-4 px-5 py-4 hover:bg-home-bg"
+              >
+                <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${tone}`}>
+                  <Icon size={20} strokeWidth={1.8} aria-hidden="true" />
+                </span>
+                <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                  <span className="truncate text-[17px] font-bold">{c.subject_name}</span>
+                  <span className="text-[15px] text-ink-2">{c.professor_name} 교수님</span>
+                  {c.sbj_no && <span className="text-[13px] text-ink-2">{c.sbj_no}</span>}
+                </span>
+                <span className="hidden shrink-0 text-[13px] text-ink-2 sm:block">
+                  {c.terms.join(', ')}
+                </span>
+                <span
+                  className={
+                    c.status === 'current'
+                      ? 'shrink-0 rounded-full bg-tone-blue px-2.5 py-1 text-xs font-bold text-navy'
+                      : 'shrink-0 rounded-full bg-home-bg px-2.5 py-1 text-xs font-bold text-ink-2'
+                  }
+                >
+                  {c.status === 'current' ? '수강 중' : '수강함'}
+                </span>
+                <ChevronRight size={18} className="shrink-0 text-ink-2" aria-hidden="true" />
+              </Link>
+            </li>
+            )
+          })}
+        </ul>
       )}
       {(mine.data?.public?.length ?? 0) > 0 && (
         <section className="flex flex-col gap-3">
@@ -150,7 +152,7 @@ function StudyContent() {
                   </span>
                 ) : w.professor_name ? (
                   <RequestWithFiles
-                    label={`열어 달라고 요청${w.request_count > 0 ? ` (${w.request_count}명 대기)` : ''}`}
+                    label={`개설 요청${w.request_count > 0 ? ` (${w.request_count}명 대기)` : ''}`}
                     create={async (note) =>
                       (
                         await unwrap(

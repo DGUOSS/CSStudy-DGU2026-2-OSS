@@ -8,11 +8,13 @@ export function AdminNav() {
   if (user && user.role !== 'admin') return <Navigate to="/" replace />
   const tab = ({ isActive }: { isActive: boolean }) =>
     cn(
-      'rounded-md px-3 py-1.5 text-sm',
-      isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent',
+      'inline-flex h-10 shrink-0 items-center rounded-full px-4 text-sm font-bold whitespace-nowrap',
+      isActive
+        ? 'bg-primary text-primary-foreground'
+        : 'border bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground',
     )
   return (
-    <nav className="flex gap-2 border-b pb-3">
+    <nav aria-label="관리 메뉴" className="flex gap-2 overflow-x-auto pb-1">
       <NavLink to="/admin/courses" className={tab}>
         과목·강좌·교안 관리
       </NavLink>

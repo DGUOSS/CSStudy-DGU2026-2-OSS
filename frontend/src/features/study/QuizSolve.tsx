@@ -5,8 +5,10 @@ import { api, unwrap } from '@/api/client'
 import { ErrorText } from '@/components/States'
 import { pct } from '@/features/mastery/queries'
 import { cn } from '@/lib/utils'
+import { choiceTextClass } from './choiceText'
 import { MisconceptionNote } from '@/features/problems/MisconceptionNote'
 import { emptyEntries, type Entry, type Problem, type Result, statusOf } from './quizTypes'
+
 
 /** 풀이 화면: 문제 번호로 아무 문제나 오갈 수 있고, 건너뛰기·정답 확인을 한다. */
 export function QuizSolve({
@@ -125,66 +127,75 @@ export function QuizSolve({
                   isWrongPick && 'border-[#c8453f] bg-[#fbeceb]',
                 )}
               >
+                {/* 번호 동그라미(24px)와 선지 줄 높이(choiceTextClass의 /6 = 24px)를 맞춰 첫 줄이 번호와 나란히 서게 한다 */}
                 <span
                   className={cn(
-                    'mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold',
+                    'flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold',
                     picked ? 'bg-navy text-white' : 'bg-home-bg text-ink-2',
                   )}
                 >
                   {i + 1}
                 </span>
-                <span className="flex-1 font-mono text-sm whitespace-pre-wrap">{choice}</span>
-                {isAnswer && <Check size={18} className="text-[#2e8b6a]" />}
-                {isWrongPick && <X size={18} className="text-[#c8453f]" />}
+                <span
+                  className={cn(
+                    'min-w-0 flex-1 whitespace-pre-wrap',
+                    choiceTextClass(choice),
+                  )}
+                >
+                  {choice}
+                </span>
+                {isAnswer && <Check size={18} aria-label="정답" className="mt-[3px] shrink-0 text-[#2e8b6a]" />}
+                {isWrongPick && <X size={18} aria-label="고른 오답" className="mt-[3px] shrink-0 text-[#c8453f]" />}
               </button>
             )
           })}
         </div>
         <ErrorText error={submit.error} />
+        {/* 이전·다음은 풀이 설명 위에: 설명이 길어도 스크롤하지 않고 바로 넘어갈 수 있게 */}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            disabled={cur === 0}
+            onClick={() => setCur(cur - 1)}
+            className="inline-flex h-11 cursor-pointer items-center gap-1 rounded-full border border-home-line bg-white px-5 text-[15px] font-bold disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <ChevronLeft size={16} />
+            이전
+          </button>
+          <span className="flex-1" />
+          {entry.result ? (
+            <button
+              type="button"
+              onClick={() => goNext(entries)}
+              className="inline-flex h-11 cursor-pointer items-center gap-1 rounded-full bg-navy px-6 text-[15px] font-bold text-white hover:bg-navy-deep"
+            >
+              {cur === last && allResolved ? '결과 보기' : '다음 문제'}
+              <ChevronRight size={16} />
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={skip}
+                className="inline-flex h-11 cursor-pointer items-center gap-1 rounded-full bg-gold-soft px-5 text-[15px] font-bold hover:bg-gold"
+              >
+                건너뛰기
+                <ChevronRight size={16} />
+              </button>
+              <button
+                type="button"
+                disabled={entry.chosen === null || submit.isPending}
+                onClick={() => submit.mutate({ index: cur, chosen: entry.chosen as number })}
+                className="h-11 cursor-pointer rounded-full bg-navy px-6 text-[15px] font-bold text-white hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {submit.isPending ? '채점 중…' : '정답 확인'}
+              </button>
+            </>
+          )}
+        </div>
         {entry.result && <Explanation result={entry.result} />}
       </section>
 
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          disabled={cur === 0}
-          onClick={() => setCur(cur - 1)}
-          className="inline-flex h-11 cursor-pointer items-center gap-1 rounded-full border border-home-line bg-white px-5 text-[15px] font-bold disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <ChevronLeft size={16} />
-          이전
-        </button>
-        <span className="flex-1" />
-        {entry.result ? (
-          <button
-            type="button"
-            onClick={() => goNext(entries)}
-            className="inline-flex h-11 cursor-pointer items-center gap-1 rounded-full bg-navy px-6 text-[15px] font-bold text-white hover:bg-navy-deep"
-          >
-            {cur === last && allResolved ? '결과 보기' : '다음 문제'}
-            <ChevronRight size={16} />
-          </button>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={skip}
-              className="inline-flex h-11 cursor-pointer items-center gap-1 rounded-full bg-gold-soft px-5 text-[15px] font-bold hover:bg-gold"
-            >
-              건너뛰기
-              <ChevronRight size={16} />
-            </button>
-            <button
-              type="button"
-              disabled={entry.chosen === null || submit.isPending}
-              onClick={() => submit.mutate({ index: cur, chosen: entry.chosen as number })}
-              className="h-11 cursor-pointer rounded-full bg-navy px-6 text-[15px] font-bold text-white hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {submit.isPending ? '채점 중…' : '정답 확인'}
-            </button>
-          </>
-        )}
-      </div>
     </>
   )
 }

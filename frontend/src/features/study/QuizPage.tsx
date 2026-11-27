@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { api, unwrap } from '@/api/client'
 import { Empty, ErrorText, Loading } from '@/components/States'
+import { useCourse } from '@/features/courses/queries'
 import { AppShell } from '@/features/home/AppShell'
 import { QUIZ_TOTAL } from './CourseChaptersPage'
 import { QuizResult } from './QuizResult'
@@ -58,13 +59,16 @@ function QuizLoader() {
     refetchOnWindowFocus: false,
   })
 
+  // 풀이·결과 어디서든 강좌 화면으로 바로 갈 수 있게 (강좌 하위 화면과 같은 모양: ‹ 과목 · 교수님)
+  // 문제마다 답은 바로 서버에 저장되므로 중간에 나가도 푼 기록은 남는다
+  const course = useCourse(courseId)
   const back = (
     <Link
       to={`/study/courses/${courseId}`}
-      className="inline-flex items-center text-sm text-ink-2 hover:underline"
+      className="-mb-4 inline-flex w-fit items-center text-sm text-ink-2 hover:text-navy"
     >
       <ChevronLeft className="size-4" />
-      단원 선택
+      {course.data ? `${course.data.subject_name} · ${course.data.professor_name} 교수님` : '강좌로'}
     </Link>
   )
 
@@ -109,7 +113,10 @@ function QuizLoader() {
     setFinished(null)
   }
 
-  return finished ? (
+  return (
+    <>
+      {back}
+      {finished ? (
     <QuizResult
       key={sessionKey}
       courseId={courseId}
@@ -120,6 +127,8 @@ function QuizLoader() {
     />
   ) : (
     <QuizSolve key={sessionKey} problems={problems} onFinish={setFinished} />
+      )}
+    </>
   )
 }
 

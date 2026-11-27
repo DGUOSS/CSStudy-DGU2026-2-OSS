@@ -72,3 +72,59 @@
   --color-tone-gold: #f3e7cc;
   --color-tone-gray: #d9dee8;
 }
+
+/*
+ * 새 디자인 틀(AppShell) 안에서는 기존 shadcn 컴포넌트(Button·Card·Badge·Input…)도 새 디자인 색을 쓰게
+ * 토큰을 바꿔 끼운다. 기존 화면(components/Layout)은 그대로다. 값은 위 @theme 색과 같다 (DESIGN.md §2).
+ */
+.design-scope {
+  --radius: 0.75rem; /* Card rounded-xl → 16px (= rounded-2xl) */
+  --primary: #1f3a6e;
+  --primary-foreground: #ffffff;
+  --secondary: #e6ebf5;
+  --secondary-foreground: #1f3a6e;
+  --accent: #e6ebf5;
+  --accent-foreground: #1f3a6e;
+  --muted: #f4f5f8;
+  --muted-foreground: #566075;
+  --border: #e1e5ee;
+  --input: #e1e5ee;
+  --ring: #1f3a6e;
+  --destructive: #c8453f;
+  --success: #2e8b6a;
+}
+/* 새 디자인은 그림자를 쓰지 않는다 (DESIGN.md §4) */
+.design-scope .shadow-sm {
+  --tw-shadow: 0 0 #0000;
+  box-shadow: none;
+}
+/*
+ * 기존 shadcn 부품의 모양도 새 디자인 규칙(DESIGN.md §4·§5)에 맞춘다. 새 디자인 틀 안에서만.
+ * 부품 파일(components/ui)의 ui-* 표시 class를 잡는다.
+ */
+.design-scope .ui-btn {
+  border-radius: 9999px;
+  font-weight: 700;
+  min-height: 2.5rem; /* 누르기 쉬운 크기 */
+}
+.design-scope .ui-badge {
+  border-radius: 9999px;
+  font-weight: 700;
+  padding-inline: 0.625rem;
+}
+.design-scope input.ui-input {
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  background: #ffffff;
+  font-size: 15px;
+}
+.design-scope textarea.ui-input {
+  border-radius: 0.75rem;
+  background: #ffffff;
+  font-size: 15px;
+}
+.design-scope .ui-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-ink-2);
+}

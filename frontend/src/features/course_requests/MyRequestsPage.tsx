@@ -1,11 +1,18 @@
 import { Plus } from 'lucide-react'
 import { Link } from 'react-router'
 import { Empty, ErrorText, Loading } from '@/components/States'
-import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 import { AttachFiles } from './AttachFiles'
 import { STATUS_LABEL, useMyRequests } from './queries'
+
+// 요청 상태 색: 대기 = 금색, 승인 = 남색, 반려 = 빨강 (DESIGN.md 색)
+const STATUS_TONE: Record<string, string> = {
+  pending: 'bg-gold-soft text-[#6b4a0c]',
+  approved: 'bg-tone-blue text-navy',
+  rejected: 'bg-[#fdf0ef] text-[#a3352f]',
+}
 
 export function MyRequestsPage() {
   const requests = useMyRequests()
@@ -18,7 +25,7 @@ export function MyRequestsPage() {
             교안이 붙으면 관리자가 확인한 뒤 강좌를 엽니다. 교안을 가지고 있다면 붙여 주세요.
           </p>
         </div>
-        <Link to="/requests/new" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+        <Link to="/requests/new" className={buttonVariants()}>
           <Plus />
           직접 요청
         </Link>
@@ -41,9 +48,14 @@ export function MyRequestsPage() {
                 <div className="font-semibold">
                   {r.subject_name} · {r.professor_name} 교수님
                 </div>
-                <Badge variant={r.status === 'pending' ? 'outline' : 'secondary'}>
+                <span
+                  className={cn(
+                    'shrink-0 rounded-full px-2.5 py-1 text-xs font-bold',
+                    STATUS_TONE[r.status] ?? 'bg-home-bg text-ink-2',
+                  )}
+                >
                   {STATUS_LABEL[r.status] ?? r.status}
-                </Badge>
+                </span>
               </div>
               <div className="text-sm text-muted-foreground">
                 {r.semester && `${r.semester} · `}
@@ -59,11 +71,14 @@ export function MyRequestsPage() {
                 </div>
               )}
               {r.status === 'rejected' && r.reject_reason && (
-                <p className="text-sm">반려 사유: {r.reject_reason}</p>
+                <p className="rounded-xl bg-[#fdf0ef] px-4 py-3 text-sm text-[#a3352f]">반려 사유: {r.reject_reason}</p>
               )}
               {r.status === 'approved' && r.course_id && (
-                <Link to={`/courses/${r.course_id}`} className="text-sm text-primary underline">
-                  강좌로 가기
+                <Link
+                  to={`/courses/${r.course_id}`}
+                  className="self-start rounded-full bg-navy-tint px-4 py-2 text-sm font-bold text-navy hover:bg-tone-blue"
+                >
+                  강좌로 가기 →
                 </Link>
               )}
             </Card>

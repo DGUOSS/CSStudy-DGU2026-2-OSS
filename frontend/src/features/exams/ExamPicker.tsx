@@ -3,8 +3,6 @@ import { Check, ThumbsDown, ThumbsUp } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { type Schemas, api, unwrap } from '@/api/client'
 import { ErrorText } from '@/components/States'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
 type Exam = Schemas['ExamOut']
@@ -75,23 +73,18 @@ export function ExamPicker({ courseId }: { courseId: number }) {
     })
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">참고할 족보 고르기</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          고른 족보는 AI 문제 생성 때 출제 스타일 참고로 쓰입니다(문제 생성은 준비 중). 좋아요가
-          많은 족보가 위에 옵니다.
+    <div className="flex flex-col gap-2.5">
+      <p className="text-[13px] leading-relaxed text-ink-2">
+        고른 족보는 새 문제를 만들 때 출제 스타일 참고로 써요. 좋아요가 많은 족보가 위에 와요.
+      </p>
+      {exams.data.length === 0 ? (
+        <p className="rounded-xl bg-home-bg px-3 py-2.5 text-[13px] text-ink-2">
+          아직 올라온 족보가 없어요. 자료의 '족보'에서 올려 주세요.
         </p>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        {exams.data.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            아직 올라온 족보가 없습니다. 자료 탭의 '족보'에서 올려 주세요.
-          </p>
-        ) : (
-          <ul className="flex flex-col divide-y rounded-lg border">
+      ) : (
+          <ul className="flex flex-col divide-y divide-home-line overflow-hidden rounded-xl border border-home-line bg-white">
             {exams.data.map((e) => (
-              <li key={e.id} className="flex items-center gap-3 px-3 py-2">
+              <li key={e.id} className="flex items-center gap-2 px-3 py-2">
                 <button
                   type="button"
                   role="checkbox"
@@ -99,8 +92,8 @@ export function ExamPicker({ courseId }: { courseId: number }) {
                   aria-label={`${e.title} 선택`}
                   onClick={() => toggle(e.id)}
                   className={cn(
-                    'flex size-5 shrink-0 cursor-pointer items-center justify-center rounded border',
-                    picked.has(e.id) && 'border-primary bg-primary text-primary-foreground',
+                    'flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-md border border-home-line bg-white',
+                    picked.has(e.id) && 'border-navy bg-navy text-white',
                   )}
                 >
                   {picked.has(e.id) && <Check className="size-3.5" />}
@@ -110,8 +103,8 @@ export function ExamPicker({ courseId }: { courseId: number }) {
                   onClick={() => toggle(e.id)}
                   className="min-w-0 flex-1 cursor-pointer text-left"
                 >
-                  <div className="truncate text-sm font-medium">{e.title}</div>
-                  <div className="truncate text-xs text-muted-foreground">
+                  <div className="truncate text-sm font-bold">{e.title}</div>
+                  <div className="truncate text-xs text-ink-2">
                     {e.filename} · {e.page_count}쪽{e.uploader_name && ` · ${e.uploader_name}`}
                   </div>
                 </button>
@@ -136,25 +129,22 @@ export function ExamPicker({ courseId }: { courseId: number }) {
               </li>
             ))}
           </ul>
-        )}
-        <ErrorText error={save.error ?? vote.error} />
-        {exams.data.length > 0 && (
-          <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              size="sm"
-              disabled={!dirty || save.isPending}
-              onClick={() => save.mutate([...picked])}
-            >
-              {save.isPending ? '저장 중…' : '선택 저장'}
-            </Button>
-            <span className="text-xs text-muted-foreground">
-              {saved.size ? `${saved.size}개 골라 둠` : '고른 족보 없음'}
-            </span>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      )}
+      <ErrorText error={save.error ?? vote.error} />
+      {exams.data.length > 0 && (
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs text-ink-2">{saved.size ? `${saved.size}개 골라 둠` : '고른 족보 없음'}</span>
+          <button
+            type="button"
+            disabled={!dirty || save.isPending}
+            onClick={() => save.mutate([...picked])}
+            className="h-9 cursor-pointer rounded-full bg-navy px-4 text-sm font-bold text-white hover:bg-navy-deep disabled:cursor-default disabled:opacity-40"
+          >
+            {save.isPending ? '저장 중…' : '선택 저장'}
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -174,18 +164,19 @@ function VoteButton({
   children: ReactNode
 }) {
   return (
-    <Button
+    <button
       type="button"
-      size="sm"
-      variant={active ? 'secondary' : 'ghost'}
       aria-label={label}
       aria-pressed={active}
       disabled={disabled}
       onClick={onClick}
-      className={cn('gap-1 px-2', active && 'text-primary')}
+      className={cn(
+        'inline-flex h-8 shrink-0 cursor-pointer items-center gap-1 rounded-full px-2 text-ink-2 hover:bg-home-bg disabled:opacity-50 [&_svg]:size-3.5',
+        active && 'bg-navy-tint text-navy',
+      )}
     >
       {children}
-      <span className="text-xs tabular-nums">{count}</span>
-    </Button>
+      <span className="text-xs font-bold tabular-nums">{count}</span>
+    </button>
   )
 }

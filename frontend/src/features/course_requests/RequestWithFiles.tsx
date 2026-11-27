@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { uploadRequestFiles } from './upload'
 
 /**
- * '열어 달라고 요청' 버튼. 누르면 교안 PDF(선택)와 메모(선택)를 넣는 칸이 열린다.
+ * '개설 요청' 버튼. 누르면 교안 PDF(선택)와 메모(선택)를 넣는 칸이 열린다.
  * create는 요청을 만들고 요청 번호를 돌려준다.
  */
 export function RequestWithFiles({

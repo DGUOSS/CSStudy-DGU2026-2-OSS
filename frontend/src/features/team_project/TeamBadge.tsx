@@ -13,8 +13,8 @@ const TEXT: Record<string, string> = {
 }
 
 const TONE: Record<string, string> = {
-  yes: 'border-orange-300 bg-orange-50 text-orange-800 dark:border-orange-800 dark:bg-orange-950 dark:text-orange-200',
-  no: 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
+  yes: 'border-gold bg-gold-soft text-[#6b4a0c]',
+  no: 'border-tone-blue bg-navy-tint text-navy',
   likely_no: 'text-muted-foreground',
 }
 

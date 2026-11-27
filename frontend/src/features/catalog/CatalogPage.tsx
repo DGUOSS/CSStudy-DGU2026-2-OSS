@@ -57,8 +57,8 @@ export function CatalogPage() {
         <h1 className="text-2xl font-bold">강좌 찾기</h1>
         <Link to="/professors" className="mt-2 inline-block text-sm text-primary hover:underline">교수별 평가 보기 →</Link>
         <p className="text-sm text-muted-foreground">
-          엔드림스 종합강의시간표와 같은 목록입니다. 동국스터디에 아직 없는 강좌는 열어 달라고
-          요청할 수 있고, 들어가는 건 수강 기록이 있는 강좌만 가능합니다.
+          엔드림스 종합강의시간표와 같은 목록입니다. 동국스터디에 아직 없는 강좌는 개설 요청할
+          수 있고, 들어가는 건 수강 기록이 있는 강좌만 가능합니다.
         </p>
       </div>
       {terms.data?.length === 0 ? (
@@ -248,7 +248,7 @@ function Row({ g }: { g: OfferingGroup }) {
           <Badge variant="outline">요청함 ({g.request_count}명)</Badge>
         ) : (
           <RequestWithFiles
-            label={`열어 달라고 요청${g.request_count > 0 ? ` (${g.request_count}명)` : ''}`}
+            label={`개설 요청${g.request_count > 0 ? ` (${g.request_count}명)` : ''}`}
             create={async (note) =>
               (
                 await unwrap(
