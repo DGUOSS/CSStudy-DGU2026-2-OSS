@@ -39,7 +39,7 @@ def test_review_lifecycle_and_privacy(client, login, enroll, course_with_problem
     assert client.post(url, json=body).status_code == 409
 
 
-def test_other_user_cannot_write_with_foreign_record_or_edit(
+def test_non_enrolled_user_can_read_but_cannot_write_or_edit(
     client, login, enroll, course_with_problems
 ):
     course = course_with_problems["course"]
@@ -47,10 +47,11 @@ def test_other_user_cannot_write_with_foreign_record_or_edit(
     url = f"/api/v1/courses/{course.id}/reviews"
     rid = client.post(url, json=body).json()["id"]
     login("other@dgu.ac.kr")
-    assert client.get(url).status_code == 403
+    response = client.get(url)
+    assert response.status_code == 200
+    assert response.json()[0]["id"] == rid
+    assert response.json()[0]["is_mine"] is False
     assert client.post(url, json=body).status_code == 403
-    enroll(course.subject_id)
-    assert client.get(url).json()[0]["is_mine"] is False
     assert client.patch(f"/api/v1/reviews/{rid}", json=body).status_code == 405
     assert client.delete(f"/api/v1/reviews/{rid}").status_code == 404
 

@@ -14,6 +14,7 @@ import {
 import { RequestWithFiles } from '@/features/course_requests/RequestWithFiles'
 import { AppShell } from '@/features/home/AppShell'
 import { TeamYears } from '@/features/team_project/TeamYears'
+import { CatalogReviews } from '@/features/reviews/CatalogReviews'
 
 const PAGE = 50
 const fieldCls =
@@ -260,6 +261,7 @@ function Offering({ g }: { g: OfferingGroup }) {
         )}
         {/* 수강신청 전에 보는 팀플 기록(같은 교수·과목 최근 3년). 강좌에 들어가지 않아도 보이게 */}
         <TeamYears history={g.team_history} className="mt-2" />
+        <CatalogReviews courseId={g.course_id} subject={g.sbj_nm} professor={g.emp_nm} />
         {(rates.length > 0 || g.plan_url) && (
           <p className="mt-1 text-xs text-ink-2">
             {rates.map(([k, v]) => `${k} ${v}%`).join(' · ')}

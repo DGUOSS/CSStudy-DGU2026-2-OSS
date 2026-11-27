@@ -101,7 +101,7 @@ def list_reviews(
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=50),
 ) -> list[ReviewOut]:
-    require_course_access(session, user, get_course_or_404(session, course_id))
+    get_course_or_404(session, course_id)
     rows = session.exec(
         select(CourseReview)
         .where(CourseReview.course_id == course_id, CourseReview.is_deleted == False)  # noqa: E712
