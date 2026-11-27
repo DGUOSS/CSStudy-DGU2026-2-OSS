@@ -3,12 +3,12 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException, Query, Response
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import select
+from sqlmodel import func, select
 
 from app.core.db import SessionDep
 from app.core.security import CurrentUser
 from app.features.courses.router import get_course_or_404
-from app.features.enrollments.service import require_course_access, term_label
+from app.features.enrollments.service import can_enter, require_course_access, term_label
 from app.models import CourseReview, Enrollment
 
 router = APIRouter(tags=["reviews"])
@@ -49,6 +49,9 @@ class ReviewTerm(BaseModel):
     enrollment_id: int
     term: str
     review_id: int | None
+
+
+MIN_PUBLIC_AUTHORS = 3  # 수강 전 조회 공개 기준(교수별 요약과 같음)
 
 
 def output(review: CourseReview, user_id: int) -> ReviewOut:
@@ -101,7 +104,19 @@ def list_reviews(
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=50),
 ) -> list[ReviewOut]:
-    get_course_or_404(session, course_id)
+    course = get_course_or_404(session, course_id)
+    # 수강 기록이 없는 사람(수강 전 조회)에게는 교수별 요약과 같은 익명 기준을 쓴다:
+    # 작성자 3명 미만이면 보이지 않고, 학기는 연도까지만(소수 분반에서 작성자를 짐작하지 않게)
+    member = can_enter(session, user, course)
+    if not member:
+        authors = session.exec(
+            select(func.count(func.distinct(CourseReview.user_id))).where(
+                CourseReview.course_id == course_id,
+                CourseReview.is_deleted == False,  # noqa: E712
+            )
+        ).one()
+        if authors < MIN_PUBLIC_AUTHORS:
+            return []
     rows = session.exec(
         select(CourseReview)
         .where(CourseReview.course_id == course_id, CourseReview.is_deleted == False)  # noqa: E712
@@ -109,7 +124,11 @@ def list_reviews(
         .offset(offset)
         .limit(limit)
     ).all()
-    return [output(r, user.id) for r in rows]
+    out = [output(r, user.id) for r in rows]
+    if not member:
+        for o in out:
+            o.sem_cd, o.term = "", f"{o.year}년"
+    return out
 
 
 @router.post("/courses/{course_id}/reviews", status_code=201)

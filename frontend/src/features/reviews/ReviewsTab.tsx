@@ -140,6 +140,9 @@ export function ReviewsTab({ courseId, readOnly = false }: { courseId: number; r
       {reviews.isPending && <Loading />}
       <ErrorText error={reviews.error} />
       {!readOnly && reviews.data?.length === 0 && <Empty>아직 후기가 없어요. 첫 수업 경험을 남겨 주세요.</Empty>}
+      {readOnly && reviews.data?.length === 0 && (
+        <Empty>아직 볼 수 있는 강의평이 없어요. 수강생 3명 이상이 남기면 공개돼요.</Empty>
+      )}
       {list.length > 0 && (
         <ul className={cn(CARD, 'divide-y divide-home-line overflow-hidden')}>
           {list.map((r) => (
