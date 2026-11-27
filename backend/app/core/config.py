@@ -28,7 +28,8 @@ class Settings(BaseSettings):
     # 비용 원칙: 기본은 Haiku. 서술형 채점만 Sonnet(11/20 비교: 틀린 내용이 섞인 답을 Haiku는 1점 후하게 줌)
     llm_model: str = "claude-haiku-5-5"
     grade_model: str = "claude-sonnet-5-5"
-    qgen_model: str = "claude-haiku-5-5"
+    # 문제 생성은 Sonnet: Haiku는 다시 풀기(solver) 단계를 reasoning_extraction으로 거절해 생성이 전부 실패했다(11/28 확인)
+    qgen_model: str = "claude-sonnet-5-5"
     # 동국대 계정(Google 워크스페이스) 로그인. 클라이언트 ID가 없으면 버튼이 안 보인다
     google_client_id: str = ""
     school_email_domain: str = "dgu.ac.kr"
