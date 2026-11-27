@@ -4,6 +4,11 @@ from app.models import Course, CourseReview, Enrollment, Professor
 from tests.conftest import make_admin
 
 
+def relogin(client, email):
+    r = client.post("/api/v1/auth/login", json={"email": email, "password": "password123"})
+    assert r.status_code == 200, r.text
+
+
 def setup_review(client, login, enroll, course):
     login()
     enroll(course.subject_id)
@@ -39,7 +44,7 @@ def test_review_lifecycle_and_privacy(client, login, enroll, course_with_problem
     assert client.post(url, json=body).status_code == 409
 
 
-def test_other_user_cannot_write_with_foreign_record_or_edit(
+def test_non_enrolled_user_can_read_but_cannot_write_or_edit(
     client, login, enroll, course_with_problems
 ):
     course = course_with_problems["course"]
@@ -47,10 +52,27 @@ def test_other_user_cannot_write_with_foreign_record_or_edit(
     url = f"/api/v1/courses/{course.id}/reviews"
     rid = client.post(url, json=body).json()["id"]
     login("other@dgu.ac.kr")
-    assert client.get(url).status_code == 403
+    # 작성자 1명: 수강 전 조회에는 보이지 않는다(작성자를 짐작할 수 있어서)
+    response = client.get(url)
+    assert response.status_code == 200 and response.json() == []
+    for email in ("b@dgu.ac.kr", "c@dgu.ac.kr"):
+        login(email)
+        enroll(course.subject_id)
+        eid = client.get(url + "/terms").json()[0]["enrollment_id"]
+        assert client.post(url, json={**body, "enrollment_id": eid}).status_code == 201
+    # 작성자 3명: 보이고, 학기는 연도까지만
+    relogin(client, "other@dgu.ac.kr")
+    response = client.get(url).json()
+    assert len(response) == 3 and rid in [r["id"] for r in response]
+    assert all(
+        r["is_mine"] is False and r["sem_cd"] == "" and r["term"] == f"{r['year']}년"
+        for r in response
+    )
+    # 수강생에게는 학기까지 보인다
+    relogin(client, "b@dgu.ac.kr")
+    assert all(r["sem_cd"] for r in client.get(url).json())
+    relogin(client, "other@dgu.ac.kr")
     assert client.post(url, json=body).status_code == 403
-    enroll(course.subject_id)
-    assert client.get(url).json()[0]["is_mine"] is False
     assert client.patch(f"/api/v1/reviews/{rid}", json=body).status_code == 405
     assert client.delete(f"/api/v1/reviews/{rid}").status_code == 404
 

@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { api, unwrap } from '@/api/client'
 import { RequestWithFiles } from '@/features/course_requests/RequestWithFiles'
 import { TeamYears } from '@/features/team_project/TeamYears'
+import { CatalogReviews } from '@/features/reviews/CatalogReviews'
 import {
   type OfferingGroup,
   type SearchQuery,
@@ -213,6 +214,7 @@ function Row({ g }: { g: OfferingGroup }) {
       <td className="min-w-56 px-3 py-2">
         <div className="font-medium">{g.sbj_nm}</div>
         <TeamYears history={g.team_history} className="mt-1" />
+        <CatalogReviews courseId={g.course_id} subject={g.sbj_nm} professor={g.emp_nm} />
         <div className="text-xs text-muted-foreground">
           {g.dpt_nm}
           {rates.length > 0 && ` · ${rates.map(([k, v]) => `${k} ${v}%`).join(' ')}`}
